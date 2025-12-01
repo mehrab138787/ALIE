@@ -212,4 +212,6 @@ def clear():
     return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    import os
+    port = int(os.environ.get("PORT", 5000))  # اگر متغیر PORT از Render موجود نبود، 5000 استفاده می‌کنه
+    app.run(host="0.0.0.0", port=port)        # debug=True رو حذف کردیم
