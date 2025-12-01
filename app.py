@@ -4,7 +4,7 @@ import requests
 app = Flask(__name__)
 app.secret_key = "supersecretkey123"
 
-API_KEY = "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"
+API_KEY = "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"
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL_NAME = "deepseek/deepseek-chat"
 
