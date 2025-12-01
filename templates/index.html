@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ALIE Chat Interface</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* ----------------------------------------------------- */
+/*                           CSS (Dark & Tidy Theme)                     */
+/* ----------------------------------------------------- */
+:root {
+    --app-height: 100vh; 
+    
+    /* --- رنگ‌های کاملاً تیره (سیاه) --- */
+    --bg-dark: #0A0A0A; 
+    --card-dark: #121212; 
+    --neum-light: rgba(255, 255, 255, 0.05); 
+    --neum-dark: rgba(0, 0, 0, 0.8);       
+
+    /* --- رنگ‌های نئون --- */
+    --neon-blue: #00bcd4; 
+    --neon-pink: #ff33aa; 
+
+    /* --- رنگ حباب‌های چت --- */
+    --user-bubble: #3f51b5; 
+    --ai-bubble-bg: #1c1c1c; 
+    --text-color: #E0E0E0; 
+    --code-color: #00ffc8; 
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    font-family:'Vazirmatn', sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-color); 
+    width: 100vw;
+    height: var(--app-height); 
+    overflow: hidden; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#chat-app {
+    width: 100%;
+    height: var(--app-height);
+    max-width: none;
+    display: flex;
+    flex-direction: column;
+    background: var(--card-dark);
+    box-shadow: 
+        15px 15px 30px var(--neum-dark),
+        -15px -15px 30px var(--neum-light); 
+    border-radius: 0;
+    padding: 10px; 
+}
+
+/* ------------------ Header (فقط ALIE) ------------------ */
+#chat-header {
+    padding: 15px 20px; 
+    background: var(--card-dark); 
+    color: var(--neon-blue);
+    text-align: center;
+    font-size: 1.8rem; /* بزرگتر شدن سایز فونت برای تاکید */
+    font-weight: 900;
+    letter-spacing: 2px; /* فاصله بیشتر بین حروف برای زیبایی نئونی */
+    border-bottom: 2px solid var(--neon-pink);
+    text-shadow: 0 0 8px var(--neon-blue), 0 0 15px var(--neon-blue); /* درخشش قوی‌تر */
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    margin-bottom: 10px; 
+}
+
+#header-controls {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 10px;
+}
+
+#chat-header button {
+    background: var(--bg-dark);
+    border: none;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    color: var(--neon-pink);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    outline: none;
+    box-shadow: 3px 3px 6px var(--neum-dark), -3px -3px 6px var(--neum-light);
+}
+#chat-header button:active { 
+    transform: translateY(-50%) scale(0.9); 
+    box-shadow: inset 3px 3px 6px var(--neum-dark), inset -3px -3px 6px var(--neum-light);
+    color: var(--neon-blue);
+}
+
+
+/* ------------------ Messages Area ------------------ */
+#messages {
+    flex: 1; 
+    padding: 15px 10px;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    display: flex;
+    flex-direction: column;
+    scrollbar-width: none;
+    
+    background: var(--bg-dark); 
+    border: 3px solid var(--neon-blue); 
+    border-radius: 15px; 
+    box-shadow: inset 0 0 25px rgba(0, 188, 212, 0.3); 
+    margin-bottom: 10px; 
+}
+#messages::-webkit-scrollbar { width: 0; height: 0; }
+
+.message {
+    margin: 8px 0; 
+    padding: 14px 18px;
+    border-radius: 20px;
+    max-width: 85%;
+    word-wrap: break-word;
+    opacity: 0;
+    transform: scale(0.95);
+    animation: bubbleIn 0.35s forwards cubic-bezier(0.2, 0.5, 0.1, 1);
+    position: relative;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    line-height: 1.7; 
+    font-size: 0.95rem; 
+}
+
+.message p {
+    margin-bottom: 0.7em; 
+    text-align: right; 
+    hyphens: auto; 
+}
+.message p:last-child {
+    margin-bottom: 0; 
+}
+
+@keyframes bubbleIn {
+    to { opacity: 1; transform: scale(1); }
+}
+
+.user {
+    background: linear-gradient(135deg, #4d7cff, #3f51b5); 
+    align-self: flex-end;
+    color: #fff;
+    border-radius: 20px 5px 20px 20px;
+}
+
+.ai {
+    background: var(--ai-bubble-bg);
+    align-self: flex-start;
+    color: var(--text-color); 
+    border-radius: 5px 20px 20px 20px;
+    box-shadow: 4px 4px 8px var(--neum-dark), -4px -4px 8px var(--neum-light);
+}
+
+.highlight {
+    box-shadow: 0 0 15px 3px var(--neon-blue);
+    transition: box-shadow 0.8s ease-out;
+}
+
+code {
+    display: block;
+    padding: 12px;
+    background: #0A0A0A; 
+    border-radius: 8px;
+    margin-top: 10px;
+    overflow-x: auto;
+    border-left: 4px solid var(--neon-pink); 
+    font-size: 0.85em;
+    color: var(--code-color); 
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; 
+}
+
+.loading {
+    font-style: italic;
+    opacity: 0.7;
+    background: var(--ai-bubble-bg);
+    animation: neonGlow 1.5s infinite alternate;
+}
+@keyframes neonGlow {
+    0% { box-shadow: 0 0 5px var(--neon-blue); }
+    100% { box-shadow: 0 0 10px var(--neon-pink); }
+}
+
+/* ------------------ Input Area ------------------ */
+#input-container {
+    display: flex;
+    background: var(--bg-dark); 
+    padding: 10px;
+    align-items: center;
+    border: 2px solid var(--neon-pink); 
+    border-radius: 15px; 
+    box-shadow: 0 0 30px rgba(255, 51, 170, 0.5); 
+    z-index: 20; 
+}
+
+#user-input {
+    flex: 1;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 30px;
+    outline: none;
+    font-size: 1rem;
+    background: var(--bg-dark); 
+    color: var(--text-color); 
+    margin: 0 8px;
+    transition: all 0.3s;
+    box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light);
+}
+
+#user-input::placeholder { 
+    color: rgba(255, 255, 255, 0.5);
+}
+
+#user-input:focus {
+    box-shadow: inset 0 0 15px var(--neon-blue);
+    border: 1px solid var(--neon-blue);
+}
+
+.input-btn {
+    width: 50px;
+    height: 50px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: #fff;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    outline: none;
+    box-shadow: 4px 4px 8px var(--neum-dark), -4px -4px 8px var(--neum-light);
+}
+
+#send-btn {
+    background: var(--neon-blue);
+    text-shadow: 0 0 5px #fff;
+}
+#send-btn:active {
+    background: var(--neon-pink);
+    transform: scale(0.9);
+    box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light);
+}
+
+/* ----------------------------------------------------- */
+/*                         JavaScript                       */
+/* ----------------------------------------------------- */
+</style>
+</head>
+<body>
+<div id="chat-app">
+    <div id="chat-header">
+        ALIE
+        <div id="header-controls">
+            <button id="clear-btn" title="پاک کردن چت"><i class="fas fa-eraser"></i></button>
+            <button id="theme-btn" title="تغییر رنگ نئون"><i class="fas fa-lightbulb"></i></button>
+        </div>
+    </div>
+    <div id="messages"></div>
+    <div id="input-container">
+        <input type="text" id="user-input" placeholder=" چت خود را ارسال کنید...">
+        <button id="send-btn" class="input-btn" title="ارسال"><i class="fas fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<script>
+// عناصر DOM
+const input=document.getElementById("user-input");
+const sendBtn=document.getElementById("send-btn");
+const clearBtn=document.getElementById("clear-btn");
+const themeBtn=document.getElementById("theme-btn");
+const messages=document.getElementById("messages");
+const chatApp = document.getElementById("chat-app");
+
+/* --- FIX اصلی موبایل (تضمین نمایش کامل صفحه) --- */
+function setAppHeight() {
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+}
+
+window.addEventListener('resize', setAppHeight);
+window.addEventListener('orientationchange', setAppHeight);
+setAppHeight(); 
+/* ------------------------------------------------ */
+
+// بارگذاری تاریخچه 
+let chatHistory=JSON.parse(localStorage.getItem("chatHistory")||"[]");
+chatHistory.forEach(m=>appendMessage(m.text,m.className,false));
+
+// اضافه کردن پیام (با پشتیبانی از پاراگراف و مارک‌داون)
+function appendMessage(text,className,highlight=true){
+    const msg=document.createElement("div");
+    msg.classList.add("message",className);
+
+    // تشخیص کد بلاک‌ها و فرمت‌بندی
+    if(text.includes("```")) {
+        const parts = text.split(/```/);
+        msg.innerHTML = "";
+        for(let i = 0; i < parts.length; i++){
+            if(i % 2 === 0) {
+                const formattedText = parts[i].trim().split('\n').map(p => `<p>${p}</p>`).join('');
+                msg.insertAdjacentHTML('beforeend', formattedText);
+            } else {
+                const codeBlock = document.createElement("code");
+                codeBlock.textContent = parts[i].replace(/^\w+\n?/,"").trim();
+                msg.appendChild(codeBlock);
+            }
+        }
+    } else {
+        const formattedText = text.trim().split('\n').map(p => `<p>${p}</p>`).join('');
+        msg.insertAdjacentHTML('beforeend', formattedText);
+    }
+
+    messages.appendChild(msg);
+    messages.scrollTop=messages.scrollHeight;
+
+    if(className !== 'loading') { 
+        chatHistory.push({text,className});
+        localStorage.setItem("chatHistory",JSON.stringify(chatHistory));
+    }
+
+    if(highlight){
+        msg.classList.add("highlight");
+        setTimeout(()=>msg.classList.remove("highlight"),800);
+    }
+
+    while(messages.children.length>50){
+        messages.removeChild(messages.children[0]);
+        chatHistory.shift();
+        localStorage.removeItem("chatHistory");
+    }
+}
+
+// حباب بارگذاری
+function showLoadingBubble(){
+    const bubble=document.createElement("div");
+    bubble.classList.add("message","ai","loading");
+    bubble.textContent="... در حال ایجاد پاسخ";
+    messages.appendChild(bubble);
+    messages.scrollTop=messages.scrollHeight;
+    return bubble;
+}
+
+// ارسال پیام به سرور
+async function sendMessage(){
+    const message=input.value.trim();
+    if(!message) return;
+    appendMessage(message,"user");
+    input.value="";
+
+    const loadingElem=showLoadingBubble();
+
+    try{
+        const res=await fetch("/chat",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({message})
+        });
+        const data=await res.json();
+        
+        loadingElem.textContent="";
+        let i=0;
+        const text=data.reply;
+        const interval=setInterval(()=>{
+            if(i < text.length) { 
+                loadingElem.textContent+=text[i];
+                i++;
+                messages.scrollTop=messages.scrollHeight;
+            }
+            if(i>=text.length) {
+                clearInterval(interval);
+                
+                loadingElem.classList.remove("loading");
+                loadingElem.classList.add("highlight");
+                
+                messages.removeChild(loadingElem);
+                appendMessage(text, "ai", true);
+            }
+        },10); 
+
+        if ('speechSynthesis' in window) {
+            const utter=new SpeechSynthesisUtterance(data.reply);
+            utter.lang="fa-IR";
+            speechSynthesis.speak(utter);
+        }
+
+    }catch(e){
+        loadingElem.textContent="⚠️ خطا! شکست نئومورفیک در سیستم.";
+        loadingElem.classList.remove("loading");
+    }
+}
+
+// پاک کردن چت
+function clearChat(){
+    if (confirm("آیا از پاک کردن کامل تاریخچه چت مطمئن هستید؟")) {
+        fetch("/clear",{method:"POST"});
+        messages.innerHTML="";
+        chatHistory=[];
+        localStorage.removeItem("chatHistory");
+    }
+}
+
+/* --- افکت جادویی نئون (تغییر طرح رنگی) --- */
+const colorSchemes = [
+    { primary: '#00bcd4', secondary: '#ff33aa' }, 
+    { primary: '#ff9800', secondary: '#4caf50' }, 
+    { primary: '#e91e63', secondary: '#673ab7' }  
+];
+let currentSchemeIndex = 0;
+
+function toggleNeonColors() {
+    currentSchemeIndex = (currentSchemeIndex + 1) % colorSchemes.length;
+    const scheme = colorSchemes[currentSchemeIndex];
+
+    document.documentElement.style.setProperty('--neon-blue', scheme.primary);
+    document.documentElement.style.setProperty('--neon-pink', scheme.secondary);
+    
+    document.getElementById('chat-header').style.textShadow = `0 0 5px ${scheme.primary}, 0 0 10px ${scheme.primary}`;
+    document.getElementById('chat-header').style.borderColor = scheme.secondary;
+
+    sendBtn.style.background = scheme.primary;
+    themeBtn.style.background = scheme.secondary;
+}
+
+
+// Event Listener
+themeBtn.addEventListener("click", toggleNeonColors);
+sendBtn.addEventListener("click", sendMessage);
+input.addEventListener("keypress",e=>{if(e.key==="Enter")sendMessage();});
+clearBtn.addEventListener("click",clearChat);
+</script>
+</body>
+</html>
