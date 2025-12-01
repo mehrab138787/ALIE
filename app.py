@@ -12,7 +12,7 @@ API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # مدل رایگان OpenRouter (بدون هزینه اضافی)
-MODEL_NAME = "mistralai/mistral-7b-instruct:free"
+MODEL_NAME = "deepseek/deepseek-chat"
 
 
 TRIGGER_KEYWORDS = [
