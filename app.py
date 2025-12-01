@@ -1,11 +1,17 @@
+import os
 from flask import Flask, render_template, request, jsonify, session
 import requests
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey123"
 
-API_KEY = "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"
+# کلید API را از متغیر محیطی بخوان
+API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+# URL API OpenRouter
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+# مدل رایگان OpenRouter (بدون هزینه اضافی)
 MODEL_NAME = "deepseek/deepseek-chat"
 
 TRIGGER_KEYWORDS = [
