@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>پروفایل - Cyrus AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* استایل‌های CSS از قبل اینجا هستند */
+        :root {
+            --app-height: 100vh;
+            --bg-dark: #070707; 
+            --card-dark: rgba(28, 28, 28, 0.85); 
+            --accent-color: #222222; 
+            --highlight-color: #03A9F4; 
+            --text-color: #FAFAFA;
+            --muted-text: #999999;
+            --border-radius: 15px; 
+            --neum-dark: rgba(0, 0, 0, 0.9);
+            --neum-light: rgba(255, 255, 255, 0.05); 
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family:'Vazirmatn', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-color);
+            width: 100vw; height: var(--app-height); overflow-x: hidden;
+            display: flex; justify-content: center; align-items: flex-start;
+        }
+
+        #page-container {
+            width: 100%; height: var(--app-height); max-width: 100%;
+            display: flex; flex-direction: column;
+            background: var(--card-dark);
+            backdrop-filter: blur(10px); 
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            position: relative;
+            overflow-y: auto;
+        }
+        
+        @media (max-width: 600px) {
+            #page-container { padding-top: 55px; }
+        }
+        @media (min-width: 601px) {
+            #page-container { padding-top: 60px; } 
+        }
+        
+        #page-header {
+            position: fixed; top: 0; left: 0; right: 0;
+            padding: 15px 20px; background: var(--bg-dark); 
+            color: var(--text-color); text-align: right; 
+            font-size: 1.6rem; font-weight: 700;
+            border-bottom: 2px solid var(--highlight-color); 
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7);
+            z-index: 50; display: flex; align-items: center; direction: rtl;
+        }
+        
+        #back-btn {
+            background: transparent; border: none;
+            color: var(--highlight-color); font-size: 1.5rem;
+            margin-left: 15px; cursor: pointer; transition: transform 0.2s ease;
+        }
+        #back-btn:active { transform: scale(0.9); }
+
+        #content {
+            flex: 1; padding: 30px; direction: rtl; line-height: 1.8;
+            background: rgba(0, 0, 0, 0.2); 
+            min-height: calc(var(--app-height) - 75px);
+        }
+
+        #content h1 {
+            color: var(--highlight-color);
+            font-size: 2.5rem; margin-bottom: 20px;
+            text-shadow: 0 0 8px rgba(3, 169, 244, 0.5);
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+        }
+
+        .card {
+            background: var(--accent-color);
+            padding: 20px; border-radius: var(--border-radius);
+            margin-bottom: 25px;
+            box-shadow: 5px 5px 12px var(--neum-dark), -5px -5px 12px var(--neum-light);
+            border-left: 5px solid var(--highlight-color);
+        }
+        
+        .card h3 {
+            color: var(--highlight-color); margin-bottom: 15px;
+            font-weight: 700; display: flex; align-items: center; font-size: 1.4rem;
+        }
+
+        .card h3 i { margin-left: 10px; font-size: 1.5rem; }
+
+        .info-item {
+            padding: 5px 0;
+            font-size: 1.1rem;
+        }
+        
+        .score-item {
+            display: flex; justify-content: space-between;
+            padding: 10px 0; border-bottom: 1px dashed var(--accent-color);
+            font-size: 1.1rem;
+        }
+        .score-item:last-child { border-bottom: none; }
+        .score-value {
+            font-weight: 700;
+            color: #4CAF50;
+        }
+        .score-item i { margin-left: 8px; color: var(--highlight-color); }
+        
+        .logout-btn {
+            display: block; width: 100%;
+            padding: 12px; margin-top: 20px;
+            background: #E53935; color: white;
+            border: none; border-radius: 8px;
+            font-size: 1.1rem; font-weight: 500;
+            cursor: pointer; transition: background 0.2s ease;
+            text-decoration: none;
+            text-align: center;
+        }
+        .logout-btn:hover { background: #C62828; }
+
+        @media (max-width: 600px) {
+            .score-item { font-size: 1rem; }
+        }
+        
+        #page-footer {
+            padding: 15px; background: var(--bg-dark);
+            text-align: center; font-size: 0.9rem;
+            color: var(--muted-text); border-top: 1px solid var(--accent-color);
+            box-shadow: 0 -5px 10px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="page-container">
+        <div id="page-header">
+            <button id="back-btn" onclick="window.history.back()" title="بازگشت به چت"><i class="fas fa-arrow-right"></i></button>
+            <span id="page-title">حساب کاربری: {{ user_data.first_name }}</span>
+        </div>
+
+        <div id="content">
+            <h1>👋 خوش آمدید، {{ user_data.first_name }} {{ user_data.last_name }}</h1>
+            
+            <div class="card">
+                <h3><i class="fas fa-id-card"></i> مشخصات فردی</h3>
+                
+                <p class="info-item">
+                    <strong>نام کامل:</strong> {{ user_data.first_name }} {{ user_data.last_name }}
+                </p>
+                <p class="info-item">
+                    <strong>حرفه:</strong> {{ user_data.profession }}
+                </p>
+                <p class="info-item">
+                    <strong>ایمیل:</strong> <span style="color: var(--highlight-color);">{{ user_data.email }}</span>
+                </p>
+            </div>
+
+            <div class="card">
+                <h3><i class="fas fa-trophy"></i> امتیازات و عملکرد</h3>
+
+                <div class="score-item">
+                    <span><i class="fas fa-star"></i> امتیاز تجربه (XP)</span>
+                    <span class="score-value">{{ user_data.xp_score }}</span>
+                </div>
+                
+                <div class="score-item">
+                    <span><i class="fas fa-level-up-alt"></i> سطح فعلی</span>
+                    <span class="score-value">{{ user_data.level }}</span>
+                </div>
+                
+                <div class="score-item">
+                    <span><i class="fas fa-comments"></i> تعداد گفتگوها</span>
+                    <span class="score-value">{{ user_data.chats }}</span>
+                </div>
+                
+                <a href="/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> خروج از حساب کاربری</a>
+            </div>
+
+        </div>
+        
+        <div id="page-footer">
+            © 2025 Cyrus AI. تمامی حقوق محفوظ است.
+        </div>
+    </div>
+    
+    <script>
+        function setAppHeight() {
+            document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+        }
+        window.addEventListener('resize', setAppHeight);
+        window.addEventListener('orientationchange', setAppHeight);
+        setAppHeight();
+    </script>
+</body>
+</html>

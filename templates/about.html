@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>معرفی Cyrus AI - هوش مصنوعی نسل جدید</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        /* ==================== 🛠️ Variables & Global Reset ==================== */
+        :root {
+            --app-height: 100vh;
+            --bg-dark: #070707; 
+            --card-dark: rgba(28, 28, 28, 0.85); 
+            --accent-color: #1a1a1a; 
+            --highlight-color: #03A9F4; /* آبی درخشان */
+            --glow-color: rgba(3, 169, 244, 0.3); /* برای سایه درخشان */
+            --secondary-highlight: #FFC107; /* طلایی */
+            --text-color: #FAFAFA;
+            --muted-text: #999999;
+            --border-radius: 15px; 
+            --neum-dark: rgba(0, 0, 0, 0.9);
+            --neum-light: rgba(255, 255, 255, 0.05); 
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family:'Vazirmatn', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-color);
+            width: 100vw; 
+            height: var(--app-height); 
+            overflow-x: hidden;
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-start;
+        }
+
+        #page-container {
+            width: 100%; 
+            height: var(--app-height); 
+            max-width: 600px; 
+            display: flex; 
+            flex-direction: column;
+            background: var(--card-dark);
+            backdrop-filter: blur(10px); 
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            position: relative;
+            overflow-y: auto;
+            margin: 0 auto; 
+            padding-top: 60px; 
+        }
+        
+        /* ==================== 🏠 Header ==================== */
+        #page-header {
+            position: fixed; 
+            top: 0; left: 0; right: 0;
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 15px 20px;  
+            background: var(--bg-dark);  
+            color: var(--text-color);
+            font-size: 1.6rem;  
+            font-weight: 700;
+            border-bottom: 2px solid var(--highlight-color);  
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            direction: rtl;
+        }
+        
+        #back-btn {
+            background: transparent; border: none;
+            color: var(--highlight-color); font-size: 1.5rem;
+            margin-left: 15px; cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        #back-btn:active { transform: scale(0.9); }
+
+        /* ==================== 📄 Content Area ==================== */
+        #content {
+            flex: 1; 
+            padding: 20px; 
+            direction: rtl;
+            line-height: 1.8;
+            background: rgba(0, 0, 0, 0.2); 
+            padding-bottom: 40px; 
+        }
+
+        #content h1 {
+            color: var(--highlight-color);
+            font-size: 2rem; 
+            margin-bottom: 30px; 
+            text-shadow: 0 0 12px var(--glow-color); 
+            border-bottom: 2px solid var(--highlight-color); 
+            padding-bottom: 10px;
+        }
+
+        #content p {
+            margin-bottom: 15px;
+            font-weight: 400;
+            font-size: 1rem; 
+        }
+        
+        /* 💡 استایل کارت‌های اطلاعاتی و افکت خفن */
+        .card {
+            background: var(--accent-color);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 25px;
+            box-shadow: 5px 5px 15px var(--neum-dark), -5px -5px 15px var(--neum-light);
+            border-left: 4px solid var(--highlight-color);
+            transition: all 0.3s ease; 
+        }
+        
+        .card:hover {
+            transform: translateY(-3px); 
+            box-shadow: 0 0 20px var(--glow-color); 
+        }
+
+        .card h3 {
+            color: var(--highlight-color);
+            margin-bottom: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            font-size: 1.4rem; 
+            text-shadow: 0 0 5px var(--glow-color);
+        }
+
+        .card h3 i {
+            margin-left: 10px;
+            font-size: 1.5rem;
+        }
+        
+        /* 💡 لیست ویژگی‌ها */
+        .feature-list {
+            list-style: none; padding: 0; margin-top: 15px;
+        }
+
+        .feature-list li {
+            margin-bottom: 12px; font-size: 1.05rem;
+            display: flex; align-items: flex-start;
+        }
+
+        .feature-list li i {
+            color: #4CAF50; 
+            margin-left: 10px; margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        /* 👑 قالب زیبا و خفن برای لیدر تیم */
+        .leader-info {
+            background: #141414; 
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid var(--secondary-highlight); 
+            box-shadow: 0 0 25px rgba(255, 193, 7, 0.5), inset 0 0 10px rgba(255, 193, 7, 0.3); 
+            margin-top: 20px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .leader-info:hover {
+             transform: scale(1.02); 
+        }
+        .leader-info .title {
+            color: var(--secondary-highlight); 
+            font-weight: 900;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+        .leader-info .description {
+            color: var(--muted-text); 
+            font-size: 0.95rem;
+        }
+        
+        /* 🎨 استایل خفن برای "بزودی" - کم رنگ و محو */
+        .future-feature {
+            font-size: 1.05rem;
+            color: var(--muted-text); 
+            opacity: 0.6; /* کم‌رنگ‌تر و محو */
+            border-top: 1px dashed var(--muted-text);
+            padding-top: 15px;
+            margin-top: 20px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .future-feature i {
+             color: var(--muted-text);
+             margin-left: 10px;
+             margin-top: 2px;
+        }
+        .future-feature strong {
+            font-weight: 400;
+        }
+        .future-feature span {
+            color: #FFC107; 
+            margin-right: 5px;
+            font-weight: 700;
+            /* سایز کوچکتر برای تاکید بر "بزودی" */
+            font-size: 0.9rem; 
+        }
+        
+        /* ==================== 🦶 Footer ==================== */
+        #page-footer {
+            padding: 15px;
+            background: var(--bg-dark);
+            text-align: center;
+            font-size: 0.8rem; 
+            color: var(--muted-text);
+            border-top: 1px solid var(--accent-color);
+            box-shadow: 0 -5px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        /* ==================== 📱 Mobile Optimizations ==================== */
+        @media (min-width: 601px) {
+            #content { padding: 30px; }
+            #content h1 { font-size: 2.5rem; }
+            .card h3 { font-size: 1.6rem; }
+            #content p, .feature-list li { font-size: 1.1rem; }
+            #page-footer { font-size: 0.9rem; }
+            .future-feature { font-size: 1.1rem; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="page-container">
+        <div id="page-header">
+            <button id="back-btn" onclick="window.history.back()" title="بازگشت به چت"><i class="fas fa-arrow-right"></i></button>
+            <span id="page-title">معرفی Cyrus AI</span>
+        </div>
+
+        <div id="content">
+            <h1>💡 موتور هوش مصنوعی Cyrus</h1>
+            
+            <div class="card">
+                <h3><i class="fas fa-mask"></i> بنیان‌گذاران: تیم NOCTOVEX (تاریک‌بین)</h3>
+                <p>پروژه Cyrus AI زاده تلاش‌های تیم نخبه و متعهد **NOCTOVEX** است. ما مجموعه‌ای از متخصصان هوش مصنوعی و توسعه وب هستیم که با هدف خلق یک تجربه چت‌بات منحصر به فرد و قدرتمند برای جامعه فارسی‌زبان دور هم جمع شده‌ایم.</p>
+                
+                <div class="leader-info">
+                    <div class="title">
+                        <i class="fas fa-crown"></i> لیدر و معمار اصلی: مهراب عزیزی
+                    </div>
+                    <p class="description">مهراب به عنوان هدایت‌گر تیم، مسئولیت استراتژی‌های فنی، انتخاب مدل‌های هوش مصنوعی و تضمین اجرای بی‌نقص پروژه را بر عهده دارد. او موتور محرک این تیم برای دسترسی به قله‌های جدید است.</p>
+                </div>
+            </div>
+            
+            <hr style="border-top: 1px solid var(--accent-color); margin: 30px 0;">
+
+            <div class="card">
+                <h3><i class="fas fa-bolt"></i> قابلیت‌های کلیدی و هوشمندی Cyrus</h3>
+                <p>Cyrus تنها یک ربات نیست؛ بلکه یک دستیار هوشمند، سریع و باهوش است که بر اساس سخت‌ترین استانداردها برای انجام وظایف پیچیده آموزش دیده است:</p>
+
+                <ul class="feature-list">
+                    <li><i class="fas fa-check-circle"></i> **تحلیل عمیق و جامع:** توانایی درک کامل سوالات پیچیده و ارائه پاسخ‌های **روان، کامل و دقیق** در تمام حوزه‌های علمی، فنی، ادبی و عمومی.</li>
+                    <li><i class="fas fa-check-circle"></i> **خلاقیت بی‌حد و مرز:** خلق محتوای سفارشی از جمله **تولید کد قابل اجرا**، سرودن شعر و داستان‌های ادبی با وزن و قافیه دقیق.</li>
+                    <li><i class="fas fa-check-circle"></i> **تسلط به زبان فارسی:** درک کامل لحن‌ها و اصطلاحات بومی با پشتیبانی کامل از استانداردهای نوشتاری (RTL).</li>
+                    <li><i class="fas fa-check-circle"></i> **بهره‌وری بالا:** پاسخ‌دهی در سریع‌ترین زمان ممکن، با تمرکز بر حفظ کیفیت و کارآمدی.</li>
+                </ul>
+
+                <div class="future-feature">
+                    <i class="fas fa-magic"></i>
+                    <strong>تولید محتوای بصری:</strong> خلق تصاویر خلاقانه بر اساس توضیحات متنی شما. <span>(بزودی)</span>
+                </div>
+            </div>
+            
+        </div>
+        
+        <div id="page-footer">
+            <p style="margin: 0;">تمامی حقوق این پروژه محفوظ و متعلق به Cyrus AI است.</p>
+            &copy; 2025 Cyrus AI.
+        </div>
+    </div>
+    
+    <script>
+        // تنظیم ارتفاع برنامه برای موبایل (برای رفع مشکل ۱۰۰vh در مرورگرهای موبایل)
+        function setAppHeight() {
+            document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+        }
+        window.addEventListener('resize', setAppHeight);
+        window.addEventListener('orientationchange', setAppHeight);
+        setAppHeight();
+    </script>
+</body>
+</html>

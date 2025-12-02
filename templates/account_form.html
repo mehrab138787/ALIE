@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>تکمیل پروفایل - Cyrus AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* استایل‌های CSS از قبل اینجا هستند */
+        :root {
+            --app-height: 100vh;
+            --bg-dark: #070707; 
+            --card-dark: rgba(28, 28, 28, 0.85); 
+            --accent-color: #222222; 
+            --highlight-color: #03A9F4; 
+            --text-color: #FAFAFA;
+            --muted-text: #999999;
+            --border-radius: 15px; 
+            --neum-dark: rgba(0, 0, 0, 0.9);
+            --neum-light: rgba(255, 255, 255, 0.05); 
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family:'Vazirmatn', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-color);
+            width: 100vw; height: var(--app-height); overflow-x: hidden;
+            display: flex; justify-content: center; align-items: flex-start;
+        }
+
+        #page-container {
+            width: 100%; height: var(--app-height); max-width: 100%;
+            display: flex; flex-direction: column;
+            background: var(--card-dark);
+            backdrop-filter: blur(10px); 
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            position: relative;
+            overflow-y: auto;
+        }
+        
+        @media (max-width: 600px) {
+            #page-container { padding-top: 55px; }
+        }
+        @media (min-width: 601px) {
+            #page-container { padding-top: 60px; } 
+        }
+        
+        #page-header {
+            position: fixed; top: 0; left: 0; right: 0;
+            padding: 15px 20px; background: var(--bg-dark); 
+            color: var(--text-color); text-align: right; 
+            font-size: 1.6rem; font-weight: 700;
+            border-bottom: 2px solid var(--highlight-color); 
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7);
+            z-index: 50; display: flex; align-items: center; direction: rtl;
+        }
+        
+        #back-btn {
+            background: transparent; border: none;
+            color: var(--highlight-color); font-size: 1.5rem;
+            margin-left: 15px; cursor: pointer; transition: transform 0.2s ease;
+        }
+        #back-btn:active { transform: scale(0.9); }
+
+        #content {
+            flex: 1; padding: 30px; direction: rtl; line-height: 1.8;
+            background: rgba(0, 0, 0, 0.2); 
+            min-height: calc(var(--app-height) - 75px);
+        }
+
+        .card {
+            background: var(--accent-color);
+            padding: 25px; border-radius: var(--border-radius);
+            margin-bottom: 25px;
+            box-shadow: 5px 5px 12px var(--neum-dark), -5px -5px 12px var(--neum-light);
+            border-left: 5px solid var(--highlight-color);
+        }
+        
+        .card h3 {
+            color: var(--highlight-color); margin-bottom: 20px;
+            font-weight: 700; font-size: 1.6rem;
+            text-align: center;
+        }
+
+        /* استایل‌های فرم */
+        .profile-form input {
+            width: 100%; padding: 12px; margin-bottom: 15px;
+            border-radius: 8px; border: 1px solid var(--highlight-color);
+            background: var(--bg-dark); color: var(--text-color);
+            font-family: 'Vazirmatn', sans-serif;
+            font-size: 1rem;
+            direction: rtl;
+        }
+        /* اصلاح جهت‌دهی برای تاریخ و فیلدهای انگلیسی/عدد */
+        input[type="date"] {
+             direction: ltr;
+             text-align: right;
+        }
+
+
+        .profile-form button {
+            background: #4CAF50;
+            color: white; border: none; padding: 15px;
+            border-radius: 8px; cursor: pointer;
+            font-weight: 700; width: 100%;
+            font-size: 1.1rem;
+            transition: background 0.2s;
+        }
+        .profile-form button:hover { background: #388E3C; }
+
+        @media (max-width: 600px) {
+            .profile-form input { padding: 10px; }
+            .profile-form button { padding: 12px; font-size: 1rem; }
+        }
+        
+        #page-footer {
+            padding: 15px; background: var(--bg-dark);
+            text-align: center; font-size: 0.9rem;
+            color: var(--muted-text); border-top: 1px solid var(--accent-color);
+            box-shadow: 0 -5px 10px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="page-container">
+        <div id="page-header">
+            <button id="back-btn" onclick="window.history.back()" title="بازگشت به چت"><i class="fas fa-arrow-right"></i></button>
+            <span id="page-title">تکمیل پروفایل</span>
+        </div>
+
+        <div id="content">
+            <h1>✍️ تکمیل مشخصات فردی</h1>
+            
+            <p style="text-align: center; color: var(--highlight-color); margin-bottom: 30px;">
+                تبریک! جیمیل شما تأیید شد. لطفاً اطلاعات زیر را جهت تکمیل پروفایل خود وارد نمایید.
+            </p>
+
+            <div class="card profile-form">
+                <h3>اطلاعات حساب</h3>
+                <form action="/complete_profile" method="POST">
+                    <input type="email" value="{{ user_data.email }}" disabled style="color: #666; background: #111;">
+                    <input type="text" name="first_name" placeholder="نام" required>
+                    <input type="text" name="last_name" placeholder="نام خانوادگی" required>
+                    <input type="date" name="dob" required>
+                    <input type="text" name="profession" placeholder="حرفه (مثلاً: توسعه‌دهنده، دانشجو، آزادکار)" required>
+                    
+                    <button type="submit"><i class="fas fa-save"></i> ذخیره و ورود به حساب</button>
+                </form>
+            </div>
+            
+        </div>
+        
+        <div id="page-footer">
+            © 2025 Cyrus AI. تمامی حقوق محفوظ است.
+        </div>
+    </div>
+    
+    <script>
+        function setAppHeight() {
+            document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+        }
+        window.addEventListener('resize', setAppHeight);
+        window.addEventListener('orientationchange', setAppHeight);
+        setAppHeight();
+    </script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ورود و ثبت نام - Cyrus AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* ==================== 🛠️ Variables & Global Reset (تم یکپارچه) ==================== */
+        :root {
+            --app-height: 100vh;
+            --bg-dark: #070707; 
+            --card-dark: rgba(28, 28, 28, 0.85); 
+            --accent-color: #1a1a1a; 
+            --highlight-color: #03A9F4; 
+            --glow-color: rgba(3, 169, 244, 0.3); 
+            --text-color: #FAFAFA;
+            --muted-text: #999999;
+            --border-radius: 15px; 
+            --neum-dark: rgba(0, 0, 0, 0.9);
+            --neum-light: rgba(255, 255, 255, 0.05); 
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family:'Vazirmatn', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-color);
+            width: 100vw; height: var(--app-height); overflow-x: hidden;
+            display: flex; justify-content: center; align-items: flex-start;
+        }
+
+        #page-container {
+            width: 100%; height: var(--app-height); max-width: 600px;
+            display: flex; flex-direction: column;
+            background: var(--card-dark);
+            backdrop-filter: blur(10px); 
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            position: relative;
+            overflow-y: auto;
+            margin: 0 auto; 
+            padding-top: 60px; 
+            padding-bottom: 60px; 
+        }
+        
+        @media (max-width: 600px) {
+            #page-container { padding-top: 55px; }
+        }
+        @media (min-width: 601px) {
+            #page-container { padding-top: 60px; } 
+        }
+        
+        /* ==================== 🏠 Header ==================== */
+        #page-header {
+            position: fixed; top: 0; left: 0; right: 0;
+            max-width: 600px; margin: 0 auto;
+            padding: 15px 20px; background: var(--bg-dark); 
+            color: var(--text-color); font-size: 1.6rem; font-weight: 700;
+            border-bottom: 2px solid var(--highlight-color); 
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7);
+            z-index: 50; display: flex; align-items: center; direction: rtl;
+        }
+        
+        #back-btn {
+            background: transparent; border: none;
+            color: var(--highlight-color); font-size: 1.5rem;
+            margin-left: 15px; cursor: pointer; transition: transform 0.2s ease;
+        }
+        #back-btn:active { transform: scale(0.9); }
+
+        /* ==================== 📄 Content Area ==================== */
+        #content {
+            flex: 1; padding: 30px 20px; direction: rtl; line-height: 1.8;
+            background: rgba(0, 0, 0, 0.2); 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 400px; 
+            text-align: center;
+        }
+
+        .card {
+            background: var(--accent-color);
+            padding: 40px 30px; 
+            border-radius: var(--border-radius);
+            box-shadow: 5px 5px 15px var(--neum-dark), -5px -5px 15px var(--neum-light);
+            border-left: 5px solid var(--highlight-color);
+        }
+        
+        .card h3 {
+            color: var(--highlight-color); margin-bottom: 25px;
+            font-weight: 700; font-size: 1.8rem;
+            text-shadow: 0 0 5px var(--glow-color); 
+            display: flex; align-items: center; justify-content: center;
+        }
+        .card h3 i {
+            margin-left: 15px;
+        }
+
+        /* 💡 دکمه ثبت نام/لاگین با جیمیل */
+        .google-btn {
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; padding: 15px;
+            background: #4285F4; 
+            color: white; border-radius: 10px;
+            font-size: 1.2rem; font-weight: 700;
+            cursor: pointer; transition: background 0.2s ease, transform 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            text-decoration: none;
+        }
+
+        .google-btn i {
+            margin-left: 15px; 
+            font-size: 1.5rem;
+            color: white; 
+        }
+
+        .google-btn:hover { 
+            background: #3376E2; 
+            transform: translateY(-2px);
+        }
+        
+        .privacy-note {
+            margin-top: 25px;
+            font-size: 0.9rem;
+            color: var(--muted-text);
+        }
+        .privacy-note a {
+            color: var(--highlight-color);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        .privacy-note a:hover {
+             color: #00d4ff;
+        }
+
+        @media (max-width: 600px) {
+            #content { padding: 20px; }
+            .card { padding: 30px 20px; }
+            .card h3 { font-size: 1.5rem; margin-bottom: 20px; }
+            .google-btn { font-size: 1.1rem; padding: 12px; }
+        }
+        
+        /* ==================== 🦶 Footer (ثابت) ==================== */
+        #page-footer {
+            padding: 15px; 
+            background: var(--bg-dark);
+            text-align: center; font-size: 0.8rem;
+            color: var(--muted-text); 
+            border-top: 1px solid var(--accent-color);
+            box-shadow: 0 -5px 10px rgba(0, 0, 0, 0.5);
+            
+            position: fixed; 
+            bottom: 0; left: 0; right: 0; 
+            max-width: 600px;
+            margin: 0 auto;
+            z-index: 50; 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="page-container">
+        <div id="page-header">
+            <button id="back-btn" onclick="window.history.back()" title="بازگشت به چت"><i class="fas fa-arrow-right"></i></button>
+            <span id="page-title">حساب کاربری / لاگین</span>
+        </div>
+
+        <div id="content">
+            <div class="auth-container">
+                <div class="card">
+                    <h3><i class="fas fa-user-lock"></i> ثبت نام و ورود</h3>
+                    
+                    <p style="margin-bottom: 30px; color: var(--muted-text);">
+                        برای ادامه استفاده از Cyrus AI، لطفاً با حساب **جیمیل رسمی** خود وارد شوید. این فرآیند امن، سریع و تنها راه احراز هویت شماست.
+                    </p>
+                    
+                    <a href="/login_google" class="google-btn">
+                        <i class="fab fa-google"></i> ثبت نام / لاگین با جیمیل
+                    </a>
+                    
+                    <p class="privacy-note">
+                        با ورود، شما <a href="#">قوانین و حریم خصوصی</a> ما را می‌پذیرید.
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="page-footer">
+            **&copy;** 2025 Cyrus AI. تمامی حقوق محفوظ است.
+        </div>
+    </div>
+    
+    <script>
+        // تنظیم ارتفاع برنامه برای موبایل
+        function setAppHeight() {
+            document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+        }
+        window.addEventListener('resize', setAppHeight);
+        window.addEventListener('orientationchange', setAppHeight);
+        setAppHeight();
+    </script>
+</body>
+</html>

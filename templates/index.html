@@ -9,7 +9,7 @@
 
     <style>
         /* ======================================================= */
-        /* 🎨 Variables (Glass, Electric Blue, Final)             */
+        /* 🎨 Variables (Glass, Electric Blue, Final)              */
         /* ======================================================= */
         :root {
             --app-height: 100vh;
@@ -30,7 +30,7 @@
         }
 
         /* ======================================================= */
-        /* 🌐 Global & Layout                                     */
+        /* 🌐 Global & Layout                                       */
         /* ======================================================= */
         * { margin:0; padding:0; box-sizing:border-box; }
         body {
@@ -49,10 +49,90 @@
             -webkit-backdrop-filter: blur(10px);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
             border-radius: 0; padding: 15px;
+            /* 💡 برای مدیریت لایه سایدبار */
+            position: relative;
+            overflow: hidden;
         }
 
         /* ======================================================= */
-        /* 👤 Header (Minimal & Clean)                             */
+        /* 💡 DRAWER (SIDEBAR) STYLES */
+        /* ======================================================= */
+        #drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 80%; /* 💡 پهنای سایدبار */
+            max-width: 300px;
+            height: var(--app-height);
+            background: var(--bg-dark); /* پس‌زمینه تیره */
+            border-left: 3px solid var(--highlight-color);
+            box-shadow: -5px 0 20px rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            transform: translateX(100%); /* پنهان کردن اولیه به سمت راست */
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* انیمیشن نرم */
+            padding-top: 50px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #drawer.open {
+            transform: translateX(0); /* باز شدن */
+        }
+
+        #drawer-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        #drawer.open + #drawer-backdrop {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* ------------------ لینک‌های سایدبار ------------------ */
+        .drawer-link {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            margin: 10px 15px;
+            color: var(--text-color);
+            text-decoration: none;
+            font-size: 1.2rem;
+            font-weight: 500;
+            border-radius: var(--border-radius);
+            transition: all 0.2s ease;
+            direction: rtl;
+            background: var(--card-dark);
+            box-shadow: 4px 4px 8px var(--neum-dark), -4px -4px 8px var(--neum-light);
+            border-right: 5px solid transparent;
+        }
+
+        .drawer-link:hover {
+            background: var(--accent-color);
+            border-right: 5px solid var(--highlight-color);
+            color: var(--highlight-color);
+            transform: translateX(-5px);
+        }
+
+        .drawer-link i {
+            margin-left: 15px; /* فاصله آیکون از متن */
+            font-size: 1.5rem;
+            min-width: 30px;
+            text-align: center;
+            color: var(--highlight-color);
+            text-shadow: 0 0 5px rgba(3, 169, 244, 0.7);
+        }
+        /* ======================================================= */
+
+        /* 👤 Header (Minimal & Clean)                            */
         /* ======================================================= */
         #chat-header {
             padding: 20px 20px; background: var(--card-dark); color: var(--text-color);
@@ -75,6 +155,11 @@
         }
         #chat-header button:hover { color: var(--highlight-color); box-shadow: 0 0 10px var(--highlight-color); }
         #chat-header button:active { transform: scale(0.9); box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light); color: var(--highlight-color); }
+        
+        /* 💡 دکمه باز کردن سایدبار */
+        #menu-btn {
+            position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
+        }
 
 
         /* ======================================================= */
@@ -88,7 +173,6 @@
             border-radius: var(--border-radius); 
             box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
             margin-bottom: 15px;
-            /* 💡 اضافه شده برای قرارگیری پرامپت اولیه در مرکز */
             position: relative; 
         }
         #messages::-webkit-scrollbar { width: 0; height: 0; }
@@ -150,7 +234,7 @@
         }
         
         /* کی‌فریم انیمیشن ورود */
-        @keyframes bubbleIn {  
+        @keyframes bubbleIn { 
             0% { opacity: 0; transform: scale(0.8) translateY(10px); }
             100% { opacity: 1; transform: scale(1) translateY(0); }
         }
@@ -173,7 +257,7 @@
             transition: box-shadow 0.6s ease-out, border 0.6s ease-out;
         }
 
-        /* ------------------ دکمه کپی ------------------ */
+        /* ------------------ دکمه کپی کل پیام ------------------ */
         .copy-btn {
             position: absolute; bottom: 10px; width: 25px; height: 25px;
             background: transparent; border: none; cursor: pointer;
@@ -187,13 +271,29 @@
         
         .copy-success { color: #00FF00 !important; } 
 
-        /* ------------------ کد بلاک و لودینگ ------------------ */
+        /* ------------------ کد بلاک (به روز رسانی شده) ------------------ */
         code {
             direction: ltr; display: block; padding: 15px; background: var(--code-bg);
             border-radius: 10px; margin-top: 15px; overflow-x: auto;
             border-left: 5px solid var(--highlight-color); 
             font-size: 0.9em; color: var(--code-text); font-family: monospace;
+            position: relative; /* 💡 برای قرارگیری دکمه کپی کد */
+            padding-top: 35px; /* 💡 فاصله برای دکمه کپی کد */
+            white-space: pre-wrap;
+            word-break: break-all;
         }
+        /* 💡 استایل دکمه کپی اختصاصی کد */
+        .code-copy-btn {
+            position: absolute; top: 5px; left: 5px; right: unset; 
+            background: rgba(255, 255, 255, 0.1); color: var(--muted-text);
+            border: none; border-radius: 5px; cursor: pointer;
+            font-size: 0.8em; padding: 5px 10px; opacity: 0.7;
+            transition: opacity 0.2s, background 0.2s, color 0.2s;
+            direction: rtl; 
+            z-index: 5;
+        }
+        .code-copy-btn:hover { opacity: 1; background: rgba(3, 169, 244, 0.2); color: var(--highlight-color); }
+        .code-copy-btn .fas { margin-left: 5px; }
         
         /* افکت چشمک‌زن برای لودینگ (واقعی‌تر) */
         .loading {
@@ -205,7 +305,7 @@
             content: '_'; 
             animation: blink 1s infinite step-start;
         }
-        @keyframes pulse {  
+        @keyframes pulse { 
             0% { opacity: 0.8; transform: scale(0.99); } 
             100% { opacity: 1; transform: scale(1.01); } 
         }
@@ -223,6 +323,26 @@
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
         }
+
+        /* ------------------ آیکون بزودی ------------------ */
+        #image-btn {
+            width: 60px; height: 60px; border-radius: 50%;
+            margin-left: 10px; /* فاصله از دکمه ارسال */
+            background: var(--bg-dark); /* پس زمینه تیره تر */
+            color: var(--muted-text);
+            font-size: 1.5rem;
+            box-shadow: inset 3px 3px 6px var(--neum-dark), inset -3px -3px 6px var(--neum-light);
+            pointer-events: none; /* برای غیرفعال بودن */
+            opacity: 0.6;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            line-height: 1.2;
+        }
+        #image-btn span {
+            font-size: 0.6rem;
+            font-weight: 500;
+        }
+        /* ---------------------------------------------------- */
+
 
         #user-input {
             flex: 1; padding: 18px 25px; border: none; border-radius: 35px; outline: none;
@@ -274,13 +394,16 @@
             }
             .user { border-radius: 20px 8px 20px 20px; }
             .ai { border-radius: 8px 20px 20px 20px; }
-            code { padding: 10px; font-size: 0.8em; }
+            code { padding: 10px; font-size: 0.8em; padding-top: 30px; }
+            .code-copy-btn { padding: 3px 8px; font-size: 0.7em; }
             .copy-btn { bottom: 6px; width: 20px; height: 20px; font-size: 0.85em; }
             .user .copy-btn { left: 10px; } 
             .ai .copy-btn { right: 10px; }
             #input-container { padding: 10px; }
             #user-input { padding: 12px 20px; font-size: 1rem; }
             .input-btn { width: 45px; height: 45px; font-size: 1.2rem; }
+            #image-btn { width: 45px; height: 45px; font-size: 1.2rem; margin-left: 5px; }
+            #image-btn span { font-size: 0.5rem; }
         }
     </style>
 </head>
@@ -289,9 +412,26 @@
 <audio id="send-sound" src="https://assets.mixkit.co/sfx/download/mixkit-bell-notification-978.wav" preload="auto"></audio>
 <audio id="bubble-sound" src="https://assets.mixkit.co/sfx/download/mixkit-bubble-pop-sound-2810.wav" preload="auto"></audio>
 
+<div id="drawer">
+    <div style="padding: 20px; font-size: 1.8rem; font-weight: 700; color: var(--highlight-color); text-align: center; border-bottom: 1px solid var(--accent-color); margin-bottom: 20px;">
+        منو
+    </div>
+    
+    <a href="account.html" class="drawer-link">
+        <i class="fas fa-user-circle"></i> حساب من
+    </a>
+    <a href="support.html" class="drawer-link">
+        <i class="fas fa-hands-helping"></i> پشتیبانی
+    </a>
+    <a href="about.html" class="drawer-link">
+        <i class="fas fa-info-circle"></i> درباره ما
+    </a>
+</div>
+<div id="drawer-backdrop"></div>
+
 <div id="chat-app">
     <div id="chat-header">
-        Cyrus
+        <button id="menu-btn" title="منو"><i class="fas fa-bars"></i></button> Cyrus
         <div id="header-controls">
             <button id="clear-btn" title="پاک کردن چت"><i class="fas fa-trash-alt"></i></button>
         </div>
@@ -304,6 +444,8 @@
     </div>
     
     <div id="input-container">
+        <button id="image-btn" class="input-btn" title="بزودی"><i class="fas fa-image"></i><span>بزودی</span></button>
+
         <input type="text" id="user-input" placeholder=" پیام خود را بنویسید و Enter بزنید...">
         <button id="send-btn" class="input-btn" title="ارسال"><i class="fas fa-rocket"></i></button>
     </div>
@@ -317,13 +459,16 @@ const clearBtn = document.getElementById("clear-btn");
 const messages = document.getElementById("messages");
 const sendSound = document.getElementById("send-sound");
 const bubbleSound = document.getElementById("bubble-sound");
-
-// 💡 عنصر جدید
 const initialPrompt = document.getElementById("initial-prompt"); 
+
+// 💡 عناصر جدید سایدبار
+const menuBtn = document.getElementById("menu-btn");
+const drawer = document.getElementById("drawer");
+const backdrop = document.getElementById("drawer-backdrop");
 
 
 /* ======================================================= */
-/* 🛠️ Utility & Setup                                     */
+/* 🛠️ Utility & Setup                                       */
 /* ======================================================= */
 
 function setAppHeight() {
@@ -335,12 +480,11 @@ setAppHeight();
 
 let chatHistory = JSON.parse(localStorage.getItem("chatHistory") || "[]");
 
-// 💡 مدیریت پیام اولیه هنگام بارگذاری
 if (chatHistory.length > 0) {
     chatHistory.forEach(m => appendMessage(m.text, m.className, false));
-    initialPrompt.style.display = 'none'; // پنهان کردن اگر تاریخچه هست
+    initialPrompt.style.display = 'none'; 
 } else {
-    initialPrompt.style.display = 'block'; // نمایش اگر تاریخچه نیست
+    initialPrompt.style.display = 'block'; 
 }
 
 function escapeHtml(str) {
@@ -415,7 +559,53 @@ function copyMessage(button, textToCopy) {
 
 
 /* ======================================================= */
-/* 💬 Messaging Logic                                      */
+/* 🧭 DRAWER / SWIPE LOGIC (منطق کشویی) */
+/* ======================================================= */
+
+function openDrawer() {
+    drawer.classList.add('open');
+}
+
+function closeDrawer() {
+    drawer.classList.remove('open');
+}
+
+menuBtn.addEventListener('click', openDrawer);
+backdrop.addEventListener('click', closeDrawer);
+
+// ** منطق تشخیص کشیدن (Swipe Detection) **
+let touchStartX = 0;
+
+document.addEventListener('touchstart', (e) => {
+    // فقط برای تک لمس و از سمت راست صفحه (70% عرض صفحه)
+    if (e.touches.length === 1 && e.touches[0].clientX > window.innerWidth * 0.7) {
+        touchStartX = e.touches[0].clientX;
+    } else {
+        touchStartX = 0;
+    }
+}, { passive: true }); // passive: true برای بهبود عملکرد اسکرول
+
+document.addEventListener('touchend', (e) => {
+    if (touchStartX === 0) return;
+    
+    const touchEndX = e.changedTouches[0].clientX;
+    const distance = touchStartX - touchEndX; // حرکت از راست به چپ باید مثبت باشد
+
+    // 💡 باز کردن: اگر فاصله حرکت به سمت چپ (فاصله مثبت) بیشتر از 80 پیکسل باشد
+    if (distance > 80) { 
+        openDrawer();
+    } 
+    // 💡 بستن: اگر سایدبار باز است و از چپ به راست کشیده شود (فاصله منفی)
+    else if (drawer.classList.contains('open') && distance < -80) {
+        closeDrawer();
+    }
+
+    touchStartX = 0; // ریست کردن
+}, { passive: true });
+
+
+/* ======================================================= */
+/* 💬 Messaging Logic                                       */
 /* ======================================================= */
 
 function appendMessage(text, className, highlight = true) {
@@ -429,14 +619,13 @@ function appendMessage(text, className, highlight = true) {
 
     const msg = document.createElement("div");
     msg.classList.add("message", className);
-    // ... (بقیه کدهای ساخت پیام مشابه قبل است) ...
     
     // 1. ساخت آواتار
     const avatar = document.createElement("div");
     avatar.classList.add("avatar", `${className}-avatar`);
     avatar.innerHTML = className === 'user' ? '<i class="fas fa-hat-cowboy"></i>' : '<i class="fas fa-brain"></i>';
     
-    // 2. ساخت دکمه کپی
+    // 2. ساخت دکمه کپی کل پیام
     const copyButton = document.createElement("button");
     copyButton.classList.add("copy-btn");
     copyButton.innerHTML = '<i class="fas fa-copy"></i>';
@@ -448,6 +637,7 @@ function appendMessage(text, className, highlight = true) {
         msg.innerHTML = "";
         for (let i = 0; i < parts.length; i++) {
             if (i % 2 === 0) {
+                // پاراگراف‌های معمولی
                 const formatted = parts[i].trim().split('\n').map(p => {
                     p = escapeHtml(p);
                     p = p.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
@@ -456,8 +646,19 @@ function appendMessage(text, className, highlight = true) {
                 }).join('');
                 msg.insertAdjacentHTML('beforeend', formatted);
             } else {
+                // بلاک کد
+                // حذف نام زبان (مانند python\n)
+                const codeText = parts[i].replace(/^\s*\w+\n?/, "").trim(); 
                 const codeBlock = document.createElement("code");
-                codeBlock.textContent = parts[i].replace(/^\s*\w+\n?/, "").trim(); 
+                codeBlock.textContent = codeText;
+                
+                // 💡 دکمه کپی اختصاصی برای کد
+                const codeCopyBtn = document.createElement("button");
+                codeCopyBtn.classList.add("code-copy-btn");
+                codeCopyBtn.innerHTML = '<i class="fas fa-copy"></i>کپی کد';
+                codeCopyBtn.addEventListener('click', () => copyMessage(codeCopyBtn, codeText));
+                
+                codeBlock.prepend(codeCopyBtn); // دکمه را بالای کد قرار می‌دهد
                 msg.appendChild(codeBlock);
             }
         }
@@ -471,9 +672,10 @@ function appendMessage(text, className, highlight = true) {
         msg.insertAdjacentHTML('beforeend', formatted);
     }
     
+    // 4. اضافه کردن دکمه کپی کل پیام
     msg.appendChild(copyButton);
 
-    // 4. قرار دادن آواتار و پیام در کانتینر
+    // 5. قرار دادن آواتار و پیام در کانتینر
     if (className === 'user') {
         container.appendChild(msg);
         container.appendChild(avatar);
@@ -551,6 +753,7 @@ async function sendMessage() {
     const { container: loadingContainer, bubble: loadingElem } = showLoadingBubble();
 
     try {
+        // این بخش را با آدرس و منطق بک‌اند خود جایگزین کنید
         const response = await fetch("/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
