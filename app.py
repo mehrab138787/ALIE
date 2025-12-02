@@ -29,11 +29,11 @@ if not API_KEY:
 # ----------------- 📧 تنظیمات Flask-Mail -----------------
 # توجه: این تنظیمات باید با اطلاعات جیمیل واقعی شما جایگزین شوند.
 app.config['MAIL_SERVER']='smtp.gmail.com'
-app.config['MAIL_PORT'] = 465
+app.config['MAIL_PORT'] = 587
 app.config['MAIL_USERNAME'] = 'noctovex@gmail.com'
 app.config['MAIL_PASSWORD'] = 'valh wehv jnqp sgsa' # رمز عبور اپلیکیشن (App Password)
-app.config['MAIL_USE_TLS'] = False
-app.config['MAIL_USE_SSL'] = True
+app.config['MAIL_USE_TLS'] = True    # ⬅️ باید True باشد
+app.config['MAIL_USE_SSL'] = False   # ⬅️ باید False باشد
 mail = Mail(app)
 
 verification_codes = {} 
