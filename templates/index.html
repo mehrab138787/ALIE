@@ -1,446 +1,626 @@
 <!DOCTYPE html>
 <html lang="fa">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ALIE Chat Interface</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-<style>
-/* ----------------------------------------------------- */
-/*                           CSS (Dark & Tidy Theme)                     */
-/* ----------------------------------------------------- */
-:root {
-    --app-height: 100vh; 
-    
-    /* --- رنگ‌های کاملاً تیره (سیاه) --- */
-    --bg-dark: #0A0A0A; 
-    --card-dark: #121212; 
-    --neum-light: rgba(255, 255, 255, 0.05); 
-    --neum-dark: rgba(0, 0, 0, 0.8);       
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cyrus AI Chat</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 
-    /* --- رنگ‌های نئون --- */
-    --neon-blue: #00bcd4; 
-    --neon-pink: #ff33aa; 
+    <style>
+        /* ======================================================= */
+        /* 🎨 Variables (Glass, Electric Blue, Final)             */
+        /* ======================================================= */
+        :root {
+            --app-height: 100vh;
+            --bg-dark: #070707; 
+            --card-dark: rgba(28, 28, 28, 0.85); 
+            --neum-light: rgba(255, 255, 255, 0.05); 
+            --neum-dark: rgba(0, 0, 0, 0.9);
+            --accent-color: #222222; 
+            --highlight-color: #03A9F4; 
+            --user-bubble: #0084FF; 
+            --ai-bubble-bg: #121212;
+            --text-color: #FAFAFA;
+            --muted-text: #999999;
+            --code-bg: #000000;
+            --code-text: #80DEEA; 
+            --avatar-size: 45px; 
+            --border-radius: 15px; 
+        }
 
-    /* --- رنگ حباب‌های چت --- */
-    --user-bubble: #3f51b5; 
-    --ai-bubble-bg: #1c1c1c; 
-    --text-color: #E0E0E0; 
-    --code-color: #00ffc8; 
-}
+        /* ======================================================= */
+        /* 🌐 Global & Layout                                     */
+        /* ======================================================= */
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family:'Vazirmatn', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-color);
+            width: 100vw; height: var(--app-height); overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+        }
 
-* { margin:0; padding:0; box-sizing:border-box; }
+        #chat-app {
+            width: 100%; height: var(--app-height); max-width: 100%;
+            display: flex; flex-direction: column;
+            background: var(--card-dark);
+            backdrop-filter: blur(10px); 
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            border-radius: 0; padding: 15px;
+        }
 
-body {
-    font-family:'Vazirmatn', sans-serif;
-    background: var(--bg-dark);
-    color: var(--text-color); 
-    width: 100vw;
-    height: var(--app-height); 
-    overflow: hidden; 
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
+        /* ======================================================= */
+        /* 👤 Header (Minimal & Clean)                             */
+        /* ======================================================= */
+        #chat-header {
+            padding: 20px 20px; background: var(--card-dark); color: var(--text-color);
+            text-align: center; font-size: 2rem; font-weight: 900;
+            border-bottom: 1px solid var(--accent-color); 
+            box-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
+            position: relative; z-index: 10; margin-bottom: 15px;
+            text-shadow: 0 0 5px var(--highlight-color); 
+        }
 
-#chat-app {
-    width: 100%;
-    height: var(--app-height);
-    max-width: none;
-    display: flex;
-    flex-direction: column;
-    background: var(--card-dark);
-    box-shadow: 
-        15px 15px 30px var(--neum-dark),
-        -15px -15px 30px var(--neum-light); 
-    border-radius: 0;
-    padding: 10px; 
-}
-
-/* ------------------ Header (فقط ALIE) ------------------ */
-#chat-header {
-    padding: 15px 20px; 
-    background: var(--card-dark); 
-    color: var(--neon-blue);
-    text-align: center;
-    font-size: 1.8rem; /* بزرگتر شدن سایز فونت برای تاکید */
-    font-weight: 900;
-    letter-spacing: 2px; /* فاصله بیشتر بین حروف برای زیبایی نئونی */
-    border-bottom: 2px solid var(--neon-pink);
-    text-shadow: 0 0 8px var(--neon-blue), 0 0 15px var(--neon-blue); /* درخشش قوی‌تر */
-    position: relative;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-    z-index: 10;
-    margin-bottom: 10px; 
-}
-
-#header-controls {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    gap: 10px;
-}
-
-#chat-header button {
-    background: var(--bg-dark);
-    border: none;
-    border-radius: 50%;
-    width: 35px;
-    height: 35px;
-    color: var(--neon-pink);
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    outline: none;
-    box-shadow: 3px 3px 6px var(--neum-dark), -3px -3px 6px var(--neum-light);
-}
-#chat-header button:active { 
-    transform: translateY(-50%) scale(0.9); 
-    box-shadow: inset 3px 3px 6px var(--neum-dark), inset -3px -3px 6px var(--neum-light);
-    color: var(--neon-blue);
-}
+        #header-controls {
+            position: absolute; right: 20px; top: 50%; transform: translateY(-50%); display: flex; gap: 12px;
+        }
+        #chat-header button {
+            background: var(--bg-dark); border: none; border-radius: 50%;
+            width: 45px; height: 45px; color: var(--muted-text);
+            font-size: 1.1rem;
+            box-shadow: 5px 5px 12px var(--neum-dark), -5px -5px 12px var(--neum-light);
+            transition: all 0.2s ease;
+        }
+        #chat-header button:hover { color: var(--highlight-color); box-shadow: 0 0 10px var(--highlight-color); }
+        #chat-header button:active { transform: scale(0.9); box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light); color: var(--highlight-color); }
 
 
-/* ------------------ Messages Area ------------------ */
-#messages {
-    flex: 1; 
-    padding: 15px 10px;
-    overflow-y: auto;
-    scroll-behavior: smooth;
-    display: flex;
-    flex-direction: column;
-    scrollbar-width: none;
-    
-    background: var(--bg-dark); 
-    border: 3px solid var(--neon-blue); 
-    border-radius: 15px; 
-    box-shadow: inset 0 0 25px rgba(0, 188, 212, 0.3); 
-    margin-bottom: 10px; 
-}
-#messages::-webkit-scrollbar { width: 0; height: 0; }
+        /* ======================================================= */
+        /* 💬 Messages Area & Containers                           */
+        /* ======================================================= */
+        #messages {
+            flex: 1; padding: 15px 10px; overflow-y: auto; scroll-behavior: smooth;
+            display: flex; flex-direction: column; scrollbar-width: none;
+            background: rgba(0, 0, 0, 0.4); 
+            border: 1px solid var(--accent-color);
+            border-radius: var(--border-radius); 
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
+            margin-bottom: 15px;
+            /* 💡 اضافه شده برای قرارگیری پرامپت اولیه در مرکز */
+            position: relative; 
+        }
+        #messages::-webkit-scrollbar { width: 0; height: 0; }
+        
+        /* 🌟 استایل پیام اولیه در مرکز صفحه 🌟 */
+        #initial-prompt {
+            position: absolute; 
+            top: 50%; 
+            left: 50%;
+            transform: translate(-50%, -50%); /* قرارگیری دقیق در مرکز */
+            font-size: 1.4rem; 
+            font-weight: 700;
+            color: var(--muted-text); /* رنگ خاکستری ملایم */
+            opacity: 0.6;
+            text-align: center;
+            padding: 20px;
+            pointer-events: none; /* تا مزاحمتی برای اسکرول ایجاد نکند */
+            transition: opacity 0.3s ease;
+        }
 
-.message {
-    margin: 8px 0; 
-    padding: 14px 18px;
-    border-radius: 20px;
-    max-width: 85%;
-    word-wrap: break-word;
-    opacity: 0;
-    transform: scale(0.95);
-    animation: bubbleIn 0.35s forwards cubic-bezier(0.2, 0.5, 0.1, 1);
-    position: relative;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-    line-height: 1.7; 
-    font-size: 0.95rem; 
-}
+        .message-container {
+            display: flex; margin: 12px 0; 
+            justify-content: flex-start; align-items: flex-end;
+            position: relative;
+        }
+        .user-container { justify-content: flex-end; }
 
-.message p {
-    margin-bottom: 0.7em; 
-    text-align: right; 
-    hyphens: auto; 
-}
-.message p:last-child {
-    margin-bottom: 0; 
-}
+        /* آواتار */
+        .avatar {
+            width: var(--avatar-size); min-width: var(--avatar-size); height: var(--avatar-size);
+            border-radius: 50%; 
+            background: var(--card-dark); 
+            display: flex; justify-content: center; align-items: center; 
+            font-size: 1.5rem; 
+            margin: 0 12px; 
+            border: 2px solid var(--accent-color);
+            box-shadow: 5px 5px 10px var(--neum-dark), -5px -5px 10px var(--neum-light);
+            transition: transform 0.3s ease;
+        }
+        .user-avatar { color: #00FFFF; } 
+        .ai-avatar { color: var(--highlight-color); } 
 
-@keyframes bubbleIn {
-    to { opacity: 1; transform: scale(1); }
-}
 
-.user {
-    background: linear-gradient(135deg, #4d7cff, #3f51b5); 
-    align-self: flex-end;
-    color: #fff;
-    border-radius: 20px 5px 20px 20px;
-}
+        /* ------------------ حباب پیام (با انیمیشن جهشی) ------------------ */
+        .message {
+            padding: 18px 25px; 
+            border-radius: 30px; 
+            max-width: 75%; 
+            opacity: 0;
+            transform: scale(0.95); 
+            animation: bubbleIn 0.5s forwards cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6); 
+            line-height: 1.7;
+            font-size: 1.05rem;
+            direction: rtl; 
+            text-align: right;
+            padding-bottom: 35px; 
+        }
+        
+        /* کی‌فریم انیمیشن ورود */
+        @keyframes bubbleIn {  
+            0% { opacity: 0; transform: scale(0.8) translateY(10px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
 
-.ai {
-    background: var(--ai-bubble-bg);
-    align-self: flex-start;
-    color: var(--text-color); 
-    border-radius: 5px 20px 20px 20px;
-    box-shadow: 4px 4px 8px var(--neum-dark), -4px -4px 8px var(--neum-light);
-}
+        .user {
+            background: var(--user-bubble); color: #FFF; 
+            border-radius: 30px 10px 30px 30px;
+            font-weight: 600;
+        }
+        .ai {
+            background: var(--ai-bubble-bg); color: var(--text-color);
+            border-radius: 10px 30px 30px 30px;
+            box-shadow: 5px 5px 10px var(--neum-dark), -5px -5px 10px var(--neum-light);
+        }
+        
+        /* جلوه Highlight نئونی */
+        .highlight {
+            box-shadow: 0 0 15px 3px var(--highlight-color), 0 0 5px var(--highlight-color);
+            border: 2px solid var(--highlight-color);
+            transition: box-shadow 0.6s ease-out, border 0.6s ease-out;
+        }
 
-.highlight {
-    box-shadow: 0 0 15px 3px var(--neon-blue);
-    transition: box-shadow 0.8s ease-out;
-}
+        /* ------------------ دکمه کپی ------------------ */
+        .copy-btn {
+            position: absolute; bottom: 10px; width: 25px; height: 25px;
+            background: transparent; border: none; cursor: pointer;
+            font-size: 1em; transition: color 0.2s, opacity 0.2s; opacity: 0.5;
+        }
 
-code {
-    display: block;
-    padding: 12px;
-    background: #0A0A0A; 
-    border-radius: 8px;
-    margin-top: 10px;
-    overflow-x: auto;
-    border-left: 4px solid var(--neon-pink); 
-    font-size: 0.85em;
-    color: var(--code-color); 
-    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; 
-}
+        .user .copy-btn { left: 15px; color: #FFF; } 
+        .ai .copy-btn { right: 15px; color: var(--muted-text); }
+        .copy-btn:hover { opacity: 1; color: var(--highlight-color); }
+        .user .copy-btn:hover { color: #FFF; }
+        
+        .copy-success { color: #00FF00 !important; } 
 
-.loading {
-    font-style: italic;
-    opacity: 0.7;
-    background: var(--ai-bubble-bg);
-    animation: neonGlow 1.5s infinite alternate;
-}
-@keyframes neonGlow {
-    0% { box-shadow: 0 0 5px var(--neon-blue); }
-    100% { box-shadow: 0 0 10px var(--neon-pink); }
-}
+        /* ------------------ کد بلاک و لودینگ ------------------ */
+        code {
+            direction: ltr; display: block; padding: 15px; background: var(--code-bg);
+            border-radius: 10px; margin-top: 15px; overflow-x: auto;
+            border-left: 5px solid var(--highlight-color); 
+            font-size: 0.9em; color: var(--code-text); font-family: monospace;
+        }
+        
+        /* افکت چشمک‌زن برای لودینگ (واقعی‌تر) */
+        .loading {
+            font-style: italic; opacity: 0.9; background: var(--ai-bubble-bg);
+            padding-right: 5px; 
+            animation: pulse 1s infinite alternate;
+        }
+        .loading::after {
+            content: '_'; 
+            animation: blink 1s infinite step-start;
+        }
+        @keyframes pulse {  
+            0% { opacity: 0.8; transform: scale(0.99); } 
+            100% { opacity: 1; transform: scale(1.01); } 
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
 
-/* ------------------ Input Area ------------------ */
-#input-container {
-    display: flex;
-    background: var(--bg-dark); 
-    padding: 10px;
-    align-items: center;
-    border: 2px solid var(--neon-pink); 
-    border-radius: 15px; 
-    box-shadow: 0 0 30px rgba(255, 51, 170, 0.5); 
-    z-index: 20; 
-}
+        /* ======================================================= */
+        /* ⌨️ Input Area (Glassy)                                  */
+        /* ======================================================= */
+        #input-container {
+            display: flex; background: var(--card-dark); padding: 15px; align-items: center;
+            border: 1px solid var(--accent-color); border-radius: var(--border-radius);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7); z-index: 20;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
 
-#user-input {
-    flex: 1;
-    padding: 14px 20px;
-    border: none;
-    border-radius: 30px;
-    outline: none;
-    font-size: 1rem;
-    background: var(--bg-dark); 
-    color: var(--text-color); 
-    margin: 0 8px;
-    transition: all 0.3s;
-    box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light);
-}
+        #user-input {
+            flex: 1; padding: 18px 25px; border: none; border-radius: 35px; outline: none;
+            font-size: 1.1rem; 
+            background: var(--bg-dark); color: var(--text-color);
+            margin: 0 10px; 
+            box-shadow: inset 5px 5px 10px var(--neum-dark), inset -5px -5px 10px var(--neum-light);
+            direction: rtl;
+        }
+        #user-input::placeholder { color: var(--muted-text); }
+        #user-input:focus { 
+            box-shadow: inset 0 0 15px rgba(3, 169, 244, 0.6); 
+            border: 1px solid var(--highlight-color); 
+        }
 
-#user-input::placeholder { 
-    color: rgba(255, 255, 255, 0.5);
-}
+        .input-btn {
+            width: 60px; height: 60px; border: none; border-radius: 50%; cursor: pointer;
+            font-size: 1.5rem; color: var(--bg-dark);
+            background: var(--highlight-color);
+            box-shadow: 5px 5px 10px var(--neum-dark), -5px -5px 10px var(--neum-light);
+            transition: transform 0.1s ease;
+        }
+        #send-btn:active { 
+            background: #0077C0; 
+            transform: scale(0.9); 
+            box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light); 
+        }
 
-#user-input:focus {
-    box-shadow: inset 0 0 15px var(--neon-blue);
-    border: 1px solid var(--neon-blue);
-}
-
-.input-btn {
-    width: 50px;
-    height: 50px;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 1.2rem;
-    color: #fff;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    outline: none;
-    box-shadow: 4px 4px 8px var(--neum-dark), -4px -4px 8px var(--neum-light);
-}
-
-#send-btn {
-    background: var(--neon-blue);
-    text-shadow: 0 0 5px #fff;
-}
-#send-btn:active {
-    background: var(--neon-pink);
-    transform: scale(0.9);
-    box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light);
-}
-
-/* ----------------------------------------------------- */
-/*                         JavaScript                       */
-/* ----------------------------------------------------- */
-</style>
+        /* ======================================================= */
+        /* 🌟 MOBILE OPTIMIZATION (تنها برای گوشی) */
+        /* ======================================================= */
+        @media (max-width: 600px) {
+            :root {
+                --avatar-size: 40px; 
+                --border-radius: 12px;
+            }
+            #chat-app { padding: 10px; }
+            #chat-header { padding: 15px 15px; font-size: 1.6rem; margin-bottom: 10px; }
+            #chat-header button { width: 38px; height: 38px; font-size: 1rem; }
+            #messages { padding: 10px 5px; margin-bottom: 10px; }
+            .message-container { margin: 8px 0; }
+            .avatar { margin: 0 8px; font-size: 1.3rem; }
+            .message {
+                padding: 12px 18px; 
+                border-radius: 20px; 
+                max-width: 80%; 
+                font-size: 0.9rem; 
+                padding-bottom: 28px; 
+            }
+            .user { border-radius: 20px 8px 20px 20px; }
+            .ai { border-radius: 8px 20px 20px 20px; }
+            code { padding: 10px; font-size: 0.8em; }
+            .copy-btn { bottom: 6px; width: 20px; height: 20px; font-size: 0.85em; }
+            .user .copy-btn { left: 10px; } 
+            .ai .copy-btn { right: 10px; }
+            #input-container { padding: 10px; }
+            #user-input { padding: 12px 20px; font-size: 1rem; }
+            .input-btn { width: 45px; height: 45px; font-size: 1.2rem; }
+        }
+    </style>
 </head>
 <body>
+    
+<audio id="send-sound" src="https://assets.mixkit.co/sfx/download/mixkit-bell-notification-978.wav" preload="auto"></audio>
+<audio id="bubble-sound" src="https://assets.mixkit.co/sfx/download/mixkit-bubble-pop-sound-2810.wav" preload="auto"></audio>
+
 <div id="chat-app">
     <div id="chat-header">
-        ALIE
+        Cyrus
         <div id="header-controls">
-            <button id="clear-btn" title="پاک کردن چت"><i class="fas fa-eraser"></i></button>
-            <button id="theme-btn" title="تغییر رنگ نئون"><i class="fas fa-lightbulb"></i></button>
+            <button id="clear-btn" title="پاک کردن چت"><i class="fas fa-trash-alt"></i></button>
         </div>
     </div>
-    <div id="messages"></div>
+    
+    <div id="messages">
+        <div id="initial-prompt">
+            چطور میتونم به شما کمک کنم؟ 🤔
+        </div>
+    </div>
+    
     <div id="input-container">
-        <input type="text" id="user-input" placeholder=" چت خود را ارسال کنید...">
-        <button id="send-btn" class="input-btn" title="ارسال"><i class="fas fa-paper-plane"></i></button>
+        <input type="text" id="user-input" placeholder=" پیام خود را بنویسید و Enter بزنید...">
+        <button id="send-btn" class="input-btn" title="ارسال"><i class="fas fa-rocket"></i></button>
     </div>
 </div>
 
 <script>
 // عناصر DOM
-const input=document.getElementById("user-input");
-const sendBtn=document.getElementById("send-btn");
-const clearBtn=document.getElementById("clear-btn");
-const themeBtn=document.getElementById("theme-btn");
-const messages=document.getElementById("messages");
-const chatApp = document.getElementById("chat-app");
+const input = document.getElementById("user-input");
+const sendBtn = document.getElementById("send-btn");
+const clearBtn = document.getElementById("clear-btn");
+const messages = document.getElementById("messages");
+const sendSound = document.getElementById("send-sound");
+const bubbleSound = document.getElementById("bubble-sound");
 
-/* --- FIX اصلی موبایل (تضمین نمایش کامل صفحه) --- */
+// 💡 عنصر جدید
+const initialPrompt = document.getElementById("initial-prompt"); 
+
+
+/* ======================================================= */
+/* 🛠️ Utility & Setup                                     */
+/* ======================================================= */
+
 function setAppHeight() {
-    const vh = window.innerHeight * 0.01;
     document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
 }
-
 window.addEventListener('resize', setAppHeight);
 window.addEventListener('orientationchange', setAppHeight);
-setAppHeight(); 
-/* ------------------------------------------------ */
+setAppHeight();
 
-// بارگذاری تاریخچه 
-let chatHistory=JSON.parse(localStorage.getItem("chatHistory")||"[]");
-chatHistory.forEach(m=>appendMessage(m.text,m.className,false));
+let chatHistory = JSON.parse(localStorage.getItem("chatHistory") || "[]");
 
-// اضافه کردن پیام (با پشتیبانی از پاراگراف و مارک‌داون)
-function appendMessage(text,className,highlight=true){
-    const msg=document.createElement("div");
-    msg.classList.add("message",className);
+// 💡 مدیریت پیام اولیه هنگام بارگذاری
+if (chatHistory.length > 0) {
+    chatHistory.forEach(m => appendMessage(m.text, m.className, false));
+    initialPrompt.style.display = 'none'; // پنهان کردن اگر تاریخچه هست
+} else {
+    initialPrompt.style.display = 'block'; // نمایش اگر تاریخچه نیست
+}
 
-    // تشخیص کد بلاک‌ها و فرمت‌بندی
-    if(text.includes("```")) {
+function escapeHtml(str) {
+    if (!str) return "";
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function playSendSound() {
+    sendSound.currentTime = 0;
+    sendSound.play().catch(e => console.log("Send sound play error:", e));
+}
+
+function playBubbleSound() {
+    bubbleSound.currentTime = 0;
+    bubbleSound.play().catch(e => console.log("Bubble sound play error:", e));
+}
+
+/** 🛠️ تابع کمکی برای انجام کپی با استفاده از Textarea (روش سنتی) */
+function fallbackCopy(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    
+    textarea.style.position = 'fixed';
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.opacity = '0';
+    
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (!successful) {
+             console.error('Fallback copy failed!');
+             alert("کپی نشد. لطفاً متن را به صورت دستی انتخاب و کپی کنید.");
+        }
+    } catch (err) {
+        console.error('Fallback copy failed!', err);
+        alert("کپی نشد. لطفاً متن را به صورت دستی انتخاب و کپی کنید.");
+    }
+
+    document.body.removeChild(textarea);
+}
+
+/** 🔔 نمایش فیدبک بصری موفقیت */
+function feedback(button) {
+    const originalIconClass = button.querySelector('i').className;
+    button.querySelector('i').className = 'fas fa-check';
+    button.classList.add('copy-success');
+
+    setTimeout(() => {
+        button.querySelector('i').className = originalIconClass;
+        button.classList.remove('copy-success');
+    }, 1000);
+}
+
+function copyMessage(button, textToCopy) {
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            feedback(button);
+        }).catch(() => {
+            fallbackCopy(textToCopy);
+            feedback(button);
+        });
+        return; 
+    } else {
+        fallbackCopy(textToCopy);
+        feedback(button);
+    }
+}
+
+
+/* ======================================================= */
+/* 💬 Messaging Logic                                      */
+/* ======================================================= */
+
+function appendMessage(text, className, highlight = true) {
+    // 💡 پنهان کردن پیام اولیه هنگام دریافت اولین پیام
+    if (initialPrompt.style.display !== 'none') {
+        initialPrompt.style.display = 'none';
+    }
+
+    const container = document.createElement("div");
+    container.classList.add("message-container", `${className}-container`);
+
+    const msg = document.createElement("div");
+    msg.classList.add("message", className);
+    // ... (بقیه کدهای ساخت پیام مشابه قبل است) ...
+    
+    // 1. ساخت آواتار
+    const avatar = document.createElement("div");
+    avatar.classList.add("avatar", `${className}-avatar`);
+    avatar.innerHTML = className === 'user' ? '<i class="fas fa-hat-cowboy"></i>' : '<i class="fas fa-brain"></i>';
+    
+    // 2. ساخت دکمه کپی
+    const copyButton = document.createElement("button");
+    copyButton.classList.add("copy-btn");
+    copyButton.innerHTML = '<i class="fas fa-copy"></i>';
+    copyButton.addEventListener('click', () => copyMessage(copyButton, text));
+    
+    // 3. پردازش محتوای پیام (کد و متن)
+    if (text.includes("```")) {
         const parts = text.split(/```/);
         msg.innerHTML = "";
-        for(let i = 0; i < parts.length; i++){
-            if(i % 2 === 0) {
-                const formattedText = parts[i].trim().split('\n').map(p => `<p>${p}</p>`).join('');
-                msg.insertAdjacentHTML('beforeend', formattedText);
+        for (let i = 0; i < parts.length; i++) {
+            if (i % 2 === 0) {
+                const formatted = parts[i].trim().split('\n').map(p => {
+                    p = escapeHtml(p);
+                    p = p.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+                    p = p.replace(/__(.+?)__/g, "<i>$1</i>");
+                    return p ? `<p>${p}</p>` : '';
+                }).join('');
+                msg.insertAdjacentHTML('beforeend', formatted);
             } else {
                 const codeBlock = document.createElement("code");
-                codeBlock.textContent = parts[i].replace(/^\w+\n?/,"").trim();
+                codeBlock.textContent = parts[i].replace(/^\s*\w+\n?/, "").trim(); 
                 msg.appendChild(codeBlock);
             }
         }
     } else {
-        const formattedText = text.trim().split('\n').map(p => `<p>${p}</p>`).join('');
-        msg.insertAdjacentHTML('beforeend', formattedText);
+        const formatted = text.trim().split('\n').map(p => {
+            p = escapeHtml(p);
+            p = p.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+            p = p.replace(/__(.+?)__/g, "<i>$1</i>");
+            return p ? `<p>${p}</p>` : '';
+        }).join('');
+        msg.insertAdjacentHTML('beforeend', formatted);
+    }
+    
+    msg.appendChild(copyButton);
+
+    // 4. قرار دادن آواتار و پیام در کانتینر
+    if (className === 'user') {
+        container.appendChild(msg);
+        container.appendChild(avatar);
+    } else {
+        container.appendChild(avatar);
+        container.appendChild(msg);
     }
 
-    messages.appendChild(msg);
-    messages.scrollTop=messages.scrollHeight;
+    messages.appendChild(container);
 
-    if(className !== 'loading') { 
-        chatHistory.push({text,className});
-        localStorage.setItem("chatHistory",JSON.stringify(chatHistory));
+    if (className !== 'loading') { 
+        messages.scrollTop = messages.scrollHeight;
+
+        chatHistory.push({ text, className });
+        localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
     }
+    
 
-    if(highlight){
+    if (highlight) {
         msg.classList.add("highlight");
-        setTimeout(()=>msg.classList.remove("highlight"),800);
+        setTimeout(() => msg.classList.remove("highlight"), 800);
     }
 
-    while(messages.children.length>50){
+    // مدیریت تاریخچه
+    while (messages.children.length > 50) {
         messages.removeChild(messages.children[0]);
         chatHistory.shift();
         localStorage.removeItem("chatHistory");
     }
 }
 
-// حباب بارگذاری
-function showLoadingBubble(){
-    const bubble=document.createElement("div");
-    bubble.classList.add("message","ai","loading");
-    bubble.textContent="... در حال ایجاد پاسخ";
-    messages.appendChild(bubble);
-    messages.scrollTop=messages.scrollHeight;
-    return bubble;
+
+// حباب لودینگ
+function showLoadingBubble() {
+    // 💡 پنهان کردن پیام اولیه هنگام نمایش لودینگ
+    if (initialPrompt.style.display !== 'none') {
+        initialPrompt.style.display = 'none';
+    }
+
+    const container = document.createElement("div");
+    container.classList.add("message-container", "ai-container");
+
+    const avatar = document.createElement("div");
+    avatar.classList.add("avatar", "ai-avatar");
+    avatar.innerHTML = '<i class="fas fa-brain"></i>';
+    container.appendChild(avatar);
+
+    const bubble = document.createElement("div");
+    bubble.classList.add("message", "ai", "loading");
+    bubble.textContent = "... در حال فکر کردن";
+    container.appendChild(bubble);
+
+    messages.appendChild(container);
+    messages.scrollTop = messages.scrollHeight;
+    
+    return { container, bubble };
 }
 
-// ارسال پیام به سرور
-async function sendMessage(){
-    const message=input.value.trim();
-    if(!message) return;
-    appendMessage(message,"user");
-    input.value="";
+// -------------------------------------------------------------------
+// 🎯 اتصال به بک‌اند Flask (با قابلیت حفظ اسکرول)
+// -------------------------------------------------------------------
 
-    const loadingElem=showLoadingBubble();
+async function sendMessage() {
+    const message = input.value.trim();
+    if (!message) return;
+    
+    sendBtn.disabled = true;
+    input.disabled = true;
+    
+    appendMessage(message, "user");
+    playSendSound(); 
 
-    try{
-        const res=await fetch("/chat",{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({message})
+    input.value = "";
+
+    const { container: loadingContainer, bubble: loadingElem } = showLoadingBubble();
+
+    try {
+        const response = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: message })
         });
-        const data=await res.json();
-        
-        loadingElem.textContent="";
-        let i=0;
-        const text=data.reply;
-        const interval=setInterval(()=>{
-            if(i < text.length) { 
-                loadingElem.textContent+=text[i];
-                i++;
-                messages.scrollTop=messages.scrollHeight;
-            }
-            if(i>=text.length) {
-                clearInterval(interval);
-                
-                loadingElem.classList.remove("loading");
-                loadingElem.classList.add("highlight");
-                
-                messages.removeChild(loadingElem);
-                appendMessage(text, "ai", true);
-            }
-        },10); 
 
-        if ('speechSynthesis' in window) {
-            const utter=new SpeechSynthesisUtterance(data.reply);
-            utter.lang="fa-IR";
-            speechSynthesis.speak(utter);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-    }catch(e){
-        loadingElem.textContent="⚠️ خطا! شکست نئومورفیک در سیستم.";
+        const data = await response.json();
+        const responseText = data.reply || "متأسفانه پاسخی از سرور دریافت نشد.";
+
+        loadingElem.textContent = "";
+        let i = 0;
+        const interval = setInterval(() => {
+            if (i < responseText.length) {
+                loadingElem.textContent += responseText[i];
+                i++;
+                
+                const isUserAtBottom = messages.scrollHeight - messages.clientHeight <= messages.scrollTop + 50; 
+                if (isUserAtBottom) {
+                    messages.scrollTop = messages.scrollHeight; 
+                }
+
+            } else {
+                clearInterval(interval);
+                
+                playBubbleSound(); 
+
+                messages.removeChild(loadingContainer);
+                appendMessage(responseText, "ai", true);
+                
+                sendBtn.disabled = false;
+                input.disabled = false;
+                input.focus();
+            }
+        }, 20); 
+
+    } catch (e) {
+        console.error("Error connecting to backend:", e);
+        loadingElem.textContent = "⚠️ خطا در اتصال به سرور (app.py).";
         loadingElem.classList.remove("loading");
+        loadingElem.style.animation = 'none'; 
+        
+        sendBtn.disabled = false;
+        input.disabled = false;
     }
 }
 
-// پاک کردن چت
-function clearChat(){
+function clearChat() {
     if (confirm("آیا از پاک کردن کامل تاریخچه چت مطمئن هستید؟")) {
-        fetch("/clear",{method:"POST"});
-        messages.innerHTML="";
-        chatHistory=[];
+        fetch("/clear_history", { method: "POST" }); 
+        messages.innerHTML = ''; // پاک کردن پیام‌ها
+        
+        // 💡 نمایش مجدد پیام اولیه پس از پاکسازی
+        messages.appendChild(initialPrompt);
+        initialPrompt.style.display = 'block'; 
+
+        chatHistory = [];
         localStorage.removeItem("chatHistory");
     }
 }
 
-/* --- افکت جادویی نئون (تغییر طرح رنگی) --- */
-const colorSchemes = [
-    { primary: '#00bcd4', secondary: '#ff33aa' }, 
-    { primary: '#ff9800', secondary: '#4caf50' }, 
-    { primary: '#e91e63', secondary: '#673ab7' }  
-];
-let currentSchemeIndex = 0;
-
-function toggleNeonColors() {
-    currentSchemeIndex = (currentSchemeIndex + 1) % colorSchemes.length;
-    const scheme = colorSchemes[currentSchemeIndex];
-
-    document.documentElement.style.setProperty('--neon-blue', scheme.primary);
-    document.documentElement.style.setProperty('--neon-pink', scheme.secondary);
-    
-    document.getElementById('chat-header').style.textShadow = `0 0 5px ${scheme.primary}, 0 0 10px ${scheme.primary}`;
-    document.getElementById('chat-header').style.borderColor = scheme.secondary;
-
-    sendBtn.style.background = scheme.primary;
-    themeBtn.style.background = scheme.secondary;
-}
-
-
-// Event Listener
-themeBtn.addEventListener("click", toggleNeonColors);
+// Event Listeners
 sendBtn.addEventListener("click", sendMessage);
-input.addEventListener("keypress",e=>{if(e.key==="Enter")sendMessage();});
-clearBtn.addEventListener("click",clearChat);
+input.addEventListener("keypress", e => { 
+    if (e.key === "Enter" && !sendBtn.disabled) sendMessage(); 
+});
+clearBtn.addEventListener("click", clearChat);
 </script>
 </body>
 </html>
