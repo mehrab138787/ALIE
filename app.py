@@ -5,14 +5,19 @@ import requests
 app = Flask(__name__)
 app.secret_key = "supersecretkey123"
 
-# کلید API را از متغیر محیطی بخوان
+# کلید API فقط از Environment Variable خوانده شود
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-# URL API OpenRouter
+# اگر کلید تنظیم نشده باشد، برنامه متوقف شود و خطا بدهد
+if not API_KEY:
+    raise ValueError(
+        "❌ متغیر محیطی OPENROUTER_API_KEY پیدا نشد! لطفاً کلید API را در محیط محلی خود تنظیم کنید."
+    )
+
+print("API_KEY is set ✅")  # فقط تایید می‌کنیم که کلید موجود است
+
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-
 MODEL_NAME = "deepseek/deepseek-chat"
-
 
 TRIGGER_KEYWORDS = [
     "سازندت کیه", "تو کی هستی", "چه شرکتی",
@@ -172,11 +177,10 @@ def chat():
     # پاسخ ثابت برای سوالات سازنده و لیدر
     if any(keyword in lower_msg for keyword in TRIGGER_KEYWORDS):
         if "لیدر تیم noctovex" in lower_msg or "رهبر تیم noctovex" in lower_msg:
-            return jsonify({"reply": "لیدر تیم NOCTOVEX، مهراب هست. او مدیریت تیم، برنامه‌ریزی پروژه‌ها و هدایت اعضا را بر عهده دارد و تجربه فنی و رهبری بالایی دارد. 👑"})
+            return jsonify({"reply": "لیدر تیم NOCTOVEX، مهراب هست. او مدیریت تیم، برنامه‌ریزی پروژه‌ها و هدایت اعضا را بر عهده دارد. 👑"})
         else:
             return jsonify({"reply": "تیم NOCTOVEX 🛡️"})
 
-    # ایجاد یا بازیابی مکالمه
     if "conversation" not in session:
         session["conversation"] = []
 
@@ -188,12 +192,28 @@ def chat():
         "Content-Type": "application/json",
         "Authorization": f"Bearer {API_KEY}"
     }
-    data = {"model": MODEL_NAME, "messages": messages_list}
+
+    # حداکثر 500 توکن برای جلوگیری از خطای 402
+    max_tokens = min(500, max(100, len(user_message) * 2))
+
+    data = {
+        "model": MODEL_NAME,
+        "messages": messages_list,
+        "max_tokens": max_tokens
+    }
 
     try:
-        response = requests.post(OPENROUTER_URL, json=data, headers=headers)
+        response = requests.post(OPENROUTER_URL, json=data, headers=headers, timeout=10)
         res_json = response.json()
         ai_message = res_json["choices"][0]["message"]["content"]
+
+        # نمایش توکن مصرف شده در CMD
+        usage = res_json.get("usage", {})
+        prompt_tokens = usage.get("prompt_tokens", 0)
+        completion_tokens = usage.get("completion_tokens", 0)
+        total_tokens = usage.get("total_tokens", 0)
+        print(f"💡 توکن مصرف شده: {total_tokens} (Prompt: {prompt_tokens}, Completion: {completion_tokens})")
+
     except Exception as e:
         print("ERROR:", e)
         ai_message = "⚠️ مشکلی پیش اومد!"
@@ -212,6 +232,5 @@ def clear():
     return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 5000))  # اگر متغیر PORT از Render موجود نبود، 5000 استفاده می‌کنه
-    app.run(host="0.0.0.0", port=port)        # debug=True رو حذف کردیم
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
