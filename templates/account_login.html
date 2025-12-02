@@ -1,1 +1,103 @@
-<!DOCTYPE html><html lang="fa"><head>    <meta charset="UTF-8">    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">    <title>???? ? ??? ??? - Cyrus AI</title>    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">    <style>        /* ==================== ??? Variables & Global Reset (?? ???????) ==================== */        :root {            --app-height: 100vh;            --bg-dark: #070707;             --card-dark: rgba(28, 28, 28, 0.85);             --accent-color: #1a1a1a; /* ??? ???? ? ???????? ????? */            --highlight-color: #03A9F4; /* ??? ?????? (?? ????) */            --glow-color: rgba(3, 169, 244, 0.3); /* ???? ???? ?????? */            --text-color: #FAFAFA;            --muted-text: #999999;            --border-radius: 15px;             --neum-dark: rgba(0, 0, 0, 0.9);            --neum-light: rgba(255, 255, 255, 0.05);         }        * { margin:0; padding:0; box-sizing:border-box; }        body {            font-family:'Vazirmatn', sans-serif;            background: var(--bg-dark);            color: var(--text-color);            width: 100vw; height: var(--app-height); overflow-x: hidden;            display: flex; justify-content: center; align-items: flex-start;        }        #page-container {            width: 100%; height: var(--app-height); max-width: 600px;            display: flex; flex-direction: column;            background: var(--card-dark);            backdrop-filter: blur(10px);             -webkit-backdrop-filter: blur(10px);            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);            position: relative;            overflow-y: auto;            margin: 0 auto;             padding-top: 60px;             padding-bottom: 60px; /* ???? ???? ???? ???? ???? */        }                @media (max-width: 600px) {            #page-container { padding-top: 55px; }        }        @media (min-width: 601px) {            #page-container { padding-top: 60px; }         }                /* ==================== ?? Header ==================== */        #page-header {            position: fixed; top: 0; left: 0; right: 0;            max-width: 600px; margin: 0 auto;            padding: 15px 20px; background: var(--bg-dark);             color: var(--text-color); font-size: 1.6rem; font-weight: 700;            border-bottom: 2px solid var(--highlight-color);             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7);            z-index: 50; display: flex; align-items: center; direction: rtl;        }                #back-btn {            background: transparent; border: none;            color: var(--highlight-color); font-size: 1.5rem;            margin-left: 15px; cursor: pointer; transition: transform 0.2s ease;        }        #back-btn:active { transform: scale(0.9); }        /* ==================== ?? Content Area ==================== */        #content {            flex: 1; padding: 30px 20px; direction: rtl; line-height: 1.8;            background: rgba(0, 0, 0, 0.2);             display: flex; flex-direction: column; align-items: center; justify-content: center;         }        .auth-container {            width: 100%;            max-width: 400px;             text-align: center;        }        .card {            background: var(--accent-color);            padding: 40px 30px;             border-radius: var(--border-radius);            box-shadow: 5px 5px 15px var(--neum-dark), -5px -5px 15px var(--neum-light);            border-left: 5px solid var(--highlight-color);        }                .card h3 {            color: var(--highlight-color); margin-bottom: 25px;            font-weight: 700; font-size: 1.8rem;            text-shadow: 0 0 5px var(--glow-color);             display: flex; align-items: center; justify-content: center;        }        .card h3 i {            margin-left: 15px;        }        /* ?? ???? ??? ???/????? ?? ????? */        .google-btn {            display: flex; align-items: center; justify-content: center;            width: 100%; padding: 15px;            background: #4285F4;             color: white; border-radius: 10px;            font-size: 1.2rem; font-weight: 700;            cursor: pointer; transition: background 0.2s ease, transform 0.2s ease;            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);            text-decoration: none;        }        .google-btn i {            margin-left: 15px;             font-size: 1.5rem;            color: white;         }        .google-btn:hover {             background: #3376E2;             transform: translateY(-2px);        }                .privacy-note {            margin-top: 25px;            font-size: 0.9rem;            color: var(--muted-text);        }        .privacy-note a {            color: var(--highlight-color);            text-decoration: none;            transition: color 0.2s ease;        }        .privacy-note a:hover {             color: #00d4ff;        }        @media (max-width: 600px) {            #content { padding: 20px; }            .card { padding: 30px 20px; }            .card h3 { font-size: 1.5rem; margin-bottom: 20px; }            .google-btn { font-size: 1.1rem; padding: 12px; }        }                /* ==================== ?? Footer (????) ==================== */        #page-footer {            padding: 15px;             background: var(--bg-dark);            text-align: center; font-size: 0.8rem;            color: var(--muted-text);             border-top: 1px solid var(--accent-color);            box-shadow: 0 -5px 10px rgba(0, 0, 0, 0.5);                        position: fixed;             bottom: 0; left: 0; right: 0;             max-width: 600px;            margin: 0 auto;            z-index: 50;         }    </style></head><body>    <div id="page-container">        <div id="page-header">            <button id="back-btn" onclick="window.history.back()" title="?????? ?? ??"><i class="fas fa-arrow-right"></i></button>            <span id="page-title">???? ?????? / ?????</span>        </div>        <div id="content">            <div class="auth-container">                <div class="card">                    <h3><i class="fas fa-user-lock"></i> ??? ??? ? ????</h3>                                        <p style="margin-bottom: 30px; color: var(--muted-text);">                        ???? ????? ??????? ?? Cyrus AI? ????? ?? ???? **????? ????** ??? ???? ????. ??? ?????? ???? ???? ? ???? ??? ????? ???? ?????.                    </p>                                        <a href="/login_google" class="google-btn">                        <i class="fab fa-google"></i> ??? ??? / ????? ?? ?????                    </a>                                        <p class="privacy-note">                        ?? ????? ??? <a href="#">?????? ? ???? ?????</a> ?? ?? ?????????.                    </p>                </div>            </div>        </div>                <div id="page-footer">            **&copy;** 2025 Cyrus AI. ????? ???? ????? ???.        </div>    </div>        <script>        // ????? ?????? ?????? ???? ??????        function setAppHeight() {            document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);        }        window.addEventListener('resize', setAppHeight);        window.addEventListener('orientationchange', setAppHeight);        setAppHeight();    </script></body></html>
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ورود/ثبت نام با ایمیل</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        /* (استایل‌های قبلی شما برای اکانت را اینجا قرار دهید) */
+        /* یا از استایل‌های پایه زیر استفاده کنید */
+        :root {
+            --bg-dark: #070707; --card-dark: #1e1e1e; --highlight-color: #03A9F4; 
+            --text-color: #FAFAFA; --error-color: #FF4444; --success-color: #00CC66;
+            --border-radius: 12px;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Vazirmatn', sans-serif;}
+        body { background: var(--bg-dark); color: var(--text-color); display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .login-card { background: var(--card-dark); padding: 30px; border-radius: var(--border-radius); width: 90%; max-width: 400px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5); direction: rtl;}
+        .login-card h2 { text-align: center; color: var(--highlight-color); margin-bottom: 30px; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: #ccc; }
+        .input-group input { width: 100%; padding: 12px; border: 1px solid #333; border-radius: 8px; background: #2a2a2a; color: var(--text-color); font-size: 1rem; outline: none; transition: border-color 0.3s;}
+        .input-group input:focus { border-color: var(--highlight-color); }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; background: var(--highlight-color); color: var(--bg-dark); font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: background-color 0.3s, opacity 0.3s;}
+        button:hover:not(:disabled) { background: #0077C0; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .status-message { margin-top: 20px; padding: 10px; border-radius: 8px; text-align: center; }
+        .status-message.error { background: rgba(255, 68, 68, 0.2); color: var(--error-color); }
+        .status-message.success { background: rgba(0, 204, 102, 0.2); color: var(--success-color); }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <h2><i class="fas fa-envelope"></i> ورود یا ثبت نام با ایمیل</h2>
+    <div class="input-group">
+        <label for="email">آدرس ایمیل</label>
+        <input type="email" id="email" placeholder="مثلاً: yourname@gmail.com" required>
+    </div>
+    
+    <button id="send-code-btn" onclick="sendCode()">
+        درخواست کد تأیید
+    </button>
+    
+    <div id="status-message" class="status-message" style="display:none;"></div>
+</div>
+
+<script>
+    const emailInput = document.getElementById('email');
+    const sendCodeBtn = document.getElementById('send-code-btn');
+    const statusDiv = document.getElementById('status-message');
+
+    function showStatus(message, type) {
+        statusDiv.textContent = message;
+        statusDiv.className = 'status-message ' + type;
+        statusDiv.style.display = 'block';
+    }
+
+    async function sendCode() {
+        const email = emailInput.value.trim();
+        if (!email) {
+            showStatus("لطفاً یک آدرس ایمیل معتبر وارد کنید.", 'error');
+            return;
+        }
+
+        sendCodeBtn.disabled = true;
+        sendCodeBtn.textContent = "در حال ارسال کد...";
+        showStatus("در حال ارسال کد به ایمیل شما...", 'success');
+
+        try {
+            const response = await fetch("/send_code", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: email })
+            });
+
+            const data = await response.json();
+            
+            if (response.ok && data.status === "success") {
+                showStatus("✅ " + data.message + " در حال انتقال...", 'success');
+                // 💡 انتقال به صفحه تأیید کد
+                setTimeout(() => {
+                    window.location.href = `/verify_page?email=${encodeURIComponent(email)}`;
+                }, 1500);
+
+            } else {
+                showStatus("❌ " + data.message, 'error');
+                sendCodeBtn.textContent = "درخواست کد تأیید";
+                sendCodeBtn.disabled = false;
+            }
+
+        } catch (e) {
+            console.error("Fetch Error:", e);
+            showStatus("⚠️ خطای شبکه یا سرور رخ داد.", 'error');
+            sendCodeBtn.textContent = "درخواست کد تأیید";
+            sendCodeBtn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>گفتگوهای من - Cyrus AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #070707; --card-dark: #1e1e1e; --highlight-color: #03A9F4; 
+            --text-color: #FAFAFA; --muted-text: #999999;
+            --border-radius: 12px;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Vazirmatn', sans-serif;}
+        body { background: var(--bg-dark); color: var(--text-color); min-height: 100vh; direction: rtl;}
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        h2 { 
+            text-align: center; 
+            color: var(--highlight-color); 
+            margin-bottom: 30px; 
+            border-bottom: 2px solid var(--highlight-color); 
+            padding-bottom: 10px;
+            text-shadow: 0 0 8px rgba(3, 169, 244, 0.4);
+        }
+        .conversation-list { display: flex; flex-direction: column; gap: 15px; }
+        
+        .conversation-item {
+            background: var(--card-dark); 
+            padding: 15px; 
+            border-radius: var(--border-radius); 
+            border-right: 4px solid var(--highlight-color); 
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .conversation-item:hover {
+            transform: translateX(-5px);
+            background: #282828;
+        }
+        .conversation-item h3 {
+            color: var(--text-color);
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+        .conversation-item h3 i {
+            margin-left: 10px;
+            color: var(--highlight-color);
+        }
+        .conversation-item p {
+            color: var(--muted-text);
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+        .conversation-item small {
+            display: block;
+            text-align: left; /* نمایش زمان در سمت چپ */
+            color: #666;
+            font-size: 0.8rem;
+        }
+        #loading-message { text-align: center; color: var(--highlight-color); margin-top: 50px;}
+        
+        .back-btn {
+            background: transparent; border: none;
+            color: var(--highlight-color); font-size: 1.5rem;
+            cursor: pointer; position: absolute; top: 20px; right: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <button class="back-btn" onclick="window.history.back()" title="بازگشت"><i class="fas fa-arrow-right"></i></button>
+    <h2><i class="fas fa-history"></i> آرشیو گفتگوهای من</h2>
+    
+    <div id="loading-message">در حال بارگذاری گفتگوها...</div>
+    <div id="conversation-list" class="conversation-list" style="display:none;">
+        </div>
+</div>
+
+<script>
+    const listContainer = document.getElementById('conversation-list');
+    const loadingMessage = document.getElementById('loading-message');
+
+    async function loadConversations() {
+        try {
+            const response = await fetch('/get_conversations_list');
+            const data = await response.json();
+
+            loadingMessage.style.display = 'none';
+
+            if (data.status === 'success' && data.conversations.length > 0) {
+                listContainer.style.display = 'flex';
+                data.conversations.forEach(chat => {
+                    const item = document.createElement('div');
+                    item.className = 'conversation-item';
+                    item.setAttribute('data-id', chat.id);
+                    item.innerHTML = `
+                        <h3><i class="fas fa-comment-dots"></i> ${chat.title}</h3>
+                        <p>${chat.preview}</p>
+                        <small>آخرین بروزرسانی: ${chat.last_update}</small>
+                    `;
+                    // 💡 فراخوانی تابع بارگذاری چت هنگام کلیک
+                    item.onclick = () => loadChat(chat.id);
+                    listContainer.appendChild(item);
+                });
+            } else if (data.status === 'success' && data.conversations.length === 0) {
+                listContainer.style.display = 'block';
+                listContainer.innerHTML = '<p style="color:var(--muted-text); text-align:center;">هنوز گفتگویی برای نمایش وجود ندارد.</p>';
+            } else {
+                listContainer.style.display = 'block';
+                listContainer.innerHTML = `<p style="color:red; text-align:center;">خطا در بارگذاری: ${data.message}</p>`;
+            }
+
+        } catch (error) {
+            loadingMessage.style.display = 'none';
+            listContainer.style.display = 'block';
+            listContainer.innerHTML = '<p style="color:red; text-align:center;">خطای شبکه در ارتباط با سرور.</p>';
+            console.error('Error fetching conversations:', error);
+        }
+    }
+
+    async function loadChat(chatId) {
+        // سوال از کاربر برای تایید
+        if (!confirm('آیا مطمئن هستید که می‌خواهید این گفتگو را بارگذاری کنید؟ این کار چت فعلی شما را جایگزین می‌کند.')) {
+            return;
+        }
+        
+        try {
+            // نمایش پیام انتظار
+            listContainer.innerHTML = '<p style="text-align:center; color: var(--highlight-color);">در حال بارگذاری گفتگو...</p>';
+
+            const response = await fetch(`/load_conversation/${chatId}`, {
+                method: 'POST', // استفاده از POST
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                // انتقال به صفحه اصلی پس از بارگذاری موفقیت‌آمیز
+                window.location.href = data.redirect;
+            } else {
+                alert('خطا در بارگذاری گفتگو: ' + data.message);
+                loadConversations(); // بارگذاری مجدد لیست در صورت خطا
+            }
+        } catch (error) {
+            alert('خطای شبکه در بارگذاری گفتگو.');
+            loadConversations(); // بارگذاری مجدد لیست در صورت خطا
+        }
+    }
+
+    // فراخوانی تابع هنگام بارگذاری صفحه
+    window.onload = loadConversations;
+</script>
+
+</body>
+</html>

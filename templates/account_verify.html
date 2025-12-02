@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تأیید کد Cyrus AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        /* (از استایل‌های account_login.html استفاده کنید) */
+        :root {
+            --bg-dark: #070707; --card-dark: #1e1e1e; --highlight-color: #03A9F4; 
+            --text-color: #FAFAFA; --error-color: #FF4444; --success-color: #00CC66;
+            --border-radius: 12px;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Vazirmatn', sans-serif;}
+        body { background: var(--bg-dark); color: var(--text-color); display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .login-card { background: var(--card-dark); padding: 30px; border-radius: var(--border-radius); width: 90%; max-width: 400px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5); direction: rtl;}
+        .login-card h2 { text-align: center; color: var(--highlight-color); margin-bottom: 30px; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: #ccc; }
+        .input-group input { width: 100%; padding: 12px; border: 1px solid #333; border-radius: 8px; background: #2a2a2a; color: var(--text-color); font-size: 1.2rem; text-align: center; outline: none; transition: border-color 0.3s;}
+        .input-group input:focus { border-color: var(--highlight-color); }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; background: var(--highlight-color); color: var(--bg-dark); font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: background-color 0.3s, opacity 0.3s;}
+        button:hover:not(:disabled) { background: #0077C0; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .status-message { margin-top: 20px; padding: 10px; border-radius: 8px; text-align: center; }
+        .status-message.error { background: rgba(255, 68, 68, 0.2); color: var(--error-color); }
+        .status-message.success { background: rgba(0, 204, 102, 0.2); color: var(--success-color); }
+        .email-display { font-size: 0.9rem; color: #aaa; text-align: center; margin-bottom: 15px; }
+        .resend-link { display: block; text-align: center; margin-top: 15px; font-size: 0.9rem; color: var(--highlight-color); cursor: pointer; text-decoration: none;}
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <h2><i class="fas fa-shield-alt"></i> تأیید نهایی</h2>
+    
+    <div class="email-display">
+        کد تأیید به آدرس زیر ارسال شده است:<br>
+        <strong id="email-address"></strong>
+    </div>
+
+    <div class="input-group">
+        <label for="code">کد ۶ رقمی تأیید</label>
+        <input type="text" id="code-input" placeholder="مثلاً: 123456" maxlength="6" required>
+    </div>
+    
+    <button id="verify-btn" onclick="verifyCode()">
+        تأیید و ورود
+    </button>
+    
+    <a href="#" class="resend-link" onclick="resendCode()">ارسال مجدد کد</a>
+
+    <div id="status-message" class="status-message" style="display:none;"></div>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const email = urlParams.get('email');
+    
+    const emailDisplay = document.getElementById('email-address');
+    const codeInput = document.getElementById('code-input');
+    const verifyBtn = document.getElementById('verify-btn');
+    const statusDiv = document.getElementById('status-message');
+
+    if (email) {
+        emailDisplay.textContent = email;
+    } else {
+        window.location.href = '/account.html'; // اگر ایمیل در URL نبود، برگردان
+    }
+
+    function showStatus(message, type) {
+        statusDiv.textContent = message;
+        statusDiv.className = 'status-message ' + type;
+        statusDiv.style.display = 'block';
+    }
+
+    async function verifyCode() {
+        const code = codeInput.value.trim();
+        if (code.length !== 6 || isNaN(code)) {
+            showStatus("لطفاً کد ۶ رقمی صحیح را وارد کنید.", 'error');
+            return;
+        }
+
+        verifyBtn.disabled = true;
+        verifyBtn.textContent = "در حال تأیید...";
+        showStatus("در حال بررسی کد تأیید...", 'success');
+
+        try {
+            const response = await fetch("/verify_code", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: email, code: code })
+            });
+
+            const data = await response.json();
+            
+            if (response.ok && data.status === "success") {
+                showStatus("✅ تأیید موفقیت‌آمیز. خوش آمدید!", 'success');
+                // 💡 انتقال به صفحه پروفایل
+                setTimeout(() => {
+                    window.location.href = data.redirect; 
+                }, 1500);
+
+            } else {
+                showStatus("❌ " + data.message, 'error');
+                verifyBtn.textContent = "تأیید و ورود";
+                verifyBtn.disabled = false;
+            }
+
+        } catch (e) {
+            console.error("Fetch Error:", e);
+            showStatus("⚠️ خطای شبکه یا سرور رخ داد.", 'error');
+            verifyBtn.textContent = "تأیید و ورود";
+            verifyBtn.disabled = false;
+        }
+    }
+    
+    // 💡 تابع ارسال مجدد کد
+    async function resendCode() {
+        const resendLink = document.querySelector('.resend-link');
+        resendLink.style.pointerEvents = 'none'; // غیرفعال کردن کلیک مجدد
+        resendLink.textContent = 'در حال ارسال مجدد...';
+        
+        try {
+            const response = await fetch("/send_code", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: email })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.status === "success") {
+                showStatus("✅ کد جدید ارسال شد. 5 دقیقه دیگر صبر کنید.", 'success');
+            } else {
+                showStatus("❌ خطایی در ارسال مجدد کد رخ داد.", 'error');
+            }
+        } catch (e) {
+            showStatus("⚠️ خطای شبکه در ارسال مجدد.", 'error');
+        } finally {
+            // فعال کردن مجدد دکمه بعد از 60 ثانیه
+            setTimeout(() => {
+                resendLink.textContent = 'ارسال مجدد کد';
+                resendLink.style.pointerEvents = 'auto';
+            }, 60000); 
+        }
+    }
+</script>
+
+</body>
+</html>
