@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بازی حدس عدد پیشرفته</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* 🎨 متغیرهای پروژه */
+        :root {
+            --bg-dark: #070707;
+            --card-dark: rgba(28, 28, 28, 0.9);
+            --highlight-color: #03A9F4; /* آبی الکتریکی */
+            --success-color: #4CAF50; /* سبز */
+            --fail-color: #F44336; /* قرمز */
+            --text-color: #FAFAFA;
+            --muted-text: #999;
+            --border-radius: 15px;
+        }
+
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-color);
+            direction: rtl;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* 🃏 کانتینر اصلی بازی */
+        .game-container {
+            width: 100%;
+            max-width: 450px;
+            background: var(--card-dark);
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            padding: 30px;
+            text-align: center;
+            border-top: 5px solid var(--highlight-color);
+        }
+
+        h1 {
+            color: var(--highlight-color);
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-size: 1.1rem;
+            color: var(--muted-text);
+            margin-bottom: 25px;
+        }
+
+        /* ⌨️ قسمت ورودی */
+        #guess-input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid var(--accent-color);
+            border-radius: 8px;
+            font-size: 1.5rem;
+            text-align: center;
+            background: var(--bg-dark);
+            color: var(--text-color);
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        #guess-input:focus {
+            border-color: var(--highlight-color);
+        }
+
+        /* 🚀 دکمه‌ها */
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            margin-bottom: 10px;
+        }
+
+        #submit-btn {
+            background-color: var(--highlight-color);
+            color: var(--bg-dark);
+            box-shadow: 0 4px 15px rgba(3, 169, 244, 0.4);
+        }
+        #submit-btn:hover {
+            background-color: #008DCC;
+            transform: translateY(-2px);
+        }
+        #submit-btn:disabled {
+            background-color: #444;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #reset-btn {
+            background-color: var(--card-dark);
+            color: var(--text-color);
+            border: 1px solid var(--muted-text);
+        }
+        #reset-btn:hover {
+            background-color: #333;
+        }
+
+        /* 📢 قسمت بازخورد */
+        #message {
+            min-height: 40px;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            /* استایل پیش‌فرض برای خالی بودن */
+            background: none; 
+            color: var(--text-color);
+        }
+        
+        .success {
+            background-color: var(--success-color);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+        .fail {
+            background-color: var(--fail-color);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+        }
+
+        /* 🗂️ قسمت آمار */
+        #attempts-display {
+            color: var(--highlight-color);
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-top: 15px;
+        }
+        
+        /* 🔙 دکمه بازگشت */
+        .back-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-top: 20px;
+            background: #444;
+            color: var(--text-color);
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 500;
+            transition: background 0.2s;
+            /* اطمینان از اینکه لینک به درستی دیده می شود */
+            z-index: 10; 
+            position: relative; 
+        }
+        .back-btn:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <h1><i class="fas fa-brain"></i> حدس عدد مخفی</h1>
+    <p>عددی بین **۱ تا ۱۰۰** را وارد کنید. هدف این است که در کمترین تعداد حدس، عدد صحیح را پیدا کنید!</p>
+
+    <input type="number" id="guess-input" placeholder="عدد خود را وارد کنید..." min="1" max="100">
+    <button id="submit-btn" class="btn"><i class="fas fa-check"></i> حدس می‌زنم!</button>
+    <button id="reset-btn" class="btn"><i class="fas fa-redo"></i> شروع مجدد</button>
+
+    <div id="message"></div>
+    <div id="attempts-display">تعداد حدس‌ها: ۰</div>
+
+    <a href="{{ url_for('game_center') }}" class="back-btn" target="_self"><i class="fas fa-arrow-right"></i> بازگشت به منو</a>
+</div>
+
+<script>
+    // تنظیم ارتفاع برای موبایل (بهبود UX)
+    document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+    window.addEventListener('resize', () => {
+        document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+    });
+
+    const input = document.getElementById('guess-input');
+    const submitBtn = document.getElementById('submit-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const messageDisplay = document.getElementById('message');
+    const attemptsDisplay = document.getElementById('attempts-display');
+    
+    let targetNumber;
+    let attempts;
+    let gameOver;
+
+    /** 🚀 تابع شروع یا ریست بازی */
+    function initGame() {
+        targetNumber = Math.floor(Math.random() * 100) + 1; 
+        attempts = 0;
+        gameOver = false;
+        
+        messageDisplay.textContent = 'بازی جدید شروع شد! موفق باشید.';
+        messageDisplay.className = '';
+        attemptsDisplay.textContent = 'تعداد حدس‌ها: ۰';
+        input.value = '';
+        input.disabled = false;
+        submitBtn.disabled = false;
+        input.focus();
+        
+        console.log(`عدد مخفی برای تقلب 😉: ${targetNumber}`);
+    }
+
+    /** 🧠 تابع اصلی حدس زدن */
+    function checkGuess() {
+        if (gameOver) return;
+
+        const userGuess = parseInt(input.value);
+
+        if (isNaN(userGuess) || userGuess < 1 || userGuess > 100) {
+            messageDisplay.textContent = 'لطفاً یک عدد صحیح بین ۱ تا ۱۰۰ وارد کنید.';
+            messageDisplay.className = 'fail';
+            return;
+        }
+
+        attempts++;
+        attemptsDisplay.textContent = `تعداد حدس‌ها: ${attempts}`;
+        
+        if (userGuess === targetNumber) {
+            messageDisplay.textContent = `تبریک! شما در ${attempts} حدس، عدد ${targetNumber} را درست حدس زدید.`;
+            messageDisplay.className = 'success';
+            gameOver = true;
+            submitBtn.disabled = true;
+            input.disabled = true;
+        } else if (userGuess < targetNumber) {
+            messageDisplay.textContent = 'عدد مخفی بزرگ‌تر است. بالاتر حدس بزنید!';
+            messageDisplay.className = 'fail';
+        } else {
+            messageDisplay.textContent = 'عدد مخفی کوچک‌تر است. پایین‌تر حدس بزنید!';
+            messageDisplay.className = 'fail';
+        }
+
+        input.value = '';
+        input.focus();
+    }
+
+    // ----------------------------------------------------
+    // 📢 Event Listeners
+    // ----------------------------------------------------
+    
+    submitBtn.addEventListener('click', checkGuess);
+    resetBtn.addEventListener('click', initGame);
+    
+    input.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+            checkGuess();
+        }
+    });
+
+    // شروع بازی هنگام بارگذاری صفحه
+    initGame();
+
+</script>
+</body>
+</html>

@@ -471,6 +471,29 @@ def image_page():
     # فایل: image.html
     return render_template("image.html", logged_in=session.get('user_id') is not None)
 
+
+# =========================================================
+# 🎮 مسیرهای بازی
+# =========================================================
+@app.route("/game")
+def game_center():
+    """مسیر صفحه اصلی بازی و سرگرمی (منوی بازی‌ها)"""
+    # فایل: game.html
+    return render_template("game.html", logged_in=session.get('user_id') is not None)
+
+@app.route("/game/car")
+def car_game():
+    """مسیر بازی ماشین (Drive Mad)"""
+    # فایل: car_game.html
+    return render_template("car_game.html", logged_in=session.get('user_id') is not None)
+
+@app.route("/game/guess")
+def guess_game():
+    """مسیر بازی حدس عدد"""
+    # فایل: number_guess_game.html
+    return render_template("number_guess_game.html", logged_in=session.get('user_id') is not None)
+
+
 # --- مسیرهای احراز هویت ---
 
 @app.route("/login")

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مرکز بازی Cyrus AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #070707; 
+            --card-dark: rgba(28, 28, 28, 0.95); 
+            --highlight-color: #03A9F4; 
+            --text-color: #FAFAFA;
+            --border-radius: 15px; 
+        }
+
+        body { 
+            font-family:'Vazirmatn', sans-serif; 
+            background: var(--bg-dark); 
+            color: var(--text-color); 
+            direction: rtl; 
+            text-align: center;
+            margin: 0;
+            padding: 40px 20px;
+        }
+
+        .header {
+            margin-bottom: 40px;
+            text-align: right;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        h1 {
+            color: var(--highlight-color);
+            font-size: 2.2rem;
+            margin: 0;
+        }
+
+        /* 🕹️ Game Grid */
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* 🃏 Game Card */
+        .game-card {
+            background: var(--card-dark);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            text-decoration: none;
+            color: var(--text-color);
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            border: 2px solid transparent;
+        }
+        
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+            border-color: var(--highlight-color);
+        }
+
+        /* 🖼️ استایل تصویر جدید */
+        .game-image {
+            width: 120px; /* اندازه تصویر */
+            height: 120px;
+            border-radius: 50%; /* گرد کردن تصویر */
+            object-fit: cover;
+            margin-bottom: 15px;
+            border: 4px solid var(--highlight-color);
+            transition: transform 0.3s;
+        }
+        
+        .game-card:hover .game-image {
+            transform: scale(1.05); /* افکت زوم هنگام هاور */
+        }
+        
+        /* ❌ حذف استایل آیکون قدیمی */
+        .game-icon {
+            display: none; 
+        }
+
+        .game-card h2 {
+            font-size: 1.5rem;
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: var(--text-color);
+        }
+
+        .game-card p {
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+
+        .new-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: #E91E63;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .back-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-top: 40px;
+            background: #444;
+            color: var(--text-color);
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .back-btn:hover {
+            background: #555;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🕹️ مرکز بازی و سرگرمی</h1>
+        <p style="color: #999; margin-top: 5px;">بازی‌های مبتنی بر هوش مصنوعی و وب را اینجا پیدا کنید.</p>
+    </div>
+
+    <div class="game-grid">
+        
+        <a href="{{ url_for('car_game') }}" class="game-card">
+            
+            <img src="{{ url_for('static', filename='images/car_game_icon.png') }}" 
+                 alt="بازی ماشین" 
+                 class="game-image">
+            
+            <h2>بازی ماشین (Drive Mad)</h2>
+            <p>یک بازی جذاب و چالش‌برانگیز برای رانندگی و عبور از موانع دیوانه‌وار!</p>
+            <span class="new-badge">جدید</span>
+        </a>
+
+        <a href="{{ url_for('guess_game') }}" class="game-card">
+            
+            <img src="{{ url_for('static', filename='images/number_guess_icon.png') }}" 
+                 alt="بازی حدس عدد" 
+                 class="game-image">
+            
+            <h2>حدس عدد</h2>
+            <p>توانایی ذهن‌خوانی خود را با حدس زدن عدد تصادفی ما تست کنید.</p>
+        </a>
+        
+        <div class="game-card" style="opacity: 0.5; cursor: not-allowed;">
+            <img src="{{ url_for('static', filename='images/puzzle_icon.png') }}" 
+                 alt="بازی پازل" 
+                 class="game-image" style="border-color: #ffc107;">
+            
+            <h2>بازی پازل (بزودی)</h2>
+            <p>برای آرامش و تمرکز، یک پازل روزانه را حل کنید.</p>
+        </div>
+        
+    </div>
+
+    <a href="{{ url_for('index') }}" class="back-btn"><i class="fas fa-arrow-right"></i> بازگشت به چت</a>
+
+</body>
+</html>
