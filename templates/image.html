@@ -224,7 +224,7 @@
 
 <div id="app-container">
     <div id="img-header">
-        <button id="back-btn" title="بازگشت" onclick="window.location.href='/';"> 
+        <button id="back-btn" title="بازگشت"> 
             <i class="fas fa-arrow-right"></i>
         </button>
         تولید تصویر هوشمند
@@ -264,6 +264,7 @@
     const downloadBtn = document.getElementById("download-btn");
     const downloadLink = document.getElementById("download-link");
     const statusMessage = document.getElementById("status-message");
+    const backBtn = document.getElementById('back-btn'); // 👈👈👈 عنصر دکمه برگشت
 
     const LOCAL_STORAGE_KEY = 'cyrus_image_prompt';
 
@@ -382,6 +383,12 @@
     generateBtn.addEventListener("click", generateImage);
     promptInput.addEventListener("keypress", e => { 
         if (e.key === "Enter" && !generateBtn.disabled) generateImage(); 
+    });
+
+    // 💡👈👈👈 اصلاح مهم برای افزایش سرعت دکمه برگشت: استفاده از history.back()
+    backBtn.addEventListener('click', () => {
+        // این متد اغلب از کش مرورگر (BFCache) استفاده می‌کند و سرعت بازگشت را بسیار بالا می‌برد.
+        window.history.back();
     });
 </script>
 </body>

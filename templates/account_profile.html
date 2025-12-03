@@ -3,22 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>پروفایل - Cyrus AI</title>
+    <title>پروفایل کاربری - Cyrus AI</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <style>
-        /* استایل‌های CSS از قبل اینجا هستند */
+        /* تنظیمات اصلی و متغیرها */
         :root {
             --app-height: 100vh;
-            --bg-dark: #070707; 
-            --card-dark: rgba(28, 28, 28, 0.85); 
-            --accent-color: #222222; 
+            --bg-dark: #0F0F0F; 
+            --card-dark: #1A1A1A; 
+            --accent-color: #262626; 
             --highlight-color: #03A9F4; 
-            --text-color: #FAFAFA;
-            --muted-text: #999999;
-            --border-radius: 15px; 
-            --neum-dark: rgba(0, 0, 0, 0.9);
-            --neum-light: rgba(255, 255, 255, 0.05); 
+            --highlight-hover: #008CFF;
+            --text-color: #F0F0F0;
+            --muted-text: #AAAAAA;
+            --border-radius: 18px; 
+            --neum-dark: rgba(0, 0, 0, 0.7);
+            --neum-light: rgba(255, 255, 255, 0.05);
         }
 
         * { margin:0; padding:0; box-sizing:border-box; }
@@ -26,137 +27,155 @@
             font-family:'Vazirmatn', sans-serif;
             background: var(--bg-dark);
             color: var(--text-color);
-            width: 100vw; height: var(--app-height); overflow-x: hidden;
+            width: 100vw; 
+            /* استفاده از min-height برای تضمین اسکرول */
+            min-height: 100vh; 
+            overflow-x: hidden;
             display: flex; justify-content: center; align-items: flex-start;
         }
 
         #page-container {
-            width: 100%; height: var(--app-height); max-width: 100%;
+            width: 100%; 
+            /* حذف height: var(--app-height); برای اسکرول بهتر */
+            min-height: 100vh;
+            max-width: 600px; 
             display: flex; flex-direction: column;
-            background: var(--card-dark);
-            backdrop-filter: blur(10px); 
-            -webkit-backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            background: var(--bg-dark); 
             position: relative;
             overflow-y: auto;
         }
         
-        @media (max-width: 600px) {
-            #page-container { padding-top: 55px; }
-        }
-        @media (min-width: 601px) {
-            #page-container { padding-top: 60px; } 
-        }
-        
+        /* هدر بهینه شده */
         #page-header {
-            position: fixed; top: 0; left: 0; right: 0;
-            padding: 15px 20px; background: var(--bg-dark); 
-            color: var(--text-color); text-align: right; 
-            font-size: 1.6rem; font-weight: 700;
-            border-bottom: 2px solid var(--highlight-color); 
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7);
-            z-index: 50; display: flex; align-items: center; direction: rtl;
+            position: sticky; top: 0; left: 0; right: 0;
+            padding: 15px 20px; background: var(--bg-dark);
+            color: var(--text-color); font-size: 1.5rem; font-weight: 700;
+            border-bottom: 3px solid var(--highlight-color);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            z-index: 50; display: flex; align-items: center; justify-content: space-between; direction: rtl;
         }
         
         #back-btn {
             background: transparent; border: none;
-            color: var(--highlight-color); font-size: 1.5rem;
-            margin-left: 15px; cursor: pointer; transition: transform 0.2s ease;
+            color: var(--highlight-color); font-size: 1.4rem;
+            cursor: pointer; transition: color 0.2s ease, transform 0.2s ease;
         }
+        #back-btn:hover { color: var(--highlight-hover); }
         #back-btn:active { transform: scale(0.9); }
+        #page-title { flex-grow: 1; text-align: right; padding-right: 15px; }
 
         #content {
-            flex: 1; padding: 30px; direction: rtl; line-height: 1.8;
-            background: rgba(0, 0, 0, 0.2); 
-            min-height: calc(var(--app-height) - 75px);
+            flex: 1; padding: 20px; direction: rtl; line-height: 1.8;
+            /* اطمینان از اینکه محتوا به اندازه کافی بلند باشد */
+            min-height: calc(100vh - 65px); 
         }
 
         #content h1 {
             color: var(--highlight-color);
-            font-size: 2.5rem; margin-bottom: 20px;
-            text-shadow: 0 0 8px rgba(3, 169, 244, 0.5);
-            border-bottom: 2px solid var(--accent-color);
-            padding-bottom: 10px;
+            font-size: 1.8rem; margin-bottom: 25px;
+            font-weight: 900;
+            text-shadow: 0 0 10px rgba(3, 169, 244, 0.2);
         }
 
+        /* کارت‌های شیک نئومورفیسم */
         .card {
-            background: var(--accent-color);
-            padding: 20px; border-radius: var(--border-radius);
+            background: var(--card-dark);
+            padding: 25px; border-radius: var(--border-radius);
             margin-bottom: 25px;
-            box-shadow: 5px 5px 12px var(--neum-dark), -5px -5px 12px var(--neum-light);
+            box-shadow: 8px 8px 15px var(--neum-dark), -8px -8px 15px var(--neum-light);
             border-left: 5px solid var(--highlight-color);
         }
         
         .card h3 {
-            color: var(--highlight-color); margin-bottom: 15px;
-            font-weight: 700; display: flex; align-items: center; font-size: 1.4rem;
+            color: var(--highlight-color); margin-bottom: 20px;
+            font-weight: 700; display: flex; align-items: center; font-size: 1.3rem;
+            border-bottom: 1px solid var(--accent-color);
+            padding-bottom: 10px;
         }
 
-        .card h3 i { margin-left: 10px; font-size: 1.5rem; }
+        .card h3 i { margin-left: 10px; font-size: 1.4rem; }
 
+        /* آیتم‌های اطلاعاتی بهینه شده */
         .info-item {
-            padding: 5px 0;
-            font-size: 1.1rem;
+            display: flex; justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dashed var(--accent-color);
+            font-size: 1rem;
         }
+        .info-item:last-of-type:not(.score-item) { border-bottom: none; }
+        .info-item strong { color: var(--muted-text); font-weight: 500; }
+        .info-item span { color: var(--text-color); font-weight: 600; }
         
+        /* بخش امتیازات */
         .score-item {
             display: flex; justify-content: space-between;
-            padding: 10px 0; border-bottom: 1px dashed var(--accent-color);
-            font-size: 1.1rem;
+            align-items: center;
+            padding: 12px 0; border-bottom: 1px dashed var(--accent-color);
+            font-size: 1rem;
         }
         .score-item:last-child { border-bottom: none; }
+        .score-item span:first-child { color: var(--muted-text); }
         .score-value {
-            font-weight: 700;
-            color: #4CAF50;
+            font-weight: 800;
+            color: #4CAF50; 
+            display: flex; align-items: center;
         }
         .score-item i { margin-left: 8px; color: var(--highlight-color); }
         
+        /* دکمه خروج شیک */
         .logout-btn {
             display: block; width: 100%;
-            padding: 12px; margin-top: 20px;
+            padding: 15px; margin-top: 25px;
             background: #E53935; color: white;
-            border: none; border-radius: 8px;
-            font-size: 1.1rem; font-weight: 500;
-            cursor: pointer; transition: background 0.2s ease;
+            border: none; border-radius: 12px;
+            font-size: 1.1rem; font-weight: 700;
+            cursor: pointer; transition: background 0.2s ease, box-shadow 0.3s ease;
             text-decoration: none;
             text-align: center;
+            box-shadow: 0 4px 15px rgba(229, 57, 53, 0.4);
         }
         .logout-btn:hover { background: #C62828; }
+        .logout-btn:active { transform: translateY(2px); box-shadow: 0 2px 5px rgba(229, 57, 53, 0.6); }
 
-        @media (max-width: 600px) {
-            .score-item { font-size: 1rem; }
-        }
-        
-        #page-footer {
-            padding: 15px; background: var(--bg-dark);
-            text-align: center; font-size: 0.9rem;
-            color: var(--muted-text); border-top: 1px solid var(--accent-color);
-            box-shadow: 0 -5px 10px rgba(0, 0, 0, 0.5);
+        /* استایل فوتر که اکنون داخل محتوا است */
+        #page-footer-in-content {
+            padding: 20px 0; 
+            text-align: center; 
+            font-size: 0.85rem;
+            color: #666666; /* کم‌رنگ‌تر شدن */
         }
     </style>
 </head>
 <body>
 
     <div id="page-container">
+        
         <div id="page-header">
             <button id="back-btn" onclick="window.history.back()" title="بازگشت به چت"><i class="fas fa-arrow-right"></i></button>
-            <span id="page-title">حساب کاربری: {{ user_data.first_name }}</span>
+            <span id="page-title">حساب کاربری</span>
         </div>
 
         <div id="content">
-            <h1>👋 خوش آمدید، {{ user_data.first_name }} {{ user_data.last_name }}</h1>
+            
+            <h1>👋 خوش آمدید، {{ user_data.first_name }}</h1>
             
             <div class="card">
                 <h3><i class="fas fa-id-card"></i> مشخصات فردی</h3>
                 
                 <p class="info-item">
-                    <strong>نام کامل:</strong> {{ user_data.first_name }} {{ user_data.last_name }}
+                    <strong>نام:</strong> <span>{{ user_data.first_name }}</span>
                 </p>
+                
                 <p class="info-item">
-                    <strong>حرفه:</strong> {{ user_data.profession }}
+                    <strong>نام خانوادگی:</strong> <span>{{ user_data.last_name }}</span>
                 </p>
+                
                 <p class="info-item">
-                    <strong>ایمیل:</strong> <span style="color: var(--highlight-color);">{{ user_data.email }}</span>
+                    <strong>حرفه:</strong> <span>{{ user_data.profession }}</span>
+                </p>
+                
+                <p class="info-item">
+                    <strong>ایمیل:</strong> <span style="color: var(--highlight-color); font-weight: 500;">{{ user_data.email }}</span>
                 </p>
             </div>
 
@@ -179,14 +198,16 @@
                 </div>
                 
                 <a href="/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> خروج از حساب کاربری</a>
+
+                </div>
+            
+            <div id="page-footer-in-content">
+                © 2025 Cyrus AI. تمامی حقوق محفوظ است.
             </div>
 
         </div>
         
-        <div id="page-footer">
-            © 2025 Cyrus AI. تمامی حقوق محفوظ است.
         </div>
-    </div>
     
     <script>
         function setAppHeight() {

@@ -27,6 +27,7 @@
             --code-text: #80DEEA; 
             --avatar-size: 45px; 
             --border-radius: 15px; 
+            --loading-color: #FFC107; /* رنگ برای "بزودی" */
         }
 
         /* ======================================================= */
@@ -49,7 +50,6 @@
             -webkit-backdrop-filter: blur(10px);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
             border-radius: 0; padding: 15px;
-            /* 💡 برای مدیریت لایه سایدبار */
             position: relative;
             overflow: hidden;
         }
@@ -61,22 +61,24 @@
             position: fixed;
             top: 0;
             right: 0;
-            width: 80%; /* 💡 پهنای سایدبار */
+            width: 80%; 
             max-width: 300px;
             height: var(--app-height);
-            background: var(--bg-dark); /* پس‌زمینه تیره */
+            background: var(--bg-dark); 
             border-left: 3px solid var(--highlight-color);
             box-shadow: -5px 0 20px rgba(0, 0, 0, 0.8);
             z-index: 1000;
-            transform: translateX(100%); /* پنهان کردن اولیه به سمت راست */
-            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* انیمیشن نرم */
+            transform: translateX(100%); 
+            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
             padding-top: 50px;
             display: flex;
             flex-direction: column;
+            /* 👈👈👈 اصلاح برای اسکرول 👈👈👈 */
+            overflow-y: auto; 
         }
 
         #drawer.open {
-            transform: translateX(0); /* باز شدن */
+            transform: translateX(0); 
         }
 
         #drawer-backdrop {
@@ -123,12 +125,32 @@
         }
 
         .drawer-link i {
-            margin-left: 15px; /* فاصله آیکون از متن */
+            margin-left: 15px; 
             font-size: 1.5rem;
             min-width: 30px;
             text-align: center;
             color: var(--highlight-color);
             text-shadow: 0 0 5px rgba(3, 169, 244, 0.7);
+        }
+        
+        /* --- استایل‌های جدید برای لینک غیرفعال (بزودی) --- */
+        .drawer-link.disabled-link {
+            cursor: not-allowed; 
+            opacity: 0.5; 
+            pointer-events: none; 
+            color: var(--muted-text) !important; 
+            padding-top: 20px;
+            padding-bottom: 20px;
+            background: var(--card-dark); 
+            box-shadow: none; 
+            border-right: 5px solid transparent;
+        }
+
+        .drawer-link.disabled-link small {
+            font-size: 0.9em;
+            font-weight: 500;
+            margin-right: 5px;
+            color: var(--loading-color); 
         }
         /* ======================================================= */
 
@@ -143,8 +165,9 @@
             text-shadow: 0 0 5px var(--highlight-color); 
         }
 
+        /* 👈👈👈 جابجایی: کنترل‌ها (مثل پاک کردن چت) الآن سمت چپ هستند 👈👈👈 */
         #header-controls {
-            position: absolute; right: 20px; top: 50%; transform: translateY(-50%); display: flex; gap: 12px;
+            position: absolute; left: 20px; top: 50%; transform: translateY(-50%); display: flex; gap: 12px;
         }
         #chat-header button {
             background: var(--bg-dark); border: none; border-radius: 50%;
@@ -156,9 +179,9 @@
         #chat-header button:hover { color: var(--highlight-color); box-shadow: 0 0 10px var(--highlight-color); }
         #chat-header button:active { transform: scale(0.9); box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light); color: var(--highlight-color); }
         
-        /* 💡 دکمه باز کردن سایدبار */
+        /* 👈👈👈 جابجایی: منو الآن سمت راست است 👈👈👈 */
         #menu-btn {
-            position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
+            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
         }
 
 
@@ -167,7 +190,6 @@
         /* ======================================================= */
         #messages {
             flex: 1; padding: 15px 10px; overflow-y: auto; 
-            /* ✅ اصلاح شده: حذف scroll-behavior: smooth برای اسکرول سریع‌تر */
             display: flex; flex-direction: column; scrollbar-width: none;
             background: rgba(0, 0, 0, 0.4); 
             border: 1px solid var(--accent-color);
@@ -178,19 +200,18 @@
         }
         #messages::-webkit-scrollbar { width: 0; height: 0; }
         
-        /* 🌟 استایل پیام اولیه در مرکز صفحه 🌟 */
         #initial-prompt {
             position: absolute; 
             top: 50%; 
             left: 50%;
-            transform: translate(-50%, -50%); /* قرارگیری دقیق در مرکز */
+            transform: translate(-50%, -50%); 
             font-size: 1.4rem; 
             font-weight: 700;
-            color: var(--muted-text); /* رنگ خاکستری ملایم */
+            color: var(--muted-text); 
             opacity: 0.6;
             text-align: center;
             padding: 20px;
-            pointer-events: none; /* تا مزاحمتی برای اسکرول ایجاد نکند */
+            pointer-events: none; 
             transition: opacity 0.3s ease;
         }
 
@@ -201,7 +222,6 @@
         }
         .user-container { justify-content: flex-end; }
 
-        /* آواتار */
         .avatar {
             width: var(--avatar-size); min-width: var(--avatar-size); height: var(--avatar-size);
             border-radius: 50%; 
@@ -217,14 +237,12 @@
         .ai-avatar { color: var(--highlight-color); } 
 
 
-        /* ------------------ حباب پیام (با انیمیشن سریع‌تر و روان‌تر) ------------------ */
         .message {
             padding: 18px 25px; 
             border-radius: 30px; 
             max-width: 75%; 
             opacity: 0;
             transform: scale(0.95); 
-            /* ✅ اصلاح شده: کاهش زمان به 0.3s و ساده‌سازی به ease-out برای حذف لگ */
             animation: bubbleIn 0.3s forwards ease-out;
             position: relative;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6); 
@@ -235,7 +253,6 @@
             padding-bottom: 35px; 
         }
         
-        /* کی‌فریم انیمیشن ورود */
         @keyframes bubbleIn { 
             0% { opacity: 0; transform: scale(0.8) translateY(10px); }
             100% { opacity: 1; transform: scale(1) translateY(0); }
@@ -252,7 +269,6 @@
             box-shadow: 5px 5px 10px var(--neum-dark), -5px -5px 10px var(--neum-light);
         }
         
-        /* جلوه Highlight نئونی */
         .highlight {
             box-shadow: 0 0 15px 3px var(--highlight-color), 0 0 5px var(--highlight-color);
             border: 2px solid var(--highlight-color);
@@ -279,12 +295,12 @@
             border-radius: 10px; margin-top: 15px; overflow-x: auto;
             border-left: 5px solid var(--highlight-color); 
             font-size: 0.9em; color: var(--code-text); font-family: monospace;
-            position: relative; /* 💡 برای قرارگیری دکمه کپی کد */
-            padding-top: 35px; /* 💡 فاصله برای دکمه کپی کد */
+            position: relative; 
+            padding-top: 35px; 
             white-space: pre-wrap;
             word-break: break-all;
         }
-        /* 💡 استایل دکمه کپی اختصاصی کد */
+        
         .code-copy-btn {
             position: absolute; top: 5px; left: 5px; right: unset; 
             background: rgba(255, 255, 255, 0.1); color: var(--muted-text);
@@ -297,7 +313,6 @@
         .code-copy-btn:hover { opacity: 1; background: rgba(3, 169, 244, 0.2); color: var(--highlight-color); }
         .code-copy-btn .fas { margin-left: 5px; }
         
-        /* افکت چشمک‌زن برای لودینگ (واقعی‌تر) */
         .loading {
             font-style: italic; opacity: 0.9; background: var(--ai-bubble-bg);
             padding-right: 5px; 
@@ -340,16 +355,15 @@
             -webkit-backdrop-filter: blur(5px);
         }
 
-        /* ------------------ دکمه تولید تصویر (فعال شده) ------------------ */
         #image-btn {
             width: 60px; height: 60px; border-radius: 50%;
-            margin-left: 10px; /* فاصله از دکمه ارسال */
+            margin-left: 10px; 
             background: var(--bg-dark); 
-            color: var(--highlight-color); /* تغییر رنگ به هایلایت */
+            color: var(--highlight-color);
             font-size: 1.5rem;
-            box-shadow: 5px 5px 10px var(--neum-dark), -5px -5px 10px var(--neum-light); /* تغییر سایه به حالت برآمده */
-            pointer-events: auto; /* فعال شدن دکمه */
-            opacity: 1; /* حذف شفافیت */
+            box-shadow: 5px 5px 10px var(--neum-dark), -5px -5px 10px var(--neum-light); 
+            pointer-events: auto;
+            opacity: 1;
             display: flex; justify-content: center; align-items: center;
             transition: all 0.2s ease;
             cursor: pointer;
@@ -360,7 +374,6 @@
             box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light); 
             color: #FFF;
         }
-        /* ---------------------------------------------------- */
 
 
         #user-input {
@@ -435,6 +448,16 @@
         منو
     </div>
     
+    <a href="{{ url_for('image_page') }}" class="drawer-link" style="color: var(--highlight-color); font-weight: 500;">
+        <i class="fas fa-palette"></i> تولید تصویر
+    </a>
+    
+    <span class="drawer-link disabled-link" title="به زودی فعال خواهد شد">
+        <i class="fas fa-music"></i> تولید موسیقی (<small>بزودی</small>)
+    </span>
+    
+    <hr style="margin: 10px 0; border-color: rgba(255, 255, 255, 0.1);">
+    
     {% if logged_in %}
         <a href="{{ url_for('my_conversations') }}" class="drawer-link">
             <i class="fas fa-history"></i> آرشیو گفتگو
@@ -466,6 +489,7 @@
 <div id="chat-app">
     <div id="chat-header">
         <button id="menu-btn" title="منو"><i class="fas fa-bars"></i></button> Cyrus
+        
         <div id="header-controls">
             <button id="clear-btn" title="پاک کردن چت"><i class="fas fa-trash-alt"></i></button>
         </div>
@@ -514,12 +538,11 @@ window.addEventListener('resize', setAppHeight);
 window.addEventListener('orientationchange', setAppHeight);
 setAppHeight();
 
-// 💡 از آنجایی که ما از Flask Session برای گفتگوهای لاگین شده استفاده می‌کنیم،
-// این بخش از LocalStorage را برای حالت مهمان نگه می‌داریم و گفتگوهای مهمان را ذخیره می‌کنیم.
+// 💡 از LocalStorage برای گفتگوهای مهمان استفاده می‌شود
 let chatHistory = JSON.parse(localStorage.getItem("chatHistory") || "[]");
 
 if (chatHistory.length > 0) {
-    chatHistory.forEach(m => appendMessage(m.text, m.className, false, m.image_url)); // اضافه کردن image_url
+    chatHistory.forEach(m => appendMessage(m.text, m.className, false, m.image_url)); 
     initialPrompt.style.display = 'none'; 
 } else {
     initialPrompt.style.display = 'block'; 
@@ -621,13 +644,13 @@ document.addEventListener('touchstart', (e) => {
     } else {
         touchStartX = 0;
     }
-}, { passive: true }); // passive: true برای بهبود عملکرد اسکرول
+}, { passive: true }); 
 
 document.addEventListener('touchend', (e) => {
     if (touchStartX === 0) return;
     
     const touchEndX = e.changedTouches[0].clientX;
-    const distance = touchStartX - touchEndX; // حرکت از راست به چپ باید مثبت باشد
+    const distance = touchStartX - touchEndX; 
 
     // 💡 باز کردن: اگر فاصله حرکت به سمت چپ (فاصله مثبت) بیشتر از 80 پیکسل باشد
     if (distance > 80) { 
@@ -638,7 +661,7 @@ document.addEventListener('touchend', (e) => {
         closeDrawer();
     }
 
-    touchStartX = 0; // ریست کردن
+    touchStartX = 0; 
 }, { passive: true });
 
 
@@ -646,9 +669,7 @@ document.addEventListener('touchend', (e) => {
 /* 💬 Messaging Logic                                      */
 /* ======================================================= */
 
-// 💡 تابع appendMessage برای پشتیبانی از نمایش تصویر به‌روز شد
 function appendMessage(text, className, highlight = true, imageUrl = null) {
-    // 💡 پنهان کردن پیام اولیه هنگام دریافت اولین پیام
     if (initialPrompt.style.display !== 'none') {
         initialPrompt.style.display = 'none';
     }
@@ -672,12 +693,10 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
     
     // 3. پردازش محتوای پیام (کد و متن)
     if (text.includes("```")) {
-        // منطق برای بلاک کد
         const parts = text.split(/```/);
         msg.innerHTML = "";
         for (let i = 0; i < parts.length; i++) {
             if (i % 2 === 0) {
-                // پاراگراف‌های معمولی
                 const formatted = parts[i].trim().split('\n').map(p => {
                     p = escapeHtml(p);
                     p = p.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
@@ -686,23 +705,21 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
                 }).join('');
                 msg.insertAdjacentHTML('beforeend', formatted);
             } else {
-                // بلاک کد
                 const codeText = parts[i].replace(/^\s*\w+\n?/, "").trim(); 
                 const codeBlock = document.createElement("code");
                 codeBlock.textContent = codeText;
                 
-                // 💡 دکمه کپی اختصاصی برای کد
                 const codeCopyBtn = document.createElement("button");
                 codeCopyBtn.classList.add("code-copy-btn");
                 codeCopyBtn.innerHTML = '<i class="fas fa-copy"></i>کپی کد';
                 codeCopyBtn.addEventListener('click', () => copyMessage(codeCopyBtn, codeText));
                 
-                codeBlock.prepend(codeCopyBtn); // دکمه را بالای کد قرار می‌دهد
+                codeBlock.prepend(codeCopyBtn); 
                 msg.appendChild(codeBlock);
             }
         }
     } else {
-        // منطق برای متن عادی (شامل پاسخ‌های تصویر)
+        // منطق برای متن عادی
         const formatted = text.trim().split('\n').map(p => {
             p = escapeHtml(p);
             p = p.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
@@ -714,7 +731,6 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
     
     // 4. اضافه کردن تصویر (اگر وجود دارد و پیام از AI است)
     if (className === 'ai' && imageUrl) {
-        // کانتینر برای نمایش بهتر تصویر در داخل حباب
         const imageWrapper = document.createElement('div');
         imageWrapper.classList.add('ai-image-container');
         
@@ -726,7 +742,6 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
         imageWrapper.appendChild(imageElement);
         msg.appendChild(imageWrapper);
         
-        // تنظیمات ارتفاع برای اطمینان از اسکرول درست پس از لود شدن تصویر
         imageElement.onload = () => {
              messages.scrollTop = messages.scrollHeight;
         };
@@ -771,7 +786,6 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
 
 // حباب لودینگ
 function showLoadingBubble() {
-    // 💡 پنهان کردن پیام اولیه هنگام نمایش لودینگ
     if (initialPrompt.style.display !== 'none') {
         initialPrompt.style.display = 'none';
     }
@@ -796,7 +810,7 @@ function showLoadingBubble() {
 }
 
 // -------------------------------------------------------------------
-// 🎯 اتصال به بک‌اند Flask (با قابلیت حفظ اسکرول و پشتیبانی از تصویر)
+// 🎯 اتصال به بک‌اند Flask
 // -------------------------------------------------------------------
 
 async function sendMessage() {
@@ -834,12 +848,10 @@ async function sendMessage() {
         loadingElem.classList.remove("loading"); 
 
         let i = 0;
-        // ✅ اصلاح نهایی: کاهش زمان تایپ به 20ms برای افزایش سرعت
         const interval = setInterval(() => {
             if (i < responseText.length) {
                 loadingElem.textContent += responseText.charAt(i); 
                 i++;
-                // اسکرول کردن به پایین هنگام تایپ برای اطمینان
                 messages.scrollTop = messages.scrollHeight; 
             } else {
                 clearInterval(interval);
@@ -882,7 +894,7 @@ clearBtn.addEventListener("click", () => {
         messages.innerHTML = `<div id="initial-prompt">چطور میتونم به شما کمک کنم؟ 🤔</div>`;
         initialPrompt.style.display = 'block';
         localStorage.removeItem("chatHistory");
-        chatHistory = []; // ریست کردن در حافظه
+        chatHistory = []; 
         alert("گفتگو پاک شد.");
     }
 });
