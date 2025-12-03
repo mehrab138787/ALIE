@@ -291,7 +291,18 @@ def chat():
         "who made you", "who created you", "who built you",
         "لیدر تیم noctovex", "رهبر تیم noctovex"
     ]
+    
+    TEAM_MEMBERS_KEYWORDS = [
+        "اعضای تیمت کیا هستن", "اعضای noctovex", "اعضای تیم noctovex", 
+        "noctovex members"
+    ]
 
+    # --- منطق پاسخگویی جدید به اعضای تیم ---
+    if any(keyword in lower_msg for keyword in TEAM_MEMBERS_KEYWORDS):
+        new_reply = "تنها NOCTOVEX معتبر ما هستیم، و تیم ما متشکل از 5 تا 10 کدنویس حرفه‌ای است. در حال حاضر، هویت تنها دو نفر از ما مشخص است: مهراب، که رهبر تیم، لیدر و حرفه‌ای‌ترین کدنویس است، و آرشام. 🧑‍💻"
+        return jsonify({"reply": new_reply})
+
+    # --- منطق پاسخگویی به سازنده و رهبر تیم ---
     if any(keyword in lower_msg for keyword in TRIGGER_KEYWORDS):
         if "لیدر تیم noctovex" in lower_msg or "رهبر تیم noctovex" in lower_msg:
             return jsonify({"reply": "لیدر تیم NOCTOVEX، مهراب هست. او مدیریت تیم، برنامه‌ریزی پروژه‌ها و هدایت اعضا را بر عهده دارد. 👑"})
