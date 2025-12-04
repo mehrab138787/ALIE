@@ -157,44 +157,104 @@
 
         <div id="content">
             
-            <h1>👋 خوش آمدید، {{ user_data.first_name }}</h1>
+            <h1>👋 خوش آمدید، کاربر Cyrus AI</h1>
             
             <div class="card">
-                <h3><i class="fas fa-id-card"></i> مشخصات فردی</h3>
+                <h3><i class="fas fa-id-card"></i> مشخصات حساب</h3>
                 
                 <p class="info-item">
-                    <strong>نام:</strong> <span>{{ user_data.first_name }}</span>
+                    <strong>شناسه کاربری:</strong> <span style="color: var(--highlight-color); font-weight: 500;">{{ user_data.identifier }}</span>
                 </p>
                 
                 <p class="info-item">
-                    <strong>نام خانوادگی:</strong> <span>{{ user_data.last_name }}</span>
+                    <strong>نوع لاگین:</strong> 
+                    <span>
+                        {% if '@' in user_data.identifier %}
+                            <i class="fas fa-envelope"></i> ایمیل
+                        {% else %}
+                            <i class="fas fa-phone"></i> شماره تلفن
+                        {% endif %}
+                    </span>
+                </p>
+
+                <p class="info-item">
+                    <strong>وضعیت پرمیوم:</strong> 
+                    <span>
+                        {% if user_data.is_premium %}
+                            <i class="fas fa-check-circle" style="color: #4CAF50;"></i> فعال
+                        {% else %}
+                            <i class="fas fa-times-circle" style="color: #E53935;"></i> عادی
+                        {% endif %}
+                    </span>
                 </p>
                 
-                <p class="info-item">
-                    <strong>حرفه:</strong> <span>{{ user_data.profession }}</span>
+                <p class="info-item" style="border-bottom: none;">
+                    <strong>وضعیت بن:</strong> 
+                    <span>
+                        {% if user_data.is_banned %}
+                            <i class="fas fa-ban" style="color: #E53935;"></i> مسدود شده
+                        {% else %}
+                            <i class="fas fa-shield-alt" style="color: #4CAF50;"></i> عادی
+                        {% endif %}
+                    </span>
                 </p>
                 
-                <p class="info-item">
-                    <strong>ایمیل:</strong> <span style="color: var(--highlight-color); font-weight: 500;">{{ user_data.email }}</span>
-                </p>
+                {% if user_data.is_admin %}
+                    <p class="info-item" style="border-top: 1px dashed var(--accent-color); padding-top: 10px; margin-top: 10px; border-bottom: none;">
+                        <strong>نقش کاربری:</strong> 
+                        <span style="color: var(--highlight-color); font-weight: 700;">
+                            <i class="fas fa-crown"></i> مدیر سیستم
+                        </span>
+                    </p>
+                {% endif %}
             </div>
 
+            <div class="card">
+                <h3><i class="fas fa-bolt"></i> بودجه مصرف روزانه (بازنشانی: 24 ساعت)</h3>
+                
+                <p class="score-item">
+                    <span><i class="fas fa-comments"></i> چت (هر استفاده: {{ user_data.chat_cost }} امتیاز)</span>
+                    <span class="score-value" style="color: {{ '#4CAF50' if user_data.chats_remaining > 0 else '#E53935' }};">
+                        {{ user_data.chats_remaining }} / {{ user_data.max_chats }}
+                        <span style="color: var(--muted-text); font-weight: 500; font-size: 0.9em; margin-left: 5px;"> ({{ user_data.chat_budget_remaining }} امتیاز)</span>
+                    </span>
+                </p>
+
+                <p class="score-item" style="border-bottom: none;">
+                    <span><i class="fas fa-image"></i> تولید تصویر (هر استفاده: {{ user_data.image_cost }} امتیاز)</span>
+                    <span class="score-value" style="color: {{ '#4CAF50' if user_data.images_remaining > 0 else '#E53935' }};">
+                        {{ user_data.images_remaining }} / {{ user_data.max_images }}
+                        <span style="color: var(--muted-text); font-weight: 500; font-size: 0.9em; margin-left: 5px;"> ({{ user_data.image_budget_remaining }} امتیاز)</span>
+                    </span>
+                </p>
+                
+                {% if user_data.is_premium %}
+                    <p class="info-item" style="border-top: 1px dashed var(--accent-color); padding-top: 10px; margin-top: 10px; border-bottom: none; color: #4CAF50;">
+                        <strong><i class="fas fa-bell"></i> توجه:</strong> <span style="font-weight: 400; color: #4CAF50;">شما از بودجه **پرمیوم** استفاده می‌کنید.</span>
+                    </p>
+                {% else %}
+                    <p class="info-item" style="border-top: 1px dashed var(--accent-color); padding-top: 10px; margin-top: 10px; border-bottom: none; color: #FF9800;">
+                        <strong><i class="fas fa-exclamation-triangle"></i> توجه:</strong> <span style="font-weight: 400; color: #FF9800;">شما از بودجه **عادی** استفاده می‌کنید.</span>
+                    </p>
+                {% endif %}
+            </div>
             <div class="card">
                 <h3><i class="fas fa-trophy"></i> امتیازات و عملکرد</h3>
 
                 <div class="score-item">
                     <span><i class="fas fa-star"></i> امتیاز تجربه (XP)</span>
-                    <span class="score-value">{{ user_data.xp_score }}</span>
+                    <span class="score-value">{{ user_data.score }}</span>
                 </div>
                 
                 <div class="score-item">
-                    <span><i class="fas fa-level-up-alt"></i> سطح فعلی</span>
-                    <span class="score-value">{{ user_data.level }}</span>
-                </div>
-                
-                <div class="score-item">
-                    <span><i class="fas fa-comments"></i> تعداد گفتگوها</span>
-                    <span class="score-value">{{ user_data.chats }}</span>
+                    <span><i class="fas fa-hand-holding-heart"></i> وضعیت اشتراک</span>
+                    <span class="score-value" style="color: {{ '#03A9F4' if user_data.is_premium else '#FF9800' }};">
+                        {% if user_data.is_premium %}
+                            <i class="fas fa-gem"></i> پرمیوم
+                        {% else %}
+                            <i class="fas fa-user"></i> عادی
+                        {% endif %}
+                    </span>
                 </div>
                 
                 <a href="/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> خروج از حساب کاربری</a>

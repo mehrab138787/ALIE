@@ -1,680 +1,134 @@
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>تکمیل پروفایل - Cyrus AI</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تکمیل پروفایل</title>
     <style>
-        /* ======================================================= */
-        /* 🎨 Variables (Glass, Electric Blue)                     */
-        /* ======================================================= */
+        @font-face {
+            font-family: 'Vazirmatn';
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.0.3/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+        }
+
         :root {
-            --app-height: 100vh;
-            --bg-dark: #070707; 
-            --card-dark: rgba(28, 28, 28, 0.9);
-            --accent-color: #1a1a1a;
-            --highlight-color: #03A9F4; 
-            --text-color: #FAFAFA;
-            --muted-text: #999999;
-            --border-radius: 15px; 
-            --neum-dark: rgba(0, 0, 0, 0.9);
-            --neum-light: rgba(255, 255, 255, 0.05); 
-            --success-color: #4CAF50;
+            --bg-color: #1a1a2e;
+            --card-color: #24243e;
+            --text-color: #ffffff;
+            --primary-color: #00bcd4;
+            --secondary-color: #e91e63;
+            --border-color: #3b3b5b;
         }
 
-        /* ======================================================= */
-        /* 🌐 Global & Layout                                       */
-        /* ======================================================= */
-        * { margin:0; padding:0; box-sizing:border-box; }
         body {
-            font-family:'Vazirmatn', sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-color);
-            width: 100vw; height: var(--app-height); overflow-x: hidden;
-            display: flex; justify-content: center; align-items: flex-start;
-        }
-
-        #page-container {
-            width: 100%; height: var(--app-height); max-width: 100%;
-            display: flex; flex-direction: column;
-            background: var(--card-dark);
-            backdrop-filter: blur(10px); 
-            -webkit-backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
-            position: relative;
-            overflow-y: auto;
-            /* ✅ فضای خالی برای فوتر ثابت */
-            padding-bottom: 50px; 
-        }
-        
-        @media (max-width: 600px) {
-            #page-container { 
-                padding-top: 55px;
-                padding-bottom: 45px; /* تنظیم برای موبایل */
-            }
-        }
-        @media (min-width: 601px) {
-            #page-container { padding-top: 65px; } 
-        }
-        
-        /* ======================================================= */
-        /* ⬆️ Header (Fixed Top)                                  */
-        /* ======================================================= */
-        #page-header {
-            position: fixed; top: 0; left: 0; right: 0;
-            padding: 15px 20px; background: var(--bg-dark); 
-            color: var(--text-color); text-align: right; 
-            font-size: 1.6rem; font-weight: 700;
-            border-bottom: 3px solid var(--highlight-color);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.7);
-            z-index: 50; display: flex; align-items: center; direction: rtl;
-        }
-        
-        #back-btn {
-            background: transparent; border: none;
-            color: var(--highlight-color); font-size: 1.5rem;
-            margin-left: 15px; cursor: pointer; 
-            transition: color 0.2s, transform 0.2s ease;
-        }
-        #back-btn:hover { color: #FFF; }
-        #back-btn:active { transform: scale(0.9); }
-
-        /* ======================================================= */
-        /* 💬 Content & Card Styles                                */
-        /* ======================================================= */
-        #content {
-            flex: 1; padding: 30px; direction: rtl; line-height: 1.8;
-            background: rgba(0, 0, 0, 0.2); 
-            min-height: calc(var(--app-height) - 75px);
-        }
-        #content h1 {
-            color: var(--highlight-color);
-            text-align: center;
-            margin-bottom: 10px;
-            text-shadow: 0 0 8px rgba(3, 169, 244, 0.5);
-        }
-
-        .card {
-            background: var(--accent-color);
-            padding: 25px; border-radius: var(--border-radius);
-            margin-bottom: 25px;
-            box-shadow: 8px 8px 16px var(--neum-dark), -8px -8px 16px var(--neum-light);
-            border-right: 5px solid var(--highlight-color);
-        }
-        
-        .card h3 {
-            color: var(--highlight-color); margin-bottom: 25px;
-            font-weight: 700; font-size: 1.7rem;
-            text-align: center;
-            border-bottom: 1px dashed var(--muted-text);
-            padding-bottom: 10px;
-        }
-
-        /* ------------------ ورودی‌های فرم ------------------ */
-        .profile-form input[type="text"], 
-        .profile-form input[type="email"],
-        .profile-form input[type="hidden"] {
-            width: 100%; padding: 15px 20px; margin-bottom: 20px;
-            border-radius: 10px; border: none;
-            background: var(--bg-dark); 
-            color: var(--text-color);
-            font-family: 'Vazirmatn', sans-serif;
-            font-size: 1.05rem;
-            direction: rtl;
-            outline: none;
-            box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light);
-            transition: box-shadow 0.3s ease;
-        }
-        .profile-form input:focus {
-            box-shadow: inset 0 0 10px var(--highlight-color), 4px 4px 8px var(--neum-dark);
-            border: 1px solid var(--highlight-color);
-        }
-        
-        /* 💡 استایل فیلد غیرفعال */
-        .profile-form input[disabled] {
-            color: #666; 
-            background: var(--accent-color);
-            box-shadow: none;
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-
-        /* ------------------ دکمه ذخیره ------------------ */
-        .profile-form button, .modal .save-button {
-            background: var(--success-color);
-            color: white; border: none; padding: 18px;
-            border-radius: 10px; cursor: pointer;
-            font-weight: 700; width: 100%;
-            font-size: 1.2rem;
-            transition: all 0.2s ease;
-            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
-            margin-top: 15px;
-        }
-        .profile-form button:hover, .modal .save-button:hover { 
-            background: #388E3C; 
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(76, 175, 80, 0.6);
-        }
-        .profile-form button:active, .modal .save-button:active { 
-            transform: scale(0.98); 
-            box-shadow: inset 2px 2px 5px rgba(0,0,0,0.5);
-        }
-
-        /* ======================================================= */
-        /* ⬇️ Footer (Fixed Bottom)                               */
-        /* ======================================================= */
-        #page-footer {
-            position: fixed; /* ✅ ثابت نگه داشتن */
-            bottom: 0; left: 0; right: 0;
-            padding: 10px; 
-            background: var(--bg-dark);
-            text-align: center; 
-            font-size: 0.85rem;
-            color: var(--muted-text); 
-            border-top: 1px solid var(--highlight-color); 
-            box-shadow: 0 -5px 10px rgba(0, 0, 0, 0.5);
-            z-index: 100;
-        }
-
-        /* ======================================================= */
-        /* 📱 Mobile Adjustments                                   */
-        /* ======================================================= */
-        @media (max-width: 600px) {
-            #content { padding: 20px; }
-            .card { padding: 20px; }
-            .profile-form input[type="text"], .profile-form input[type="email"], .scroller-trigger { 
-                padding: 12px 15px; font-size: 0.95rem; margin-bottom: 15px; 
-            }
-            .profile-form button { padding: 15px; font-size: 1.1rem; }
-            #page-footer { padding: 8px; font-size: 0.75rem; }
-        }
-
-        /* ======================================================= */
-        /* 📅 Scroller Date Picker Styles (Spinner)                */
-        /* ======================================================= */
-
-        /* 💡 استایل دکمه‌ای که مودال را باز می‌کند */
-        .scroller-trigger {
-            width: 100%; padding: 15px 20px; margin-bottom: 20px;
-            border-radius: 10px; border: none;
-            background: var(--bg-dark); 
-            color: var(--muted-text); /* رنگ متن پیش‌فرض */
-            font-family: 'Vazirmatn', sans-serif;
-            font-size: 1.05rem;
-            direction: rtl;
-            outline: none;
-            cursor: pointer;
-            box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light);
-            transition: all 0.2s ease;
-            text-align: right;
-        }
-
-        .scroller-trigger:hover {
-            color: var(--highlight-color);
-            box-shadow: inset 0 0 10px var(--highlight-color), 4px 4px 8px var(--neum-dark);
-        }
-
-        .scroller-trigger i {
-            margin-left: 10px;
-            color: var(--highlight-color);
-        }
-
-        /* ------------------ Modal ------------------ */
-        .modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-            z-index: 10000;
-            display: none; /* مخفی بودن اولیه */
-            justify-content: center; align-items: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .modal.open { display: flex; opacity: 1; }
-
-        .modal-content {
-            background: var(--card-dark);
-            border-radius: var(--border-radius);
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            margin: 0;
             padding: 20px;
-            width: 90%; max-width: 450px;
-            box-shadow: 0 10px 40px rgba(3, 169, 244, 0.5); /* سایه نئونی */
-            transform: scale(0.9);
-            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-        .modal.open .modal-content { transform: scale(1); }
-
-        .modal-header {
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid var(--accent-color);
-            padding-bottom: 15px; margin-bottom: 15px;
-        }
-        .modal-header h3 { 
-            color: var(--highlight-color); 
-            font-size: 1.4rem; 
-            margin: 0; /* برای فیکس شدن در فلکس */
-        }
-        #modal-close-btn { 
-            background: none; border: none; color: var(--muted-text); font-size: 1.5rem; cursor: pointer;
-            transition: color 0.2s;
-        }
-        #modal-close-btn:hover { color: #FFF; }
-
-        .modal .save-button {
-            margin-top: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            direction: rtl;
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
         }
 
-        /* ------------------ Scrollers ------------------ */
-        .scroller-wrapper {
-            display: flex; justify-content: space-between;
-            height: 180px; /* ارتفاع ثابت برای نمایش 3 آیتم (180px / 3 = 60px) */
-            overflow: hidden;
-            position: relative;
-            border: 1px solid var(--accent-color);
-            border-radius: 10px;
-            background: var(--bg-dark);
-            direction: ltr; /* محتویات اسکرول باید چپ به راست باشد */
+        .form-container {
+            width: 100%;
+            max-width: 400px;
+            background-color: var(--card-color);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         }
-        
-        /* خط وسط برای نشان دادن آیتم منتخب */
-        .scroller-wrapper::before,
-        .scroller-wrapper::after {
-            content: '';
-            position: absolute;
-            left: 0; right: 0;
-            height: 60px; /* (180px - 60px) / 2 = 60px از بالا و 60px از پایین */
-            z-index: 1;
-            pointer-events: none;
-        }
-        /* افکت محو شدگی بالا و پایین (برای زیبایی بیشتر از حالت Gradient) */
-        .scroller-wrapper::before {
-            top: 0;
-            background: linear-gradient(to bottom, var(--bg-dark), rgba(7, 7, 7, 0));
-        }
-        .scroller-wrapper::after {
-            bottom: 0;
-            background: linear-gradient(to top, var(--bg-dark), rgba(7, 7, 7, 0));
-        }
-        
-        /* هایلایت نئونی آیتم مرکزی */
-        .scroller-wrapper::before {
-            top: 60px; /* شروع از بالای آیتم مرکزی */
-            height: 60px;
-            background: rgba(3, 169, 244, 0.1);
-            border-top: 1px solid rgba(3, 169, 244, 0.5);
-            border-bottom: 1px solid rgba(3, 169, 244, 0.5);
-            z-index: 0;
-        }
-        
-        .scroller-column {
-            flex: 1;
-            overflow-y: scroll;
-            padding: 0 5px;
-            scroll-snap-type: y mandatory; /* برای قفل شدن روی آیتم‌ها */
+
+        .form-container h2 {
             text-align: center;
-            border-left: 1px solid var(--accent-color);
-            /* مخفی کردن نوار اسکرول */
-            -ms-overflow-style: none; /* IE and Edge */
-            scrollbar-width: none; /* Firefox */
-        }
-        .scroller-column:last-child { border-left: none; }
-        .scroller-column::-webkit-scrollbar { display: none; }
-
-        .scroller-item {
-            height: 60px; /* ارتفاع هر آیتم */
-            line-height: 60px;
-            font-size: 1.3rem;
-            font-weight: 500;
-            color: var(--muted-text);
-            scroll-snap-align: center; /* قفل شدن در مرکز اسکرول */
-            transition: all 0.1s ease;
+            color: var(--primary-color);
+            margin-bottom: 25px;
         }
 
-        /* 💡 استایل برای آیتم مرکزی انتخاب شده */
-        .scroller-item.selected {
-            color: var(--highlight-color);
-            font-weight: 900;
-            font-size: 1.8rem;
-            /* text-shadow: 0 0 5px var(--highlight-color); */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ccc;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: #3b3b5b;
+            color: var(--text-color);
+            box-sizing: border-box;
+            direction: rtl;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+
+        .btn-submit:hover {
+            background-color: #00a0b8;
+        }
+
+        .skip-link {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #999;
         }
     </style>
 </head>
 <body>
-
-    <div id="page-container">
-        <div id="page-header">
-            <button id="back-btn" onclick="window.history.back()" title="بازگشت به چت"><i class="fas fa-arrow-right"></i></button>
-            <span id="page-title">تکمیل پروفایل</span>
-        </div>
-
-        <div id="content">
-            <h1>✍️ تکمیل مشخصات فردی</h1>
+    <div class="form-container">
+        <h2>تکمیل اطلاعات پروفایل</h2>
+        <p style="text-align: center; color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">
+            این اطلاعات برای شخصی‌سازی حساب کاربری شما لازم است.
+        </p>
+        <form method="POST" action="{{ url_for('complete_profile_mock') }}">
             
-            <p style="text-align: center; color: var(--highlight-color); margin-bottom: 30px; font-weight: 500;">
-                تبریک! جیمیل شما تأیید شد. لطفاً اطلاعات زیر را جهت تکمیل پروفایل خود وارد نمایید.
-            </p>
-
-            <div class="card profile-form">
-                <h3>اطلاعات حساب</h3>
-                <form action="/complete_profile" method="POST">
-                    <input type="email" value="{{ user_data.email }}" disabled>
-                    <input type="text" name="first_name" placeholder="نام" required>
-                    <input type="text" name="last_name" placeholder="نام خانوادگی" required>
-                    
-                    <div class="date-selector-container">
-                        <div id="dob-display" class="scroller-trigger" required>
-                            <i class="fas fa-calendar-alt"></i> تاریخ تولد (میلادی)
-                        </div>
-                        <input type="hidden" name="dob" id="dob_hidden" required> 
-                    </div>
-                    
-                    <input type="text" name="profession" placeholder="حرفه (مثلاً: توسعه‌دهنده، دانشجو، آزادکار)" required>
-                    
-                    <button type="submit"><i class="fas fa-save"></i> ذخیره و ورود به حساب</button>
-                </form>
+            <div class="form-group">
+                <label for="user_name">نام:</label>
+                <input type="text" id="user_name" name="user_name" required>
             </div>
             
-        </div>
-        
-    </div>
-    
-    <div id="page-footer">
-        © 2025 Cyrus AI. تمامی حقوق محفوظ است.
-    </div>
-
-    <div id="date-picker-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 style="direction: rtl;">انتخاب تاریخ تولد</h3>
-                <button id="modal-close-btn" title="بستن"><i class="fas fa-times"></i></button>
+            <div class="form-group">
+                <label for="user_family">نام خانوادگی:</label>
+                <input type="text" id="user_family" name="user_family" required>
             </div>
-            <div class="scroller-wrapper">
-                <div class="scroller-column" id="year-scroller"></div>
-                <div class="scroller-column" id="month-scroller"></div>
-                <div class="scroller-column" id="day-scroller"></div>
+            
+            <div class="form-group">
+                <label for="user_profession">حرفه/شغل:</label>
+                <input type="text" id="user_profession" name="user_profession">
             </div>
-            <button id="modal-save-btn" class="save-button"><i class="fas fa-check"></i> تأیید و ذخیره</button>
-        </div>
+            
+            <button type="submit" class="btn-submit">ذخیره و ورود به حساب</button>
+            
+            <a href="{{ url_for('account') }}" class="skip-link">بعداً انجام می‌دهم (حذف این مرحله)</a>
+        </form>
     </div>
-
-    <script>
-        /* ======================================================= */
-        /* 💡 تنظیم ارتفاع برای موبایل و منطق چرخشی جاوا اسکریپت     */
-        /* ======================================================= */
-        
-        // تنظیم ارتفاع اپلیکیشن برای موبایل
-        function setAppHeight() {
-            document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
-        }
-        window.addEventListener('resize', setAppHeight);
-        window.addEventListener('orientationchange', setAppHeight);
-        setAppHeight();
-
-        
-        const YEAR_START = 1940;
-        const YEAR_END = new Date().getFullYear(); 
-        const ITEM_HEIGHT = 60; // ارتفاع آیتم از CSS
-        
-        const dobDisplay = document.getElementById('dob-display');
-        const dobHidden = document.getElementById('dob_hidden');
-        const modal = document.getElementById('date-picker-modal');
-        const closeBtn = document.getElementById('modal-close-btn');
-        const saveBtn = document.getElementById('modal-save-btn');
-        const yearScroller = document.getElementById('year-scroller');
-        const monthScroller = document.getElementById('month-scroller');
-        const dayScroller = document.getElementById('day-scroller');
-
-        // تاریخ اولیه (مثلاً سال 2000 میلادی)
-        let selectedDate = { year: 2000, month: 1, day: 1 }; 
-
-        // نام ماه‌ها به میلادی
-        const MONTHS = [
-            { name: 'January', days: 31 }, { name: 'February', days: 28 }, 
-            { name: 'March', days: 31 }, { name: 'April', days: 30 }, 
-            { name: 'May', days: 31 }, { name: 'June', days: 30 }, 
-            { name: 'July', days: 31 }, { name: 'August', days: 31 }, 
-            { name: 'September', days: 30 }, { name: 'October', days: 31 }, 
-            { name: 'November', days: 30 }, { name: 'December', days: 31 }
-        ];
-
-        /* ------------------ توابع کمکی ------------------ */
-
-        // چک کردن سال کبیسه
-        function isLeap(year) {
-            return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-        }
-
-        // به‌روزرسانی روزهای ماه جاری (برای فوریه و ماه‌های ۳۰ روزه)
-        function updateDayScroller() {
-            let daysInMonth = MONTHS[selectedDate.month - 1].days;
-            if (selectedDate.month === 2) { // فوریه
-                daysInMonth = isLeap(selectedDate.year) ? 29 : 28;
-            }
-
-            // اگر روز انتخاب شده از حداکثر روزهای ماه بیشتر است، آن را اصلاح می‌کند
-            if (selectedDate.day > daysInMonth) {
-                selectedDate.day = daysInMonth;
-            }
-
-            dayScroller.innerHTML = '';
-            
-            // افزودن 2 آیتم خالی در ابتدا و انتها برای تمرکز آیتم‌های واقعی در مرکز
-            dayScroller.appendChild(createEmptyItem());
-            dayScroller.appendChild(createEmptyItem());
-
-            for (let i = 1; i <= daysInMonth; i++) {
-                const item = createScrollerItem(i);
-                dayScroller.appendChild(item);
-            }
-            
-            dayScroller.appendChild(createEmptyItem());
-            dayScroller.appendChild(createEmptyItem());
-
-            // نمایش آیتم انتخاب شده پس از آپدیت
-            syncSelection(dayScroller, selectedDate.day);
-            // اسکرول مجدد به موقعیت صحیح (چون DOM تغییر کرده)
-            scrollToItem(dayScroller, selectedDate.day - 1, false); 
-        }
-
-        // ساخت یک آیتم (روز، ماه یا سال)
-        function createScrollerItem(value, label = value) {
-            const item = document.createElement('div');
-            item.classList.add('scroller-item');
-            item.dataset.value = value;
-            item.textContent = label;
-            return item;
-        }
-
-        // ساخت آیتم خالی (برای فضای بالا و پایین)
-        function createEmptyItem() {
-            const item = document.createElement('div');
-            item.classList.add('scroller-item', 'empty');
-            return item;
-        }
-
-        // همگام‌سازی وضعیت انتخاب شده در هر ستون
-        function syncSelection(scroller, selectedValue) {
-            // حذف کلاس selected از همه آیتم‌ها
-            scroller.querySelectorAll('.scroller-item').forEach(item => item.classList.remove('selected'));
-            
-            // انتخاب آیتم جدید
-            const itemToSelect = scroller.querySelector(`.scroller-item[data-value="${selectedValue}"]`);
-            if (itemToSelect) {
-                itemToSelect.classList.add('selected');
-            }
-        }
-
-        // انیمیشن اسکرول به موقعیت انتخاب شده
-        function scrollToItem(scroller, index, smooth = true) {
-            // آیتم‌های واقعی از ایندکس 0 شروع می‌شوند، اما 2 آیتم خالی در بالا داریم
-            const targetScroll = (index + 2) * ITEM_HEIGHT - ITEM_HEIGHT;
-            
-            scroller.scrollTo({
-                top: targetScroll,
-                behavior: smooth ? 'smooth' : 'auto'
-            });
-        }
-
-        // تابع اصلی اسکرول و انتخاب
-        function handleScroll(scroller, type) {
-            // اجرای این کد با تأخیر، برای کاهش بار محاسباتی
-            if (scroller.scrollTimeout) {
-                clearTimeout(scroller.scrollTimeout);
-            }
-
-            scroller.scrollTimeout = setTimeout(() => {
-                // محاسبه مرکزی‌ترین آیتم بر اساس موقعیت اسکرول
-                const centerIndex = Math.round(scroller.scrollTop / ITEM_HEIGHT);
-                
-                // آیتم‌های واقعی از ایندکس ۲ شروع می‌شوند (به دلیل ۲ آیتم خالی)
-                const selectedIndex = centerIndex - 1; 
-                
-                const items = scroller.querySelectorAll('.scroller-item:not(.empty)');
-
-                if (selectedIndex >= 0 && selectedIndex < items.length) {
-                    const newValue = parseInt(items[selectedIndex].dataset.value);
-                    
-                    // اصلاح موقعیت اسکرول نهایی برای قفل شدن روی آیتم (Scroll Snapping)
-                    const finalScroll = (selectedIndex + 2) * ITEM_HEIGHT - ITEM_HEIGHT;
-                    scroller.scrollTop = finalScroll;
-
-                    let updated = false;
-
-                    // به‌روزرسانی مدل داده و کنترل وابستگی‌ها
-                    if (type === 'year' && selectedDate.year !== newValue) {
-                        selectedDate.year = newValue;
-                        updated = true;
-                    } else if (type === 'month' && selectedDate.month !== newValue) {
-                        selectedDate.month = newValue;
-                        updated = true;
-                    } else if (type === 'day') {
-                        selectedDate.day = newValue;
-                    }
-                    
-                    if (updated) {
-                        // اگر سال یا ماه عوض شد، باید روزها را آپدیت کنیم
-                        updateDayScroller(); 
-                    }
-                    
-                    // نمایش آیتم انتخاب شده
-                    syncSelection(scroller, newValue);
-                }
-            }, 100); 
-        }
-
-
-        /* ------------------ توابع ساخت و مقداردهی اولیه ------------------ */
-
-        function initScrollers() {
-            // ۱. سال
-            yearScroller.innerHTML = '';
-            yearScroller.appendChild(createEmptyItem());
-            yearScroller.appendChild(createEmptyItem());
-            for (let y = YEAR_END; y >= YEAR_START; y--) { // از سال جدیدتر به قدیمی‌تر
-                yearScroller.appendChild(createScrollerItem(y));
-            }
-            yearScroller.appendChild(createEmptyItem());
-            yearScroller.appendChild(createEmptyItem());
-
-            // ۲. ماه
-            monthScroller.innerHTML = '';
-            monthScroller.appendChild(createEmptyItem());
-            monthScroller.appendChild(createEmptyItem());
-            MONTHS.forEach((m, index) => {
-                monthScroller.appendChild(createScrollerItem(index + 1, m.name)); // Value: 1-12, Label: Name
-            });
-            monthScroller.appendChild(createEmptyItem());
-            monthScroller.appendChild(createEmptyItem());
-            
-            // ۳. روز (با توجه به سال و ماه اولیه)
-            updateDayScroller();
-
-            // تنظیمات اولیه
-            syncSelection(yearScroller, selectedDate.year);
-            syncSelection(monthScroller, selectedDate.month);
-            syncSelection(dayScroller, selectedDate.day);
-
-            // اسکرول اولیه به موقعیت صحیح (بدون انیمیشن)
-            const yearIndex = YEAR_END - selectedDate.year;
-            const monthIndex = selectedDate.month - 1;
-            const dayIndex = selectedDate.day - 1;
-            
-            scrollToItem(yearScroller, yearIndex, false); 
-            scrollToItem(monthScroller, monthIndex, false);
-            scrollToItem(dayScroller, dayIndex, false);
-        }
-
-        /* ------------------ Event Listeners ------------------ */
-
-        document.addEventListener('DOMContentLoaded', function() {
-            // اگر قبلاً در فیلد مخفی تاریخ وجود داشت، آن را بارگذاری کن
-            if (dobHidden.value) {
-                const parts = dobHidden.value.split('-');
-                if (parts.length === 3) {
-                    selectedDate.year = parseInt(parts[0]);
-                    selectedDate.month = parseInt(parts[1]);
-                    selectedDate.day = parseInt(parts[2]);
-                    dobDisplay.innerHTML = `<i class="fas fa-calendar-check"></i> ${dobHidden.value}`;
-                    dobDisplay.style.color = 'var(--highlight-color)';
-                }
-            } else {
-                // تاریخ اولیه را به تاریخ امروز - 25 سال (مثلا) تنظیم می‌کنیم.
-                const today = new Date();
-                selectedDate.year = today.getFullYear() - 25; 
-                selectedDate.month = today.getMonth() + 1;
-                selectedDate.day = today.getDate();
-            }
-
-            // باز کردن مودال
-            dobDisplay.addEventListener('click', () => {
-                initScrollers(); 
-                modal.classList.add('open');
-            });
-
-            // بستن مودال
-            closeBtn.addEventListener('click', () => {
-                modal.classList.remove('open');
-            });
-            modal.addEventListener('click', (e) => {
-                if(e.target === modal) {
-                    modal.classList.remove('open');
-                }
-            });
-
-            // ذخیره و بستن مودال
-            saveBtn.addEventListener('click', () => {
-                // 💡 فرمت تاریخ: YYYY-MM-DD
-                const monthPadded = String(selectedDate.month).padStart(2, '0');
-                const dayPadded = String(selectedDate.day).padStart(2, '0');
-                const finalDate = `${selectedDate.year}-${monthPadded}-${dayPadded}`;
-                
-                dobHidden.value = finalDate;
-                dobDisplay.innerHTML = `<i class="fas fa-calendar-check"></i> ${finalDate}`;
-                dobDisplay.style.color = 'var(--highlight-color)';
-
-                modal.classList.remove('open');
-            });
-
-            // افزودن رویدادهای اسکرول
-            yearScroller.addEventListener('scroll', () => handleScroll(yearScroller, 'year'));
-            monthScroller.addEventListener('scroll', () => handleScroll(monthScroller, 'month'));
-            dayScroller.addEventListener('scroll', () => handleScroll(dayScroller, 'day'));
-            
-            // 💡 برای رفع مشکل قفل نشدن اسکرول در برخی مرورگرها (به خصوص موبایل)
-            [yearScroller, monthScroller, dayScroller].forEach(scroller => {
-                scroller.addEventListener('touchend', () => {
-                    // یک فراخوانی با تاخیر برای قفل کردن نهایی موقعیت
-                    setTimeout(() => {
-                        if (scroller.id === 'year-scroller') handleScroll(scroller, 'year');
-                        if (scroller.id === 'month-scroller') handleScroll(scroller, 'month');
-                        if (scroller.id === 'day-scroller') handleScroll(scroller, 'day');
-                    }, 50);
-                });
-            });
-        });
-    </script>
 </body>
 </html>

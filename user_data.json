@@ -1,0 +1,30 @@
+{
+    "09962935294": {
+        "id": "6cd9da0f-3d3e-4e09-b1b5-7ef6a6ed246d",
+        "email": null,
+        "phone": "09962935294",
+        "score": 0,
+        "is_premium": false,
+        "is_banned": false
+    },
+    "09023287024": {
+        "id": "664acc85-1fcf-44d0-b2e4-7708f9148244",
+        "email": null,
+        "phone": "09023287024",
+        "score": 0,
+        "is_premium": false,
+        "is_banned": false,
+        "name": "مهراب ",
+        "family_name": "عزیزی ",
+        "profession": "معمار"
+    },
+    "09930804059": {
+        "id": "1aa21ae3-4462-482d-b98f-97ac87069eba",
+        "email": null,
+        "phone": "09930804059",
+        "score": 0,
+        "is_premium": true,
+        "is_banned": false,
+        "is_admin": false
+    }
+}

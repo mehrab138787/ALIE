@@ -1,0 +1,70 @@
+{% extends "admin_base.html" %}
+
+{% block title %}داشبورد - پنل مدیریت{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* CSS اختصاصی برای این صفحه */
+
+    /* تنظیم چینش پیش‌فرض برای دسکتاپ (3 ستون) */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+
+    /* تنظیمات موبایل: تک ستونی */
+    @media (max-width: 768px) {
+        .dashboard-grid {
+            /* در صفحات کوچک، همه کارت‌ها زیر هم قرار می‌گیرند */
+            grid-template-columns: 1fr; 
+            gap: 15px; /* کاهش فاصله */
+        }
+
+        /* در موبایل، کارت‌ها پدینگ بیشتری بگیرند تا زیبا تر شوند */
+        .card {
+            padding: 20px;
+        }
+
+        /* اندازه فونت‌ها را برای موبایل کمی کاهش می‌دهیم */
+        .card p:first-of-type { /* برای عدد بزرگ */
+            font-size: 2rem !important;
+        }
+        
+        .card h3 {
+            font-size: 1.2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block page_heading %}آمار کلی سیستم{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    
+    <div class="card" style="border-right: 5px solid var(--primary-color);">
+        <h3 style="color: var(--primary-color); margin-top: 0;">👥 کاربران ثبت‌نامی</h3>
+                <p style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{{ total_users }}</p>
+        <p style="color: #ccc;">تعداد کل حساب‌های کاربری در سیستم.</p>
+    </div>
+
+    <div class="card" style="border-right: 5px solid #ffeb3b;">
+        <h3 style="color: #ffeb3b; margin-top: 0;">💎 کاربران پرمیوم</h3>
+        <p style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{{ premium_users }}</p>
+        <p style="color: #ccc;">تعداد کاربران دارای اشتراک ویژه.</p>
+    </div>
+
+    <div class="card" style="border-right: 5px solid var(--secondary-color);">
+        <h3 style="color: var(--secondary-color); margin-top: 0;">🚫 کاربران مسدود</h3>
+        <p style="font-size: 2.5rem; font-weight: bold; margin: 10px 0;">{{ banned_users }}</p>
+        <p style="color: #ccc;">تعداد کاربرانی که دسترسی‌شان مسدود شده است.</p>
+    </div>
+
+</div>
+
+<div class="card" style="margin-top: 30px;">
+    <h3 style="color: var(--primary-color);">📊 فعالیت‌های اخیر و گزارش‌ها</h3>
+    <p style="color: #999;">این بخش در آینده برای نمایش نمودارها و لاگ فعالیت‌ها تکمیل خواهد شد.</p>
+</div>
+{% endblock %}

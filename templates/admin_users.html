@@ -1,0 +1,182 @@
+{% extends "admin_base.html" %}
+
+{% block title %}مدیریت کاربران - پنل مدیریت{% endblock %}
+
+{% block page_heading %}لیست و مدیریت کاربران{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* استایل‌های خاص جدول */
+    .user-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        text-align: right;
+    }
+
+    .user-table th, .user-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid var(--border-color);
+        text-align: right;
+    }
+
+    .user-table th {
+        background-color: #3b3b5b;
+        color: var(--primary-color);
+        font-weight: bold;
+    }
+
+    .user-table tr:hover {
+        background-color: #2e2e4a;
+    }
+
+    .user-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .score-input {
+        width: 60px;
+        padding: 5px;
+        text-align: center !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div id="status-message" class="alert" style="display: none;"></div>
+
+<div class="card">
+    <table class="user-table">
+        <thead>
+            <tr>
+                <th>شناسه کاربری (ایمیل/تلفن)</th>
+                <th>امتیاز</th>
+                <th>وضعیت پرمیوم</th>
+                <th>وضعیت بن</th>
+                <th>عملیات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr id="row-{{ user.identifier }}">
+                <td data-identifier="{{ user.identifier }}" title="ایمیل: {{ user.email }}, تلفن: {{ user.phone }}">
+                    {{ user.identifier }}
+                </td>
+                <td>
+                    <span id="score-{{ user.identifier }}">{{ user.score }}</span>
+                    <input type="number" id="input-score-{{ user.identifier }}" class="score-input" value="{{ user.score }}" min="0">
+                    <button class="btn btn-primary" onclick="adminAction('{{ user.identifier }}', 'set_score', document.getElementById('input-score-{{ user.identifier }}').value)">
+                        ➕ ثبت امتیاز
+                    </button>
+                </td>
+                <td>
+                    <span id="premium-{{ user.identifier }}" style="color: {% if user.is_premium %}#ffeb3b{% else %}#ccc{% endif %};">
+                        {% if user.is_premium %}💎 پرمیوم{% else %}عادی{% endif %}
+                    </span>
+                    <button class="btn {% if user.is_premium %}btn-danger{% else %}btn-primary{% endif %}" 
+                            onclick="adminAction('{{ user.identifier }}', 'toggle_premium')">
+                        {% if user.is_premium %}عادی کردن{% else %}پرمیوم کردن{% endif %}
+                    </button>
+                </td>
+                <td>
+                    <span id="banned-{{ user.identifier }}" style="color: {% if user.is_banned %}var(--secondary-color){% else %}#28a745{% endif %}; font-weight: bold;">
+                        {% if user.is_banned %}🚫 بن شده{% else %}فعال{% endif %}
+                    </span>
+                    <button class="btn {% if user.is_banned %}btn-primary{% else %}btn-danger{% endif %}" 
+                            onclick="adminAction('{{ user.identifier }}', 'toggle_ban')">
+                        {% if user.is_banned %}رفع بن{% else %}بن کردن{% endif %}
+                    </button>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align: center; color: #aaa;">هنوز هیچ کاربری در سیستم ثبت‌نام نکرده است.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function showMessage(type, message) {
+        const msgElement = document.getElementById('status-message');
+        msgElement.className = 'alert ' + (type === 'success' ? 'alert-success' : 'alert-error');
+        msgElement.textContent = message;
+        msgElement.style.display = 'block';
+        setTimeout(() => {
+            msgElement.style.display = 'none';
+        }, 5000); // پیام بعد از 5 ثانیه مخفی می‌شود
+    }
+
+    // تابع اصلی برای اجرای عملیات ادمین
+    async function adminAction(identifier, action, value = null) {
+        const url = '{{ url_for("admin.user_action") }}';
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ identifier, action, value })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.status === 'success') {
+                showMessage('success', data.message);
+                // به‌روزرسانی رابط کاربری (UI)
+                updateUI(identifier, data.new_status);
+            } else {
+                showMessage('error', data.message || "خطا در اجرای عملیات.");
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            showMessage('error', "خطای شبکه یا سرور رخ داد.");
+        }
+    }
+
+    // تابع برای به‌روزرسانی عناصر جدول پس از هر عملیات موفق
+    function updateUI(identifier, newStatus) {
+        // به‌روزرسانی امتیاز
+        document.getElementById(`score-${identifier}`).textContent = newStatus.score;
+        document.getElementById(`input-score-${identifier}`).value = newStatus.score;
+
+        // به‌روزرسانی وضعیت پرمیوم
+        const premiumSpan = document.getElementById(`premium-${identifier}`);
+        const premiumButton = premiumSpan.nextElementSibling;
+        
+        if (newStatus.is_premium) {
+            premiumSpan.textContent = '💎 پرمیوم';
+            premiumSpan.style.color = '#ffeb3b';
+            premiumButton.textContent = 'عادی کردن';
+            premiumButton.className = 'btn btn-danger';
+        } else {
+            premiumSpan.textContent = 'عادی';
+            premiumSpan.style.color = '#ccc';
+            premiumButton.textContent = 'پرمیوم کردن';
+            premiumButton.className = 'btn btn-primary';
+        }
+        
+        // به‌روزرسانی وضعیت بن
+        const banSpan = document.getElementById(`banned-${identifier}`);
+        const banButton = banSpan.nextElementSibling;
+        
+        if (newStatus.is_banned) {
+            banSpan.textContent = '🚫 بن شده';
+            banSpan.style.color = 'var(--secondary-color)';
+            banButton.textContent = 'رفع بن';
+            banButton.className = 'btn btn-primary';
+        } else {
+            banSpan.textContent = 'فعال';
+            banSpan.style.color = '#28a745';
+            banButton.textContent = 'بن کردن';
+            banButton.className = 'btn btn-danger';
+        }
+    }
+</script>
+{% endblock %}

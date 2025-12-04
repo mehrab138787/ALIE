@@ -3,17 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ورود/ثبت نام با ایمیل</title>
-    <!-- استفاده از فونت آیکون برای زیبایی -->
+    <title>ورود/ثبت نام با شماره تلفن</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <!-- فونت وزیرمتن برای خوانایی بهتر در فارسی -->
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         /* متغیرهای اصلی رنگ */
         :root {
             --bg-dark: #070707; 
             --card-dark: #1e1e1e; 
-            --highlight-color: #03A9F4; /* رنگ آبی جذاب */
+            --highlight-color: #03A9F4; 
             --highlight-color-light: #4cbbff;
             --text-color: #FAFAFA; 
             --error-color: #FF4444; 
@@ -31,24 +29,23 @@
             padding: 20px;
         }
         
-        /* 💥 استایل کارت با سایه‌های عمیق */
+        /* استایل کارت با سایه‌های عمیق و افکت هاور */
         .login-card { 
             background: var(--card-dark); 
             padding: 35px; 
-            border-radius: var(--border-radius); 
+            border-radius: 16px;
             width: 90%; 
             max-width: 400px; 
-            /* سایه‌های چندگانه برای عمق */
             box-shadow: 
-                0 10px 30px rgba(0, 0, 0, 0.6), /* سایه تاریک‌تر */
-                0 0 0 1px rgba(255, 255, 255, 0.05); /* حاشیه داخلی ظریف */
+                0 10px 30px rgba(0, 0, 0, 0.6), 
+                0 0 0 1px rgba(255, 255, 255, 0.05);
             direction: rtl;
             transform: scale(1);
             transition: transform 0.3s ease-in-out;
         }
 
         .login-card:hover {
-            transform: scale(1.01); /* افکت کوچک هاور روی کارت */
+            transform: scale(1.01);
         }
 
         .login-card h2 { 
@@ -60,36 +57,45 @@
         .input-group { margin-bottom: 25px; }
         .input-group label { display: block; margin-bottom: 8px; font-size: 0.95rem; color: #aaa; }
         
-        /* استایل فیلد ایمیل با آیکون و جداکننده */
-        .input-with-icon {
+        /* استایل کانتینر فیلد تلفن (شامل کد و شماره) */
+        .phone-input-container {
             display: flex;
-            /* استایل مرز کمی روشن‌تر */
             border: 1px solid #3d3d3d; 
             border-radius: 10px;
             background: #2a2a2a;
             overflow: hidden;
             transition: border-color 0.3s;
-            direction: ltr;
+            direction: ltr; 
         }
         
-        .input-with-icon:focus-within {
+        .phone-input-container:focus-within {
             border-color: var(--highlight-color); 
-            box-shadow: 0 0 8px rgba(3, 169, 244, 0.5); /* سایه نئونی در فوکوس */
+            box-shadow: 0 0 8px rgba(3, 169, 244, 0.5); 
         }
 
-        .icon-wrapper {
-            /* جداکننده عمودی قوی‌تر */
+        /* 💥 استایل نمایش کد کشور (+98 و پرچم) */
+        .country-code-display {
             border-right: 1px solid #3d3d3d; 
             display: flex;
             align-items: center;
             padding: 12px 15px;
-            background: #222222; /* رنگ پس‌زمینه متفاوت برای آیکون */
-            color: var(--highlight-color); 
+            background: #222222; 
+            color: var(--text-color);
             font-size: 1.1rem;
+            font-weight: 700;
             flex-shrink: 0; 
+            direction: ltr; 
+            gap: 5px; /* فاصله بین +98 و پرچم */
+        }
+        
+        /* 💥 استایل SVG پرچم */
+        .flag-icon svg {
+            display: block;
+            border-radius: 3px; 
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3); /* سایه کوچک برای عمق */
         }
 
-        .input-with-icon input { 
+        .phone-input-container input { 
             flex-grow: 1; 
             padding: 12px;
             border: none;
@@ -97,7 +103,7 @@
             color: var(--text-color); 
             font-size: 1rem; 
             outline: none; 
-            direction: ltr;
+            direction: ltr; 
             text-align: left;
         }
         
@@ -112,13 +118,16 @@
             font-size: 1.15rem; 
             font-weight: 700; 
             cursor: pointer; 
-            /* انیمیشن برای هاور */
             transition: background-color 0.3s, opacity 0.3s, transform 0.2s, box-shadow 0.3s;
-            box-shadow: 0 4px 15px rgba(3, 169, 244, 0.4); /* سایه برای برجستگی */
+            box-shadow: 0 4px 15px rgba(3, 169, 244, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
         }
         button:hover:not(:disabled) { 
             background: var(--highlight-color-light); 
-            transform: translateY(-2px); /* کمی بالا آمدن در هاور */
+            transform: translateY(-2px); 
             box-shadow: 0 6px 20px rgba(3, 169, 244, 0.6);
         }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -141,22 +150,16 @@
             border-bottom: 1px solid #3d3d3d; 
         }
 
-        .divider:not(:empty)::before {
-            margin-left: .7em;
-        }
+        .divider:not(:empty)::before { margin-left: .7em; }
+        .divider:not(:empty)::after { margin-right: .7em; }
 
-        .divider:not(:empty)::after {
-            margin-right: .7em;
-        }
-
-        /* 💥 استایل لینک سوییچ (Secondary Button) */
+        /* استایل لینک سوییچ (Secondary Button) */
         .switch-link { 
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 10px; 
             padding: 12px;
-            /* استایل دکمه با حاشیه آبی */
             border: 2px solid var(--highlight-color); 
             border-radius: 10px;
             background: transparent; 
@@ -168,8 +171,8 @@
         }
 
         .switch-link:hover {
-            background: var(--highlight-color); /* تغییر رنگ به آبی */
-            color: var(--bg-dark); /* تغییر رنگ متن به تیره */
+            background: var(--highlight-color); 
+            color: var(--bg-dark); 
             transform: translateY(-1px);
         }
         
@@ -181,22 +184,31 @@
 <body>
 
 <div class="login-card">
-    <h2><i class="fas fa-envelope-open-text"></i> ورود یا ثبت نام با ایمیل</h2>
+    <h2><i class="fas fa-mobile-alt"></i> ورود یا ثبت نام با شماره تلفن</h2>
     <div class="input-group">
-        <label for="email">آدرس ایمیل</label>
+        <label for="phone">شماره تلفن (۱۰ رقمی)</label>
         
-        <!-- فیلد ورودی ایمیل با آیکون داخل کادر -->
-        <div class="input-with-icon">
-            <span class="icon-wrapper">
-                <i class="fas fa-at"></i> <!-- آیکون ات ساین (@) -->
+        <div class="phone-input-container">
+            <span class="country-code-display">
+                +98 
+                <span class="flag-icon">
+                    <!-- SVG پرچم ایران -->
+                    <svg viewBox="0 0 100 60" width="24" height="18">
+                        <rect width="100" height="20" fill="#23A03B"/> <!-- Green -->
+                        <rect y="20" width="100" height="20" fill="#FFFFFF"/> <!-- White -->
+                        <rect y="40" width="100" height="20" fill="#DA0000"/> <!-- Red -->
+                        <!-- Emblem is omitted for simplicity and small size, but we add a small red circle for placeholder/cuteness -->
+                        <circle cx="50" cy="30" r="4" fill="#DA0000" />
+                    </svg>
+                </span>
             </span>
-            <input type="email" id="email" placeholder="مثلاً: yourname@gmail.com" required>
+            <input type="tel" id="phone" placeholder="9123456789" required maxlength="10">
         </div>
 
     </div>
     
     <button id="send-code-btn" onclick="sendCode()">
-        <i class="fas fa-paper-plane"></i> درخواست کد تأیید
+        <i class="fas fa-sms"></i> درخواست کد تأیید پیامکی
     </button>
     
     <div id="status-message" class="status-message" style="display:none;"></div>
@@ -204,64 +216,85 @@
     <!-- خط جداکننده افقی شیک -->
     <div class="divider">یا</div>
     
-    <!-- لینک سوییچ به صفحه شماره تلفن (دکمه ثانویه) -->
-    <a href="/login_phone" class="switch-link">
-        <i class="fas fa-mobile-alt"></i> 
-        ورود با شماره تلفن
+    <!-- لینک سوییچ به صفحه ایمیل (دکمه ثانویه) -->
+    <a href="/login" class="switch-link">
+        <i class="fas fa-envelope-open-text"></i>
+        ورود با ایمیل
     </a>
 </div>
 
 <script>
-    const emailInput = document.getElementById('email');
+    const phoneInput = document.getElementById('phone');
     const sendCodeBtn = document.getElementById('send-code-btn');
     const statusDiv = document.getElementById('status-message');
 
-    // نمایش پیام وضعیت (موفقیت، خطا، هشدار)
     function showStatus(message, type) {
         statusDiv.textContent = message;
         statusDiv.className = 'status-message ' + type;
         statusDiv.style.display = 'block';
     }
 
+    // تابع برای اطمینان از اینکه ورودی فقط اعداد باشد و با 9 شروع شود
+    phoneInput.addEventListener('input', (e) => {
+        let value = e.target.value.replace(/\D/g, ''); // حذف غیر اعداد
+        
+        if (value.length > 0 && value[0] !== '9') {
+            value = '9' + value.substring(1); // شروع با 9 را اجباری می‌کند
+        }
+        
+        if (value.length > 10) {
+            value = value.substring(0, 10);
+        }
+        
+        e.target.value = value;
+    });
+
     // تابع اصلی ارسال کد
     async function sendCode() {
-        const email = emailInput.value.trim();
-        if (!email) {
-            showStatus("لطفاً یک آدرس ایمیل معتبر وارد کنید.", 'error');
+        // ما فقط 10 رقم بعد از 98 را می‌گیریم
+        const phone_suffix = phoneInput.value.trim(); 
+        
+        if (phone_suffix.length !== 10 || phone_suffix[0] !== '9') {
+            showStatus("لطفاً یک شماره تلفن ۱۰ رقمی معتبر (شروع با ۹) وارد کنید.", 'error');
             return;
         }
+        
+        // ترکیب نهایی برای ارسال به بک‌اند (مانند 0912...)
+        const full_phone = '0' + phone_suffix;
 
         sendCodeBtn.disabled = true;
-        sendCodeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال ارسال کد...';
-        showStatus("در حال ارسال کد به ایمیل شما...", 'success');
+        sendCodeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال ارسال پیامک...';
+        showStatus("در حال ارسال کد به شماره شما...", 'success');
 
         try {
             // شبیه‌سازی فراخوانی Flask API
-            const response = await fetch("/send_code", {
+            const response = await fetch("/send_sms_code", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: email })
+                body: JSON.stringify({ phone: full_phone }) // ارسال شماره کامل (با 0)
             });
 
             const data = await response.json();
             
             if (response.ok && data.status === "success") {
+                // ذخیره شماره تلفن کامل (با 0) در Local Storage (برای مثال)
+                localStorage.setItem('phone_for_verification', full_phone);
+                
                 showStatus("✅ " + data.message + " در حال انتقال...", 'success');
-                // انتقال به صفحه تأیید کد
                 setTimeout(() => {
-                    window.location.href = `/verify_page?email=${encodeURIComponent(email)}`;
+                    window.location.href = `/verify_page_phone`;
                 }, 1500);
 
             } else {
                 showStatus("❌ " + data.message, 'error');
-                sendCodeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> درخواست کد تأیید';
+                sendCodeBtn.innerHTML = '<i class="fas fa-sms"></i> درخواست کد تأیید پیامکی';
                 sendCodeBtn.disabled = false;
             }
 
         } catch (e) {
             console.error("Fetch Error:", e);
             showStatus("⚠️ خطای شبکه یا سرور رخ داد. اتصال به سرور را بررسی کنید.", 'error');
-            sendCodeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> درخواست کد تأیید';
+            sendCodeBtn.innerHTML = '<i class="fas fa-sms"></i> درخواست کد تأیید پیامکی';
             sendCodeBtn.disabled = false;
         }
     }

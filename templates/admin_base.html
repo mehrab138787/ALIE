@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}پنل مدیریت Cyrus AI{% endblock %}</title>
+    <style>
+        /* فونت فارسی و ثابت */
+        @font-face {
+            font-family: 'Vazirmatn';
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.0.3/fonts/webfonts/Vazirmatn-Regular.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+        }
+
+        /* متغیرهای رنگی برای Dark Mode حرفه‌ای */
+        :root {
+            --bg-color: #121212; /* پس زمینه اصلی: بسیار تیره */
+            --card-color: #1e1e1e; /* پس زمینه کارت‌ها: تیره با کنتراست */
+            --text-color: #e0e0e0; /* رنگ متن اصلی: روشن و ملایم */
+            --primary-color: #03dac6; /* رنگ اصلی: فیروزه‌ای Material Design */
+            --secondary-color: #cf6679; /* رنگ هشدار/ثانویه */
+            --border-color: #333333; /* رنگ حاشیه و خطوط */
+            --shadow-color-light: rgba(0, 0, 0, 0.2);
+            --shadow-color-deep: rgba(0, 0, 0, 0.5);
+        }
+
+        /* --- استایل‌های پایه --- */
+        body {
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            direction: rtl;
+            line-height: 1.6;
+        }
+
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: #62f8e9;
+        }
+
+        /* --- سایدبار (منوی کناری) --- */
+        .sidebar {
+            width: 280px; 
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            right: 0; 
+            background-color: var(--card-color);
+            padding: 20px;
+            box-shadow: 0 0 20px var(--shadow-color-deep);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            transition: right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+        }
+
+        .sidebar h2 {
+            text-align: center;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+            font-size: 1.6rem;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar ul li {
+            margin-bottom: 10px;
+        }
+
+        .sidebar ul li a {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            border-radius: 8px;
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s, transform 0.2s;
+            font-size: 1rem;
+        }
+
+        .sidebar ul li a:hover, .sidebar ul li a.active {
+            background-color: rgba(3, 218, 198, 0.1); 
+            color: var(--primary-color);
+            transform: translateX(-5px); 
+            text-decoration: none;
+            border-right: 4px solid var(--primary-color);
+        }
+        
+        .sidebar-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+            text-align: center;
+        }
+
+        /* --- محتوای اصلی و سربرگ (Header) --- */
+        .main-content {
+            margin-right: 320px; /* فاصله از نوار کناری در دسکتاپ */
+            padding: 20px;
+            transition: margin-right 0.4s;
+        }
+        
+        .header {
+            padding: 15px 0;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-color); 
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+
+        .header h1 {
+            margin: 0;
+            color: var(--primary-color);
+            font-size: 1.8rem;
+        }
+        
+        /* دکمه منو در حالت دسکتاپ مخفی است */
+        .menu-toggle {
+            display: none;
+        }
+
+
+        /* --- کارت‌ها (Cards) --- */
+        .card {
+            background-color: var(--card-color);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px var(--shadow-color-light), 0 8px 20px var(--shadow-color-deep);
+            margin-bottom: 20px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px var(--shadow-color-light), 0 12px 30px var(--shadow-color-deep);
+        }
+        
+        /* --- Overlay (پوشش صفحه در حالت منوی موبایل) --- */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 990; 
+            display: none;
+            transition: opacity 0.4s ease-in-out;
+            opacity: 0;
+        }
+        .overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        /* --- استایل‌های داخلی برای RTL و عناصر فرم --- */
+        input[type="text"], input[type="number"] {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: #2a2a2a;
+            color: var(--text-color);
+            width: 100%;
+            box-sizing: border-box;
+            text-align: right;
+            direction: rtl;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            color: var(--bg-color); 
+            font-weight: bold;
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+        }
+        .btn-primary:hover {
+            background-color: #62f8e9;
+            color: var(--card-color);
+        }
+        
+        .btn-danger {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+        }
+        .btn-danger:hover {
+            background-color: #e91e63;
+        }
+
+        /* ------------------------------------------- */
+        /* --- استایل‌های موبایل (Mobile Responsive) --- */
+        /* ------------------------------------------- */
+        @media (max-width: 768px) {
+            
+            /* --- نوار کناری (Sidebar) --- */
+            .sidebar {
+                right: -280px; /* پنهان کردن کامل در موبایل */
+                border-left: 1px solid var(--border-color);
+                box-shadow: none;
+            }
+            .sidebar.open {
+                right: 0;
+                box-shadow: 0 0 40px var(--shadow-color-deep);
+            }
+
+            /* --- محتوای اصلی --- */
+            .main-content {
+                margin-right: 0; /* تمام عرض */
+                padding: 15px;
+                padding-bottom: 70px; /* فضای خالی برای دکمه شناور */
+            }
+
+            /* --- سربرگ (Header) --- */
+            .header {
+                justify-content: center; /* عنوان وسط قرار می‌گیرد */
+                padding: 10px 15px;
+            }
+            .header h1 {
+                font-size: 1.4rem;
+            }
+            
+            /* --- دکمه اکشن شناور (Floating Action Button - FAB) --- */
+            .mobile-fab {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: fixed;
+                left: 20px; /* گوشه پایین سمت چپ */
+                bottom: 20px;
+                width: 55px;
+                height: 55px;
+                border-radius: 50%; /* دایره‌ای */
+                background: var(--primary-color);
+                color: var(--bg-color);
+                box-shadow: 0 0 10px var(--shadow-color-light), 0 5px 15px var(--shadow-color-deep);
+                font-size: 1.5rem;
+                cursor: pointer;
+                z-index: 1010; /* بالاترین لایه */
+                border: none;
+                transition: transform 0.3s, background-color 0.3s;
+                line-height: 1;
+            }
+            
+            /* لایه‌ی پوشاننده */
+            .overlay {
+                opacity: 0;
+            }
+        }
+    </style>
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    <div class="overlay" onclick="toggleMenu()"></div>
+
+    <div class="sidebar">
+        <h2>پنل مدیریت</h2>
+        <p style="font-size:0.9rem; color: #aaa; text-align: center; margin-bottom: 30px;">
+            مدیریت توسط: {{ admin_identifier }}
+        </p>
+        <ul>
+            <li><a href="{{ url_for('admin.admin_dashboard') }}" class="{% if request.endpoint == 'admin.admin_dashboard' %}active{% endif %}">🏠 داشبورد</a></li>
+            <li><a href="{{ url_for('admin.manage_users') }}" class="{% if request.endpoint == 'admin.manage_users' %}active{% endif %}">👥 مدیریت کاربران</a></li>
+        </ul>
+        <div class="sidebar-footer">
+            <a href="{{ url_for('logout') }}" class="btn btn-danger" style="width: 100%; display: block; margin-top: 10px;">
+                🚪 خروج و بازگشت
+            </a>
+            <p style="font-size: 0.8rem; color: #888; margin-top: 15px;">Cyrus AI Admin © 2025</p>
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="header">
+            <h1>{% block page_heading %}داشبورد{% endblock %}</h1>
+        </div>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="card alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <button class="mobile-fab" onclick="toggleMenu()">☰</button>
+
+    <script>
+        function toggleMenu() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.overlay');
+            
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+
+            // مدیریت پیمایش صفحه (جلوگیری از اسکرول شدن محتوا هنگام باز بودن منو)
+            if (sidebar.classList.contains('open')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = 'auto';
+            }
+        }
+    </script>
+</body>
+</html>
