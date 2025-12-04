@@ -243,13 +243,23 @@
             animation: bubbleIn 0.3s forwards ease-out;
             position: relative;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6); 
-            line-height: 1.7;
+            line-height: 1.5; /* ⬅️ FIX 1: Reduced from 1.7 to 1.5 */
             font-size: 1.05rem;
             direction: rtl; 
             text-align: right;
-            padding-bottom: 35px; 
+            padding-bottom: 30px; /* ⬅️ FIX 3: Reduced from 35px to 30px */
         }
         
+        /* ⬅️ FIX 2: Added - Control spacing between paragraphs (Enter presses) */
+        .message p {
+            margin: 0; 
+            padding: 0;
+            margin-bottom: 8px; /* Standardize spacing between lines/paragraphs */
+        }
+        .message p:last-child {
+            margin-bottom: 0; 
+        }
+
         @keyframes bubbleIn { 
             0% { opacity: 0; transform: scale(0.8) translateY(10px); }
             100% { opacity: 1; transform: scale(1) translateY(0); }
