@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>سیاست حفظ حریم خصوصی</title>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
-    <style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"> <style>
         :root {
             --bg-dark: #070707;
             --card-dark: #1e1e1e;
             --highlight-color: #03A9F4;
             --text-color: #FAFAFA;
             --border-radius: 12px;
+            --accent-color: #222222; /* ⬅️ اضافه شدن متغیر برای استفاده در دکمه */
         }
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Vazirmatn', sans-serif;}
         body { background: var(--bg-dark); color: var(--text-color); padding: 40px; direction: rtl; }
@@ -37,9 +38,56 @@
             color: #999; 
             font-size: 0.9rem;
         }
+
+        /* ------------------ استایل دکمه بازگشت (تکرار) ------------------ */
+        .back-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--card-dark);
+            color: var(--highlight-color);
+            border: 2px solid var(--accent-color);
+            padding: 10px 15px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            z-index: 100;
+        }
+        .back-button i {
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
+        .back-button:hover {
+            background: var(--highlight-color);
+            color: var(--bg-dark);
+            box-shadow: 0 0 15px rgba(3, 169, 244, 0.8);
+            transform: translateY(-2px);
+        }
+        @media (max-width: 600px) {
+            body { padding: 15px; }
+            .container { padding: 20px; }
+            .back-button {
+                top: 10px;
+                right: 10px;
+                padding: 8px 12px;
+                font-size: 0.9rem;
+            }
+        }
+        /* ---------------------------------------------------- */
     </style>
 </head>
 <body>
+    
+    <button class="back-button" onclick="history.back()">
+        <i class="fas fa-arrow-right"></i> بازگشت
+    </button>
+    
     <div class="container">
         <h1>سیاست حفظ حریم خصوصی — برنامه Cyrus</h1>
         
