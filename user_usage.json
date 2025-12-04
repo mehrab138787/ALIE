@@ -4,5 +4,11 @@
         "chat_budget": 97,
         "image_budget": 120,
         "level_check": "premium"
+    },
+    "mehrabzyzy3@gmail.com": {
+        "date": "2025-12-04",
+        "chat_budget": 50,
+        "image_budget": 40,
+        "level_check": "free"
     }
 }

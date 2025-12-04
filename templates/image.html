@@ -18,7 +18,7 @@
             --muted-text: #999999;
             --border-radius: 15px; 
             --success-color: #00CC66; 
-            --error-color: #FF4444;   
+            --error-color: #FF4444; 
             --loading-color: #FFA500; /* رنگ نارنجی برای لودینگ */
         }
 
@@ -264,7 +264,7 @@
     const downloadBtn = document.getElementById("download-btn");
     const downloadLink = document.getElementById("download-link");
     const statusMessage = document.getElementById("status-message");
-    const backBtn = document.getElementById('back-btn'); // 👈👈👈 عنصر دکمه برگشت
+    const backBtn = document.getElementById('back-btn'); 
 
     const LOCAL_STORAGE_KEY = 'cyrus_image_prompt';
 
@@ -277,7 +277,7 @@
     
     // 💡 تابع کمکی برای نمایش پیام وضعیت
     function showStatus(message, type) {
-        statusMessage.textContent = message;
+        statusMessage.innerHTML = message; // از innerHTML به جای textContent برای آیکون
         statusMessage.className = ''; 
         statusMessage.classList.add(type);
         statusMessage.style.opacity = 1;
@@ -320,7 +320,9 @@
         generatedImage.src = ""; // حذف تصویر قبلی
         imagePlaceholder.style.display = 'none';
         
-        showStatus("💡 در حال تولید... (فاز ۱)", 'loading');
+        // **✅ تغییر اعمال شده: جایگزینی فاز ۱ با آیکون ستاره در حال چرخش**
+        showStatus('💡 در حال تولید... <i class="fas fa-star fa-spin"></i>', 'loading');
+
 
         try {
             // 2. ارسال درخواست به مسیر image_generator
@@ -385,7 +387,7 @@
         if (e.key === "Enter" && !generateBtn.disabled) generateImage(); 
     });
 
-    // 💡👈👈👈 اصلاح مهم برای افزایش سرعت دکمه برگشت: استفاده از history.back()
+    // 💡 اصلاح مهم برای افزایش سرعت دکمه برگشت: استفاده از history.back()
     backBtn.addEventListener('click', () => {
         // این متد اغلب از کش مرورگر (BFCache) استفاده می‌کند و سرعت بازگشت را بسیار بالا می‌برد.
         window.history.back();

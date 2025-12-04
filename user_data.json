@@ -26,5 +26,14 @@
         "is_premium": true,
         "is_banned": false,
         "is_admin": false
+    },
+    "mehrabzyzy3@gmail.com": {
+        "id": "7bdb4bc2-e07f-4b57-90fb-8c844cdbdd00",
+        "email": "mehrabzyzy3@gmail.com",
+        "phone": null,
+        "score": 0,
+        "is_premium": false,
+        "is_banned": false,
+        "is_admin": false
     }
 }
