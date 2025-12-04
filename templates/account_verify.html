@@ -15,7 +15,11 @@
         }
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Vazirmatn', sans-serif;}
         body { background: var(--bg-dark); color: var(--text-color); display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .login-card { background: var(--card-dark); padding: 30px; border-radius: var(--border-radius); width: 90%; max-width: 400px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5); direction: rtl;}
+        .login-card { 
+            background: var(--card-dark); padding: 30px; border-radius: var(--border-radius); width: 90%; 
+            max-width: 400px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5); direction: rtl;
+            position: relative; /* 🆕 برای موقعیت‌دهی دکمه بازگشت */
+        }
         .login-card h2 { text-align: center; color: var(--highlight-color); margin-bottom: 30px; }
         .input-group { margin-bottom: 20px; }
         .input-group label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: #ccc; }
@@ -29,11 +33,31 @@
         .status-message.success { background: rgba(0, 204, 102, 0.2); color: var(--success-color); }
         .email-display { font-size: 0.9rem; color: #aaa; text-align: center; margin-bottom: 15px; }
         .resend-link { display: block; text-align: center; margin-top: 15px; font-size: 0.9rem; color: var(--highlight-color); cursor: pointer; text-decoration: none;}
+        
+        /* 🆕 استایل دکمه بازگشت */
+        .back-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #888;
+            font-size: 1.3rem;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .back-button:hover {
+            color: var(--highlight-color);
+        }
     </style>
 </head>
 <body>
 
 <div class="login-card">
+    
+    <a href="javascript:history.back()" class="back-button" title="بازگشت">
+        <i class="fas fa-arrow-right"></i>
+    </a>
+    
     <h2><i class="fas fa-shield-alt"></i> تأیید نهایی</h2>
     
     <div class="email-display">

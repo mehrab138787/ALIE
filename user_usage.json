@@ -10,5 +10,11 @@
         "chat_budget": 49,
         "image_budget": 40,
         "level_check": "free"
+    },
+    "09023287024": {
+        "date": "2025-12-05",
+        "chat_budget": 50,
+        "image_budget": 40,
+        "level_check": "free"
     }
 }

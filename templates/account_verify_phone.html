@@ -41,6 +41,7 @@
                 0 0 0 1px rgba(255, 255, 255, 0.05);
             direction: rtl;
             transition: all 0.3s ease-in-out;
+            position: relative; /* 🆕 اضافه شده برای دکمه بازگشت */
         }
 
         .verify-card:hover {
@@ -151,6 +152,21 @@
         .resend-link:hover:not(.disabled) { color: var(--text-color); }
         .resend-link.disabled { opacity: 0.6; cursor: default; }
 
+        /* 🆕 استایل دکمه بازگشت */
+        .back-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #888;
+            font-size: 1.3rem;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .back-button:hover {
+            color: var(--highlight-color);
+        }
+        
         /* 💥 بهینه‌سازی نهایی برای موبایل */
         @media (max-width: 400px) {
             .verify-card { 
@@ -171,10 +187,14 @@
 <body>
 
 <div class="verify-card">
+    
+    <a href="javascript:history.back()" class="back-button" title="بازگشت به صفحه قبل">
+        <i class="fas fa-arrow-right"></i>
+    </a>
+    
     <h2><i class="fas fa-lock"></i> تأیید کد پیامکی</h2>
     <p>کد ۶ رقمی ارسال شده به شماره <strong id="user-phone"></strong> را وارد کنید:</p>
     
-    <!-- 💥 کانتینر ۶ کادر ورودی -->
     <div class="otp-container" id="otp-container">
         <input type="text" id="code-1" maxlength="1" inputmode="numeric">
         <input type="text" id="code-2" maxlength="1" inputmode="numeric">
