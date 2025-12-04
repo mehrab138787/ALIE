@@ -930,6 +930,20 @@ def support():
 def about():
     return render_template("about.html")
 
+# 🔗 مسیرهای جدید برای سیاست‌های حفظ حریم خصوصی و شرایط استفاده
+@app.route('/privacy-policy')
+def privacy_policy():
+    """نمایش صفحه سیاست حفظ حریم خصوصی"""
+    # توجه: باید فایل HTML با نام privacy_policy.html در پوشه templates وجود داشته باشد.
+    return render_template('privacy_policy.html')
+
+@app.route('/terms-of-service')
+def terms_of_service():
+    """نمایش صفحه شرایط استفاده از خدمات"""
+    # توجه: باید فایل HTML با نام terms_of_service.html در پوشه templates وجود داشته باشد.
+    return render_template('terms_of_service.html')
+# --------------------------------------------------------------------------
+
 @app.route("/profile")
 def profile():
     if not session.get('user_id'):

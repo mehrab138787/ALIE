@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ورود/ثبت نام با ایمیل</title>
-    <!-- استفاده از فونت آیکون برای زیبایی -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <!-- فونت وزیرمتن برای خوانایی بهتر در فارسی -->
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         /* متغیرهای اصلی رنگ */
@@ -176,6 +174,33 @@
         .status-message { margin-top: 20px; padding: 10px; border-radius: 8px; text-align: center; }
         .status-message.error { background: rgba(255, 68, 68, 0.2); color: var(--error-color); }
         .status-message.success { background: rgba(0, 204, 102, 0.2); color: var(--success-color); }
+        
+        /* --- استایل جدید برای متن پذیرش شرایط --- */
+        .terms-acceptance {
+            text-align: center;
+            margin-top: 25px; /* فاصله از دکمه بالا */
+            font-size: 0.9rem;
+            color: #999;
+            line-height: 1.6;
+        }
+
+        .terms-acceptance .policy-link {
+            color: var(--highlight-color); /* استفاده از رنگ آبی */
+            text-decoration: none; /* حذف زیرخط پیش فرض مرورگر */
+            font-weight: 700;
+            transition: color 0.2s;
+        }
+
+        .terms-acceptance .policy-link:hover {
+            color: var(--highlight-color-light); 
+            text-decoration: underline;
+        }
+        
+        .terms-acceptance .fas {
+            margin-left: 5px;
+            color: var(--success-color); /* آیکون تیک سبز */
+        }
+        /* ------------------------------------------- */
     </style>
 </head>
 <body>
@@ -185,11 +210,9 @@
     <div class="input-group">
         <label for="email">آدرس ایمیل</label>
         
-        <!-- فیلد ورودی ایمیل با آیکون داخل کادر -->
         <div class="input-with-icon">
             <span class="icon-wrapper">
-                <i class="fas fa-at"></i> <!-- آیکون ات ساین (@) -->
-            </span>
+                <i class="fas fa-at"></i> </span>
             <input type="email" id="email" placeholder="مثلاً: yourname@gmail.com" required>
         </div>
 
@@ -201,14 +224,22 @@
     
     <div id="status-message" class="status-message" style="display:none;"></div>
 
-    <!-- خط جداکننده افقی شیک -->
     <div class="divider">یا</div>
     
-    <!-- لینک سوییچ به صفحه شماره تلفن (دکمه ثانویه) -->
     <a href="/login_phone" class="switch-link">
         <i class="fas fa-mobile-alt"></i> 
         ورود با شماره تلفن
     </a>
+    
+    <p class="terms-acceptance">
+        <i class="fas fa-check-circle"></i>
+        من 
+        <a href="{{ url_for('terms_of_service') }}" class="policy-link">شرایط استفاده از خدمات</a> 
+        و 
+        <a href="{{ url_for('privacy_policy') }}" class="policy-link">حریم خصوصی</a> 
+        را می پذیرم.
+    </p>
+    
 </div>
 
 <script>

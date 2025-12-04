@@ -73,7 +73,6 @@
             padding-top: 50px;
             display: flex;
             flex-direction: column;
-            /* 👈👈👈 اصلاح برای اسکرول 👈👈👈 */
             overflow-y: auto; 
         }
 
@@ -165,7 +164,6 @@
             text-shadow: 0 0 5px var(--highlight-color); 
         }
 
-        /* 👈👈👈 جابجایی: کنترل‌ها (مثل پاک کردن چت) الآن سمت چپ هستند 👈👈👈 */
         #header-controls {
             position: absolute; left: 20px; top: 50%; transform: translateY(-50%); display: flex; gap: 12px;
         }
@@ -179,7 +177,6 @@
         #chat-header button:hover { color: var(--highlight-color); box-shadow: 0 0 10px var(--highlight-color); }
         #chat-header button:active { transform: scale(0.9); box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light); color: var(--highlight-color); }
         
-        /* 👈👈👈 جابجایی: منو الآن سمت راست است 👈👈👈 */
         #menu-btn {
             position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
         }
@@ -349,7 +346,7 @@
         /* ======================================================= */
         #input-container {
             display: flex; background: var(--card-dark); padding: 15px; align-items: center;
-            border: 1px solid var(--accent-color); border-radius: var(--border-radius);
+            border: 1px solid var(--accent-color); border-radius: 25px;
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.7); z-index: 20;
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
@@ -383,6 +380,10 @@
             margin: 0 10px; 
             box-shadow: inset 5px 5px 10px var(--neum-dark), inset -5px -5px 10px var(--neum-light);
             direction: rtl;
+            resize: none; 
+            overflow-y: hidden; 
+            max-height: 150px; 
+            line-height: 1.5;
         }
         #user-input::placeholder { color: var(--muted-text); }
         #user-input:focus { 
@@ -392,15 +393,15 @@
 
         .input-btn {
             width: 60px; height: 60px; border: none; border-radius: 50%; cursor: pointer;
-            font-size: 1.5rem; color: var(--bg-dark);
-            background: var(--highlight-color);
-            box-shadow: 5px 5px 10px var(--neum-dark), -5px -5px 10px var(--neum-light);
-            transition: transform 0.1s ease;
+            font-size: 1.5rem; color: #FFF; 
+            background: linear-gradient(45deg, var(--highlight-color), #0077C0);
+            box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.7), 0 0 8px rgba(3, 169, 244, 0.5); 
+            transition: transform 0.1s ease, box-shadow 0.2s ease;
         }
         #send-btn:active { 
             background: #0077C0; 
             transform: scale(0.9); 
-            box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light); 
+            box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light), 0 0 15px rgba(3, 169, 244, 0.8); 
         }
 
         /* ======================================================= */
@@ -414,7 +415,11 @@
             #chat-app { padding: 10px; }
             #chat-header { padding: 15px 15px; font-size: 1.6rem; margin-bottom: 10px; }
             #chat-header button { width: 38px; height: 38px; font-size: 1rem; }
-            #messages { padding: 10px 5px; margin-bottom: 10px; }
+            #messages { 
+                padding: 10px 5px; 
+                margin-bottom: 10px; 
+                border-radius: 15px; 
+            }
             .message-container { margin: 8px 0; }
             .avatar { margin: 0 8px; font-size: 1.3rem; }
             .message {
@@ -431,8 +436,12 @@
             .copy-btn { bottom: 6px; width: 20px; height: 20px; font-size: 0.85em; }
             .user .copy-btn { left: 10px; } 
             .ai .copy-btn { right: 10px; }
-            #input-container { padding: 10px; }
-            #user-input { padding: 12px 20px; font-size: 1rem; }
+            #input-container { padding: 10px; border-radius: 20px; } 
+            #user-input { 
+                padding: 12px 20px; 
+                font-size: 1rem; 
+                max-height: 100px; 
+            }
             .input-btn { width: 45px; height: 45px; font-size: 1.2rem; }
             #image-btn { width: 45px; height: 45px; font-size: 1.2rem; margin-left: 5px; }
         }
@@ -452,12 +461,12 @@
         <i class="fas fa-palette"></i> تولید تصویر
     </a>
     
-    <a href="{{ url_for('game_center') }}" class="drawer-link">
-        <i class="fas fa-gamepad"></i> بازی و سرگرمی
-    </a>
-    
     <span class="drawer-link disabled-link" title="به زودی فعال خواهد شد">
         <i class="fas fa-music"></i> تولید موسیقی (<small>بزودی</small>)
+    </span>
+
+    <span class="drawer-link disabled-link" title="به زودی فعال خواهد شد">
+        <i class="fas fa-gem"></i> خرید پرمیوم (<small>بزودی از طریق کافه بازار</small>)
     </span>
     
     <hr style="margin: 10px 0; border-color: rgba(255, 255, 255, 0.1);">
@@ -510,8 +519,9 @@
             <i class="fas fa-image"></i>
         </button>
 
-        <input type="text" id="user-input" placeholder=" پیام خود را بنویسید و Enter بزنید...">
-        <button id="send-btn" class="input-btn" title="ارسال"><i class="fas fa-rocket"></i></button>
+        <textarea id="user-input" rows="1" placeholder=" پیام خود را بنویسید و Enter بزنید..."></textarea>
+        
+        <button id="send-btn" class="input-btn" title="ارسال"><i class="fas fa-paper-plane"></i></button>
     </div>
 </div>
 
@@ -827,7 +837,9 @@ async function sendMessage() {
     appendMessage(message, "user");
     playSendSound(); 
 
+    // مهم: پس از ارسال پیام، ارتفاع input را به حالت اولیه برگردانید.
     input.value = "";
+    input.style.height = 'auto'; // تنظیم مجدد ارتفاع
 
     const { container: loadingContainer, bubble: loadingElem } = showLoadingBubble();
 
@@ -866,6 +878,9 @@ async function sendMessage() {
                 sendBtn.disabled = false;
                 input.disabled = false;
                 input.focus();
+                
+                // اسکرول مجدد در صورت نیاز
+                autoGrowTextarea();
             }
         }, 20); 
 
@@ -876,7 +891,32 @@ async function sendMessage() {
         sendBtn.disabled = false;
         input.disabled = false;
         input.focus();
+        
+        // اسکرول مجدد در صورت نیاز
+        autoGrowTextarea();
     }
+}
+
+
+/* ======================================================= */
+/* 📈 Textarea Auto-Grow Logic (منطق افزایش ارتفاع)       */
+/* ======================================================= */
+
+function autoGrowTextarea() {
+    // 1. ارتفاع را موقتاً به حداقل برگردانید
+    input.style.height = 'auto'; 
+
+    // 2. ارتفاع جدید را بر اساس محتوا تنظیم کنید
+    let newHeight = input.scrollHeight;
+
+    // 3. اعمال ارتفاع جدید
+    input.style.height = newHeight + 'px';
+
+    // 4. اسکرول کردن به آخرین پیام در لیست پیام‌ها
+    messages.scrollTop = messages.scrollHeight; 
+
+    // 💡 گام جدید برای موبایل: اطمینان حاصل شود که Input در دید باقی بماند
+    input.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
 
@@ -886,9 +926,25 @@ async function sendMessage() {
 
 sendBtn.addEventListener("click", sendMessage);
 
+// Event Listener برای مدیریت ارتفاع هنگام تایپ
+input.addEventListener("input", autoGrowTextarea); 
+
+// Event Listener برای مدیریت فوکوس اولیه در موبایل (اطمینان از دیده شدن دکمه ارسال)
+input.addEventListener("focus", () => {
+    // کمی تاخیر برای اطمینان از بالا آمدن کامل کیبورد
+    setTimeout(() => {
+        // اطمینان حاصل شود که کانتینر ورودی به انتهای نمای دید اسکرول شود
+        document.getElementById("input-container").scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'end' 
+        });
+    }, 100); 
+});
+
 input.addEventListener("keypress", (event) => {
+    // برای textarea، برای ارسال پیام باید جلوی خط جدید را بگیریم.
     if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault(); // جلوگیری از خط جدید در input
+        event.preventDefault(); // جلوگیری از خط جدید
         sendMessage();
     }
 });
@@ -900,6 +956,8 @@ clearBtn.addEventListener("click", () => {
         localStorage.removeItem("chatHistory");
         chatHistory = []; 
         alert("گفتگو پاک شد.");
+        // بازگرداندن ارتفاع textarea به حالت اولیه پس از پاک کردن چت
+        input.style.height = 'auto';
     }
 });
 </script>
