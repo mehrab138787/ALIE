@@ -852,9 +852,22 @@ def image_generator():
 @app.route("/")
 def index():
     cleanup_old_images() 
+    
+    # ⬅️ اصلاح برای رفع باگ تکرار پیام: تاریخچه گفتگو از سشن به قالب پاس داده می‌شود
+    conversation_history = session.get("conversation", [])
+    
+    # ⬅️ اعمال تابع fix_rtl_ltr بر روی پیام‌ها برای نمایش صحیح در فرانت‌اند
+    display_messages = [
+        {"role": msg["role"], "content": fix_rtl_ltr(msg["content"])}
+        for msg in conversation_history
+    ]
+    
     return render_template("index.html", 
         logged_in=session.get('user_id') is not None,
-        is_admin=session.get('is_admin', False))
+        is_admin=session.get('is_admin', False),
+        # ⬅️ ارسال تاریخچه گفتگو به قالب
+        chat_history=display_messages
+    )
 
 @app.route("/image")
 def image_page():
@@ -934,6 +947,16 @@ def support():
 @app.route("/about")
 def about():
     return render_template("about.html")
+    
+@app.route("/terms_of_service")
+def terms_of_service():
+    """نمایش صفحه شرایط و قوانین استفاده از سرویس."""
+    return render_template("terms_of_service.html")
+
+@app.route("/privacy_policy")
+def privacy_policy():
+    """نمایش صفحه حریم خصوصی."""
+    return render_template("privacy_policy.html")
 
 @app.route("/profile")
 def profile():
