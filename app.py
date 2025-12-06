@@ -38,7 +38,7 @@ if not API_KEY:
 
 # ----------------- 💾 تنظیمات PostgreSQL (Supabase) -----------------
 # ⚠️ مهم: YOUR_NEW_PASSWORD را با رمز عبور جدیدی که در Supabase ریست کردید، جایگزین کنید!
-DB_PASSWORD = "09962935294" 
+DB_PASSWORD = "مهراب0902328" 
 DB_HOST = "db.qkiewpjxvsmhynpilmgr.supabase.co"
 DB_NAME = "postgres"
 DB_USER = "postgres"
