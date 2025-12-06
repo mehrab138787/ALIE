@@ -1,6 +1,7 @@
 import os
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, Blueprint
 import requests
+import requests.exceptions # ⬅️ اضافه شدن برای مدیریت خطای Timeout
 import tiktoken
 import re
 from PIL import Image
@@ -13,10 +14,14 @@ from flask_mail import Mail, Message
 from kavenegar import KavenegarAPI, APIException, HTTPException 
 from functools import wraps 
 import json 
-from datetime import date # ⬅️ اضافه شده برای تاریخ دقیقتر
+# ⬅️ تغییر مهم: وارد کردن SQLAlchemy و datetime برای مدل‌ها
+from flask_sqlalchemy import SQLAlchemy 
+from datetime import date, datetime 
+import sqlalchemy.exc # برای مدیریت خطاهای دیتابیس
+from sqlalchemy import or_
 
 # =========================================================
-# 🛠️ تنظیمات اولیه و ذخیره‌سازهای موقت
+# 🛠️ تنظیمات اولیه و اتصال به دیتابیس
 # =========================================================
 app = Flask(__name__)
 
@@ -30,6 +35,22 @@ ADMIN_PHONE_NUMBER = '09962935294'
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 if not API_KEY:
     raise ValueError("❌ متغیر محیطی OPENROUTER_API_KEY پیدا نشد! لطفاً آن را تنظیم کنید.")
+
+# ----------------- 💾 تنظیمات PostgreSQL (Supabase) -----------------
+# ⚠️ مهم: YOUR_NEW_PASSWORD را با رمز عبور جدیدی که در Supabase ریست کردید، جایگزین کنید!
+DB_PASSWORD = "09962935294" 
+DB_HOST = "db.qkiewpjxvsmhynpilmgr.supabase.co"
+DB_NAME = "postgres"
+DB_USER = "postgres"
+
+# ساخت رشته اتصال PostgreSQL
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
+
+# تنظیمات Flask-SQLAlchemy
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
 
 # ----------------- 📧 تنظیمات Flask-Mail -----------------
 app.config['MAIL_SERVER']='smtp.gmail.com'
@@ -49,16 +70,14 @@ SMS_API = KavenegarAPI(KAVENEGAR_API_KEY)
 phone_verification_codes = {} 
 # ---------------------------------------------------------
 
-# 💡 ساختار برای ذخیره دائم گفتگوها (شبیه‌سازی پایگاه داده)
-# { 'user_identifier': [ {id: uuid, title: str, messages: [msgs...], last_update: timestamp}, ... ] }
-USER_CONVERSATIONS = {} 
+# ❌ حذف کدهای ذخیره‌سازی JSON
+# USER_CONVERSATIONS = {}  # دیگر لازم نیست
+# USER_DATA = {} # دیگر لازم نیست
+# USER_DATA_FILE = 'user_data.json' # دیگر لازم نیست
+# USER_USAGE = {} # دیگر لازم نیست
+# USAGE_DATA_FILE = 'user_usage.json' # دیگر لازم نیست
 
-# 🎯 ساختار جدید برای ذخیره اطلاعات پروفایل کاربر (برای مدیریت ادمین)
-# { 'user_identifier': { 'id': uuid, 'email': str, 'phone': str, 'score': int, 'is_premium': bool, 'is_banned': bool } }
-USER_DATA = {} 
-USER_DATA_FILE = 'user_data.json' # ⬅️ فایل ذخیره داده‌های کاربر
-
-# 🎯 تنظیمات هزینه و بودجه امتیاز روزانه (جدید - شامل درخواست 50 چت و 60 عکس برای کاربر عادی)
+# 🎯 تنظیمات هزینه و بودجه امتیاز روزانه
 SCORE_QUOTA_CONFIG = {
     'COSTS': {
         'chat': 1, # هر چت 1 امتیاز (مطابق درخواست)
@@ -75,12 +94,6 @@ SCORE_QUOTA_CONFIG = {
         }
     }
 }
-
-
-# 🗓️ ساختار برای ذخیره بودجه امتیاز باقی مانده در روز جاری
-# { 'user_identifier': { 'date': '2025-12-04', 'chat_budget': 49, 'image_budget': 60 } }
-USER_USAGE = {}
-USAGE_DATA_FILE = 'user_usage.json' # ⬅️ فایل ذخیره استفاده روزانه
 
 # ---------------------------------------------------------
 
@@ -114,9 +127,54 @@ INPUT_TOKEN_LIMIT = 100 # ⬅️ سقف ورودی: ۱۰۰ (برای حفظ تا
 MAX_COMPLETION_TOKENS = 400 # ⬅️ سقف نهایی پاسخ (خروجی) به ۴۰۰ توکن تنظیم شد.
 encoder = tiktoken.get_encoding("cl100k_base")
 
+# =========================================================
+# 🏛️ مدل‌های دیتابیس (SQLAlchemy Models)
+# =========================================================
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = db.Column(db.String(120), unique=True, nullable=True)
+    phone = db.Column(db.String(15), unique=True, nullable=True)
+    score = db.Column(db.Integer, default=0)
+    is_premium = db.Column(db.Boolean, default=False)
+    is_banned = db.Column(db.Boolean, default=False)
+    is_admin = db.Column(db.Boolean, default=False)
+    
+    # رابطه برای دسترسی به بودجه روزانه
+    usage = db.relationship('UserUsage', backref='user', lazy=True, uselist=False)
+    conversations = db.relationship('Conversation', backref='user', lazy='dynamic')
+
+
+class UserUsage(db.Model):
+    __tablename__ = 'user_usage'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), unique=True, nullable=False)
+    
+    # تاریخ را به صورت تاریخ ذخیره می‌کنیم
+    date = db.Column(db.Date, default=datetime.utcnow().date) 
+    
+    chat_budget = db.Column(db.Integer, default=50)
+    image_budget = db.Column(db.Integer, default=60)
+    level_check = db.Column(db.String(10), nullable=True) # برای بررسی تغییر سطح
+
+
+class Conversation(db.Model):
+    __tablename__ = 'conversations'
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(db.String(100), nullable=False, default="گفتگوی جدید...")
+    
+    # زمان را به صورت تایم‌استمپ پایتون ذخیره می‌کنیم
+    last_update = db.Column(db.Float, default=time.time) 
+    
+    # لیست پیام‌ها به صورت یک رشته بزرگ JSON
+    messages_json = db.Column(db.Text, nullable=False) 
+
 
 # =========================================================
 # ⚙️ توابع احراز هویت و ایمیل/پیامک
+# (این توابع بدون تغییر باقی می‌مانند)
 # =========================================================
 
 def generate_verification_code():
@@ -158,57 +216,174 @@ def send_verification_sms(phone_number, code):
         return False
 
 # =========================================================
-# 💾 توابع پایداری داده (Persistence)
+# 💾 توابع پایداری داده (Persistence) - **بازنویسی شده برای DB**
 # =========================================================
 
-def load_user_data():
-    """بارگذاری داده‌های کاربران (امتیاز، پرمیوم، بن) از فایل JSON."""
-    global USER_DATA
-    if os.path.exists(USER_DATA_FILE):
-        try:
-            with open(USER_DATA_FILE, 'r', encoding='utf-8') as f:
-                USER_DATA = json.load(f)
-        except Exception as e:
-            print(f"⚠️ Error loading user data: {e}. Starting with empty data.")
-            USER_DATA = {}
+# ❌ توابع load_user_data/save_user_data/load_user_usage/save_user_usage حذف شدند.
 
-def save_user_data():
-    """ذخیره داده‌های کاربران در فایل JSON."""
-    global USER_DATA
+def get_user_identifier(session):
+    """برگرداندن ایمیل یا شماره تلفن برای ذخیره‌سازی گفتگو."""
+    return session.get('user_email') or session.get('user_phone')
+
+def get_user_by_identifier(identifier):
+    """یافتن کاربر بر اساس ایمیل یا شماره تلفن."""
+    return User.query.filter(
+        or_(User.email == identifier, User.phone == identifier)
+    ).first()
+
+def get_user_by_id(user_id):
+    """یافتن کاربر بر اساس UUID."""
+    return User.query.get(user_id)
+
+
+def register_user_if_new(user_identifier, email=None, phone=None):
+    """
+    اگر کاربر جدید است، آن را در دیتابیس ثبت می‌کند.
+    اگر موجود است، اطلاعات لاگین (email/phone) را به‌روز می‌کند و آبجکت User را برمی‌گرداند.
+    """
+    user = get_user_by_identifier(user_identifier)
+
+    if not user:
+        is_admin = (phone == ADMIN_PHONE_NUMBER)
+        user = User(
+            id=str(uuid.uuid4()),
+            email=email,
+            phone=phone,
+            score=0, 
+            is_premium=False,
+            is_banned=False,
+            is_admin=is_admin
+        )
+        db.session.add(user)
+    else:
+        # به‌روزرسانی اطلاعات لاگین
+        if email:
+            user.email = email
+        if phone:
+            user.phone = phone
+            
     try:
-        temp_file = USER_DATA_FILE + '.tmp'
-        with open(temp_file, 'w', encoding='utf-8') as f:
-            json.dump(USER_DATA, f, indent=4, ensure_ascii=False)
-        os.replace(temp_file, USER_DATA_FILE)
-    except Exception as e:
-        print(f"❌ Error saving user data: {e}")
+        db.session.commit()
+        return user
+    except sqlalchemy.exc.IntegrityError as e:
+        db.session.rollback()
+        print(f"Database Integrity Error during registration: {e}")
+        return None # در صورت وجود مشکل در ثبت (مانند Unique Constraint)
 
-def load_user_usage():
-    """بارگذاری داده‌های استفاده روزانه (بودجه) از فایل JSON."""
-    global USER_USAGE
-    if os.path.exists(USAGE_DATA_FILE):
-        try:
-            with open(USAGE_DATA_FILE, 'r', encoding='utf-8') as f:
-                USER_USAGE = json.load(f)
-        except Exception as e:
-            print(f"⚠️ Error loading user usage data: {e}. Starting with empty data.")
-            USER_USAGE = {}
 
-def save_user_usage():
-    """ذخیره داده‌های استفاده روزانه (بودجه) در فایل JSON."""
-    global USER_USAGE
+def check_and_deduct_score(user_identifier, usage_type):
+    """
+    بررسی بودجه امتیاز روزانه، کسر هزینه و ذخیره.
+    usage_type می‌تواند 'chat' یا 'image' باشد.
+    برمی‌گرداند: (True, remaining_budget) اگر مجاز بود، یا (False, پیام خطا)
+    """
+    user = get_user_by_identifier(user_identifier)
+    if not user:
+        return False, "خطای داخلی: کاربر در دیتابیس یافت نشد."
+
+    today_date = datetime.utcnow().date() 
+    
+    # 1. تعیین هزینه‌ها و بودجه‌های روزانه
+    is_premium = user.is_premium
+    level = 'premium' if is_premium else 'free'
+    cost = SCORE_QUOTA_CONFIG['COSTS'][usage_type]
+    daily_limits = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]
+    budget_key = f'{usage_type}_budget' # 'chat_budget' or 'image_budget'
+
+    # 2. بازیابی یا ایجاد رکورد UserUsage
+    usage = user.usage
+    
+    # اگر رکورد usage وجود ندارد، یا تاریخ گذشته یا سطح تغییر کرده، باید ایجاد/ریست شود
+    if not usage:
+        usage = UserUsage(
+            user_id=user.id, 
+            date=today_date,
+            chat_budget=daily_limits['chat'],
+            image_budget=daily_limits['image'],
+            level_check=level
+        )
+        db.session.add(usage)
+    elif usage.date != today_date or usage.level_check != level:
+        # بازنشانی برای روز جدید یا سطح جدید
+        usage.date = today_date
+        usage.chat_budget = daily_limits['chat']
+        usage.image_budget = daily_limits['image']
+        usage.level_check = level
+    
+    # 3. بررسی و کسر امتیاز
+    current_budget = getattr(usage, budget_key, 0)
+    
+    if current_budget < cost:
+        # 4. پیام خطا
+        action_fa = 'چت' if usage_type == 'chat' else 'تولید تصویر'
+        level_fa = 'پرمیوم' if is_premium else 'عادی'
+        remaining_uses = current_budget // cost
+        
+        error_message = (
+            f"⛔ متأسفم، بودجه امتیاز روزانه شما برای {action_fa} ({level_fa}) کافی نیست."
+            f" هزینه هر {action_fa} {cost} امتیاز است و شما {current_budget} امتیاز باقی مانده دارید."
+            f" (حدود {remaining_uses} استفاده باقی مانده)."
+        )
+        if not is_premium:
+            error_message += " با ارتقا به حساب پرمیوم می‌توانید محدودیت‌های خود را برطرف کنید."
+        
+        return False, error_message
+    
+    # 5. کسر امتیاز و ذخیره
+    setattr(usage, budget_key, current_budget - cost)
+    
     try:
-        temp_file = USAGE_DATA_FILE + '.tmp'
-        with open(temp_file, 'w', encoding='utf-8') as f:
-            json.dump(USER_USAGE, f, indent=4, ensure_ascii=False)
-        os.replace(temp_file, USAGE_DATA_FILE)
+        db.session.commit() # ⬅️ ذخیره پس از کسر
+        remaining_budget = getattr(usage, budget_key)
+        return True, remaining_budget
     except Exception as e:
-        print(f"❌ Error saving user usage data: {e}")
+        db.session.rollback()
+        print(f"Error deducting score: {e}")
+        return False, "خطای دیتابیس هنگام کسر امتیاز. لطفاً دوباره تلاش کنید."
+
+
+def save_conversation(user_identifier, chat_id, messages, user_message):
+    """ذخیره یا به‌روزرسانی گفتگو در دیتابیس."""
+    user = get_user_by_identifier(user_identifier)
+    if not user:
+        return
+
+    # 1. جستجوی گفتگوی موجود
+    chat_entry = Conversation.query.filter_by(id=chat_id, user_id=user.id).first()
+    
+    # تبدیل لیست پیام‌ها به رشته JSON
+    messages_json_string = json.dumps(messages, ensure_ascii=False)
+
+    if chat_entry:
+        # 2. به‌روزرسانی
+        chat_entry.messages_json = messages_json_string
+        chat_entry.last_update = time.time()
+        if chat_entry.title == "گفتگوی جدید...":
+             chat_entry.title = user_message[:50] + "..." if len(user_message) > 50 else user_message
+    else:
+        # 3. ایجاد جدید
+        new_title = user_message[:50] + "..." if len(user_message) > 50 else user_message
+        chat_entry = Conversation(
+            id=chat_id,
+            user_id=user.id,
+            title=new_title,
+            messages_json=messages_json_string,
+            last_update=time.time()
+        )
+        db.session.add(chat_entry)
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error saving conversation: {e}")
+
 
 # =========================================================
 # ⚙️ توابع کمکی، شمارنده و محدودیت (Quota)
 # =========================================================
 
+# (بقیه توابع کمکی مانند count_tokens, fix_rtl_ltr, translate_prompt_to_english بدون تغییر باقی می‌مانند)
 def count_tokens(messages):
     return sum(len(encoder.encode_ordinary(m["content"])) for m in messages)
 
@@ -265,7 +440,8 @@ def generate_and_crop_image(english_prompt):
     image_url = f"{POLLINATIONS_URL}{full_prompt.replace(' ', '%20')}"
     
     try:
-        response = requests.get(image_url, timeout=40) 
+        # ⬅️ تغییر: افزایش تایم‌اوت به ۱۰۰ ثانیه
+        response = requests.get(image_url, timeout=100) 
         response.raise_for_status() 
         
         img = Image.open(BytesIO(response.content))
@@ -283,132 +459,13 @@ def generate_and_crop_image(english_prompt):
         
         return file_name
         
+    # ⬅️ اضافه کردن مدیریت خطای تایم‌اوت برای تشخیص در مسیر اصلی
+    except requests.exceptions.Timeout:
+        return "TIMEOUT_100_SEC"
+        
     except Exception as e:
         print(f"Error in image generation/cropping: {e}")
         return None
-
-def get_user_identifier(session):
-    """برگرداندن ایمیل یا شماره تلفن برای ذخیره‌سازی گفتگو."""
-    return session.get('user_email') or session.get('user_phone')
-
-def register_user_if_new(user_identifier, email=None, phone=None):
-    """اگر کاربر جدید است، آن را در USER_DATA ثبت می‌کند و save_user_data را فراخوانی می‌کند."""
-    is_new = user_identifier not in USER_DATA
-    if is_new:
-        USER_DATA[user_identifier] = {
-            'id': str(uuid.uuid4()),
-            'email': email,
-            'phone': phone,
-            'score': 0, # امتیاز XP (دائمی)
-            'is_premium': False,
-            'is_banned': False,
-            'is_admin': (phone == ADMIN_PHONE_NUMBER) # فقط برای ثبت ادمین اصلی
-        }
-    else:
-        # به‌روزرسانی اطلاعات لاگین
-        if email:
-            USER_DATA[user_identifier]['email'] = email
-        if phone:
-            USER_DATA[user_identifier]['phone'] = phone
-    
-    save_user_data() 
-
-def check_and_deduct_score(user_identifier, usage_type):
-    """
-    بررسی بودجه امتیاز روزانه، کسر هزینه و ذخیره.
-    usage_type می‌تواند 'chat' یا 'image' باشد.
-    برمی‌گرداند: (True, remaining_budget) اگر مجاز بود، یا (False, پیام خطا)
-    """
-    today_str = date.today().isoformat() # ⬅️ استفاده از datetime برای تاریخ دقیق
-    
-    # 1. تعیین هزینه‌ها و بودجه‌های روزانه
-    is_premium = USER_DATA.get(user_identifier, {}).get('is_premium', False)
-    level = 'premium' if is_premium else 'free'
-    
-    cost = SCORE_QUOTA_CONFIG['COSTS'][usage_type]
-    
-    daily_limits = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]
-    budget_key = f'{usage_type}_budget' # 'chat_budget' or 'image_budget'
-
-    # 2. بررسی و بازنشانی بودجه
-    if user_identifier not in USER_USAGE:
-        # کاربر جدید، تنظیم بودجه کامل
-        USER_USAGE[user_identifier] = {
-            'date': today_str, 
-            'chat_budget': daily_limits['chat'], 
-            'image_budget': daily_limits['image']
-        }
-    
-    usage = USER_USAGE[user_identifier]
-    
-    # اگر تاریخ امروز نیست یا سطح کاربر تغییر کرده، بودجه روزانه را بازنشانی کن
-    # ⚠️ نکته: اگر کاربر در طول روز پرمیوم شود، بودجه او بلافاصله به سقف جدید تغییر می‌یابد.
-    if usage['date'] != today_str:
-        usage['date'] = today_str
-        # بازنشانی بودجه‌ها بر اساس سطح فعلی کاربر
-        usage['chat_budget'] = daily_limits['chat']
-        usage['image_budget'] = daily_limits['image']
-    
-    # ⬅️ اطمینان از به روز بودن بودجه بر اساس سطح فعلی (حتی اگر تاریخ یکسان باشد)
-    # این تضمین می‌کند که اگر ادمین در طول روز وضعیت پرمیوم را تغییر داد، بودجه بلافاصله اعمال شود.
-    if usage.get('level_check') != level:
-         usage['chat_budget'] = daily_limits['chat']
-         usage['image_budget'] = daily_limits['image']
-         usage['level_check'] = level # ذخیره سطح برای بررسی در آینده
-
-
-    current_budget = usage.get(budget_key, 0)
-    
-    # 3. بررسی و کسر امتیاز
-    if current_budget < cost:
-        action_fa = 'چت' if usage_type == 'chat' else 'تولید تصویر'
-        level_fa = 'پرمیوم' if is_premium else 'عادی'
-        
-        # محاسبه تعداد استفاده باقی مانده
-        remaining_uses = current_budget // cost
-        
-        # ⬅️ پیام خطا بهینه شده: اگر عادی است، به پرمیوم شدن اشاره کن
-        error_message = (
-            f"⛔ متأسفم، بودجه امتیاز روزانه شما برای {action_fa} ({level_fa}) کافی نیست."
-            f" هزینه هر {action_fa} {cost} امتیاز است و شما {current_budget} امتیاز باقی مانده دارید."
-            f" (حدود {remaining_uses} استفاده باقی مانده)."
-        )
-        if not is_premium:
-            error_message += " با ارتقا به حساب پرمیوم می‌توانید محدودیت‌های خود را برطرف کنید."
-
-        return False, error_message
-    
-    # کسر امتیاز
-    usage[budget_key] = current_budget - cost
-    save_user_usage() # ⬅️ ذخیره پس از کسر
-    
-    remaining_budget = usage[budget_key]
-    
-    return True, remaining_budget
-
-
-def save_conversation(user_identifier, chat_id, messages, user_message):
-    """ذخیره یا به‌روزرسانی گفتگو در ساختار سراسری."""
-    if user_identifier not in USER_CONVERSATIONS:
-        USER_CONVERSATIONS[user_identifier] = []
-
-    chat_entry = next((c for c in USER_CONVERSATIONS[user_identifier] if c['id'] == chat_id), None)
-
-    if chat_entry:
-        chat_entry['messages'] = messages
-        chat_entry['last_update'] = time.time()
-        if chat_entry['title'] == "گفتگوی جدید...":
-            chat_entry['title'] = user_message[:50] + "..." if len(user_message) > 50 else user_message
-    else:
-        new_title = user_message[:50] + "..." if len(user_message) > 50 else user_message
-        new_entry = {
-            'id': chat_id, 
-            'title': new_title, 
-            'messages': messages, 
-            'last_update': time.time()
-        }
-        USER_CONVERSATIONS[user_identifier].insert(0, new_entry) 
-        session['current_chat_id'] = chat_id 
 
 
 @app.cli.command("cleanup-images")
@@ -427,7 +484,7 @@ def cleanup_old_images():
             print(f"Error deleting file {filename}: {e}")
 
 # =========================================================
-# 👑 توابع و مسیرهای پنل مدیریت (Blueprint)
+# 👑 توابع و مسیرهای پنل مدیریت (Blueprint) - **بازنویسی شده برای DB**
 # =========================================================
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin', template_folder='templates')
@@ -436,8 +493,11 @@ def admin_required(f):
     """دکوراتور برای محدود کردن دسترسی فقط به ادمین."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not session.get('is_admin'):
-            # اگر ادمین نیست، به صفحه ورود هدایت شود
+        # ⬅️ بررسی مستقیم از دیتابیس برای اطمینان بیشتر
+        user_identifier = get_user_identifier(session)
+        user = get_user_by_identifier(user_identifier)
+        
+        if not user or not user.is_admin:
             return redirect(url_for('login', next=request.url)) 
         return f(*args, **kwargs)
     return decorated_function
@@ -446,9 +506,10 @@ def admin_required(f):
 @admin_required
 def admin_dashboard():
     """داشبورد اصلی ادمین."""
-    total_users = len(USER_DATA)
-    premium_users = sum(1 for data in USER_DATA.values() if data.get('is_premium'))
-    banned_users = sum(1 for data in USER_DATA.values() if data.get('is_banned'))
+    # ⬅️ استفاده از Query برای آمار
+    total_users = User.query.count()
+    premium_users = User.query.filter_by(is_premium=True).count()
+    banned_users = User.query.filter_by(is_banned=True).count()
     
     context = {
         'total_users': total_users,
@@ -456,25 +517,26 @@ def admin_dashboard():
         'banned_users': banned_users,
         'admin_identifier': get_user_identifier(session)
     }
-    # فرض می‌کنیم فایل admin_dashboard.html را دارید
     return render_template("admin_dashboard.html", **context)
 
 @admin_bp.route("/users")
 @admin_required
 def manage_users():
     """صفحه مدیریت و نمایش لیست کاربران."""
+    # ⬅️ بازیابی تمام کاربران از دیتابیس
+    all_users = User.query.all()
+    
     users_list = [
         {
-            'identifier': identifier,
-            'score': data.get('score', 0),
-            'is_premium': data.get('is_premium', False),
-            'is_banned': data.get('is_banned', False),
-            'email': data.get('email', 'N/A'),
-            'phone': data.get('phone', 'N/A')
+            'identifier': user.email or user.phone or user.id,
+            'score': user.score,
+            'is_premium': user.is_premium,
+            'is_banned': user.is_banned,
+            'email': user.email or 'N/A',
+            'phone': user.phone or 'N/A'
         }
-        for identifier, data in USER_DATA.items()
+        for user in all_users
     ]
-    # فرض می‌کنیم فایل admin_users.html را دارید
     return render_template("admin_users.html", users=users_list)
 
 @admin_bp.route("/user_action", methods=["POST"])
@@ -485,48 +547,63 @@ def user_action():
     action = request.json.get("action")
     value = request.json.get("value")
 
-    if identifier not in USER_DATA:
-        return jsonify({"status": "error", "message": "کاربر یافت نشد."}), 404
+    user = get_user_by_identifier(identifier)
 
-    user = USER_DATA[identifier]
+    if not user:
+        return jsonify({"status": "error", "message": "کاربر یافت نشد."}), 404
 
     if action == "set_score":
         try:
             score = int(value)
-            user['score'] = score
+            user.score = score
             message = f"امتیاز کاربر {identifier} به {score} تغییر یافت."
         except ValueError:
             return jsonify({"status": "error", "message": "امتیاز باید عدد صحیح باشد."}), 400
     
     elif action == "toggle_premium":
-        user['is_premium'] = not user.get('is_premium', False)
-        status = "پرمیوم شد" if user['is_premium'] else "عادی شد"
+        user.is_premium = not user.is_premium
+        status = "پرمیوم شد" if user.is_premium else "عادی شد"
         message = f"وضعیت کاربر {identifier}: {status}."
         
         # ⬅️ نکته کلیدی: تغییر وضعیت پرمیوم، نیاز به ریست بودجه سطح در روز فعلی دارد
-        if identifier in USER_USAGE:
+        if user.usage:
             # پاک کردن level_check باعث می‌شود در اولین استفاده، بودجه روزانه بر اساس سطح جدید تنظیم شود
-            USER_USAGE[identifier].pop('level_check', None)
-            save_user_usage()
+            user.usage.level_check = None 
         
     elif action == "toggle_ban":
-        user['is_banned'] = not user.get('is_banned', False)
-        status = "بن شد" if user['is_banned'] else "رفع بن شد"
+        user.is_banned = not user.is_banned
+        status = "بن شد" if user.is_banned else "رفع بن شد"
         message = f"وضعیت بن کاربر {identifier}: {status}."
     
     else:
         return jsonify({"status": "error", "message": "عملیات نامعتبر."}), 400
 
-    save_user_data() 
-    return jsonify({"status": "success", "message": message, "new_status": user})
+    try:
+        db.session.commit() 
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": f"خطای دیتابیس: {e}"}), 500
+        
+    return jsonify({
+        "status": "success", 
+        "message": message, 
+        "new_status": {
+            'is_premium': user.is_premium,
+            'is_banned': user.is_banned,
+            'score': user.score
+        }
+    })
 
 
 # 🔗 ثبت Blueprint در برنامه اصلی
 app.register_blueprint(admin_bp)
 
 # =========================================================
-# 📧 مسیرهای احراز هویت (ایمیل و پیامک)
+# 📧 مسیرهای احراز هویت (ایمیل و پیامک) - **بازنویسی شده برای DB**
 # =========================================================
+
+# (مسیرهای send_code, verify_code, send_sms_code, verify_sms_code بدون تغییر باقی می‌مانند، 
+# اما از توابع جدید register_user_if_new و get_user_by_identifier استفاده می‌کنند.)
 
 @app.route("/send_code", methods=["POST"])
 def send_code():
@@ -535,6 +612,10 @@ def send_code():
     
     if not user_email:
         return jsonify({"status": "error", "message": "لطفاً ایمیل خود را وارد کنید."}), 400
+
+    # ⬅️ بررسی وجود کاربر برای لاگین (اختیاری)
+    # اگر کاربر از طریق ایمیل قبلاً ثبت شده باشد
+    # user_exists = get_user_by_identifier(user_email)
 
     code = generate_verification_code()
     
@@ -567,13 +648,16 @@ def verify_code():
     if entered_code == stored_data['code']:
         del verification_codes[user_email]
         
-        register_user_if_new(user_email, email=user_email) # ⬅️ ثبت یا به‌روزرسانی کاربر
+        user = register_user_if_new(user_email, email=user_email) # ⬅️ استفاده از تابع جدید DB
         
+        if not user:
+            return jsonify({"status": "error", "message": "خطا در ثبت/بازیابی کاربر از دیتابیس."}), 500
+            
         session.clear() # پاک کردن سشن قبلی
-        session['user_id'] = USER_DATA[user_email]['id']
+        session['user_id'] = user.id
         session['user_email'] = user_email
         session['needs_profile_info'] = True 
-        session['is_admin'] = USER_DATA[user_email].get('is_admin', False)
+        session['is_admin'] = user.is_admin # ⬅️ خواندن مستقیم از آبجکت User
         
         return jsonify({"status": "success", "redirect": url_for('account')})
     else:
@@ -619,13 +703,16 @@ def verify_sms_code():
     if entered_code == stored_data['code']:
         del phone_verification_codes[phone_number]
         
-        is_admin = (phone_number == ADMIN_PHONE_NUMBER)
-        register_user_if_new(phone_number, phone=phone_number) 
+        user = register_user_if_new(phone_number, phone=phone_number) # ⬅️ استفاده از تابع جدید DB
         
+        if not user:
+            return jsonify({"status": "error", "message": "خطا در ثبت/بازیابی کاربر از دیتابیس."}), 500
+            
+        is_admin = user.is_admin # ⬅️ خواندن مستقیم از آبجکت User
         redirect_url = url_for('admin.admin_dashboard') if is_admin else url_for('account')
         
         session.clear() 
-        session['user_id'] = USER_DATA[phone_number]['id']
+        session['user_id'] = user.id
         session['user_phone'] = phone_number 
         session['needs_profile_info'] = True 
         session['is_admin'] = is_admin
@@ -636,7 +723,7 @@ def verify_sms_code():
 
 
 # =========================================================
-# 💬 مسیر چت و بقیه مسیرها (با اعمال محدودیت)
+# 💬 مسیر چت و بقیه مسیرها (با اعمال محدودیت) - **بازنویسی شده برای DB**
 # =========================================================
 
 @app.route("/chat", methods=["POST"])
@@ -648,10 +735,11 @@ def chat():
         return jsonify({"reply": "لطفاً پیامی ارسال کنید."})
 
     user_identifier = get_user_identifier(session)
+    user = get_user_by_identifier(user_identifier)
     
-    if user_identifier and user_identifier in USER_DATA:
+    if user and user_identifier:
         # 1. بررسی وضعیت بن
-        if USER_DATA[user_identifier].get('is_banned'):
+        if user.is_banned:
             return jsonify({"reply": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."})
         
         # 2. ⬅️ بررسی و کسر بودجه چت
@@ -688,23 +776,30 @@ def chat():
             
     current_chat_id = session.get('current_chat_id')
     
-    if user_identifier and session.get('user_id'):
+    if user and session.get('user_id'):
         
         if not current_chat_id:
             current_chat_id = str(uuid.uuid4())
             session['current_chat_id'] = current_chat_id
             session["conversation"] = []
             
-        elif user_identifier in USER_CONVERSATIONS:
-            chat_entry = next((c for c in USER_CONVERSATIONS[user_identifier] if c['id'] == current_chat_id), None)
+        else:
+            # ⬅️ بازیابی گفتگو از دیتابیس
+            chat_entry = Conversation.query.filter_by(id=current_chat_id, user_id=user.id).first()
             if chat_entry:
-                session["conversation"] = chat_entry['messages']
+                try:
+                    # تبدیل رشته JSON ذخیره شده به لیست پیام‌ها
+                    session["conversation"] = json.loads(chat_entry.messages_json)
+                except Exception:
+                    session["conversation"] = []
+                    print("Error loading conversation JSON from DB.")
             else:
                 session.pop('current_chat_id', None)
                 session["conversation"] = []
                 current_chat_id = str(uuid.uuid4())
                 session['current_chat_id'] = current_chat_id
     else:
+        # اگر لاگین نیست، از سشن معمولی استفاده کن
         session.pop('current_chat_id', None)
         if "conversation" not in session:
             session["conversation"] = []
@@ -768,7 +863,8 @@ def chat():
     session["conversation"].append({"role": "user", "content": user_message})
     session["conversation"].append({"role": "assistant", "content": ai_message})
 
-    if user_identifier and session.get('user_id'):
+    if user and session.get('user_id'):
+        # ⬅️ استفاده از تابع جدید DB
         save_conversation(user_identifier, session['current_chat_id'], session["conversation"], user_message)
 
     if len(session["conversation"]) > 50:
@@ -785,7 +881,7 @@ def clear_history():
 
 
 # =========================================================
-# 🖼️ مسیر تولید تصویر (با اعمال محدودیت)
+# 🖼️ مسیر تولید تصویر (با اعمال محدودیت) - **بازنویسی شده برای DB**
 # =========================================================
 
 @app.route("/image_generator", methods=["POST"])
@@ -793,19 +889,20 @@ def image_generator():
     persian_prompt = request.json.get("prompt", "").strip()
     
     user_identifier = get_user_identifier(session)
+    user = get_user_by_identifier(user_identifier)
     
     # 1. بررسی لاگین
-    if not user_identifier or user_identifier not in USER_DATA:
+    if not user:
         return jsonify({"status": "error", "message": "لطفاً ابتدا وارد حساب کاربری خود شوید."}), 403
         
     # 2. بررسی وضعیت بن
-    if USER_DATA[user_identifier].get('is_banned'):
+    if user.is_banned:
         return jsonify({
             "status": "error",
             "message": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."
         }), 403
 
-    # 3. ⬅️ بررسی و کسر بودجه تولید تصویر
+    # 3. ⬅️ بررسی و کسر بودجه تولید تصویر (تابع جدید DB)
     is_allowed, result = check_and_deduct_score(user_identifier, 'image')
     if not is_allowed:
         return jsonify({"status": "error", "message": result}), 429 # 429 Too Many Requests
@@ -822,6 +919,13 @@ def image_generator():
     try:
         english_prompt = translate_prompt_to_english(persian_prompt)
         file_name = generate_and_crop_image(english_prompt)
+        
+        # ⬅️ مدیریت خطای تایم‌اوت جدید: اگر مقدار خاصی که در Timeout تابع تعریف کردیم، برگردانده شود.
+        if file_name == "TIMEOUT_100_SEC": 
+             return jsonify({
+                "status": "error",
+                "message": "⚠️ سرور تولید تصویر شلوغ است. صبور باشید و مجدداً امتحان کنید."
+            }), 503
         
         if file_name:
             local_image_url = url_for('static', filename=f'temp_images/{file_name}')
@@ -853,10 +957,8 @@ def image_generator():
 def index():
     cleanup_old_images() 
     
-    # ⬅️ اصلاح برای رفع باگ تکرار پیام: تاریخچه گفتگو از سشن به قالب پاس داده می‌شود
     conversation_history = session.get("conversation", [])
     
-    # ⬅️ اعمال تابع fix_rtl_ltr بر روی پیام‌ها برای نمایش صحیح در فرانت‌اند
     display_messages = [
         {"role": msg["role"], "content": fix_rtl_ltr(msg["content"])}
         for msg in conversation_history
@@ -865,7 +967,6 @@ def index():
     return render_template("index.html", 
         logged_in=session.get('user_id') is not None,
         is_admin=session.get('is_admin', False),
-        # ⬅️ ارسال تاریخچه گفتگو به قالب
         chat_history=display_messages
     )
 
@@ -915,13 +1016,14 @@ def account():
     if not session.get('user_id'):
         return redirect(url_for('login'))
         
-    user_identifier = get_user_identifier(session)
-    # اگر کاربر در USER_DATA ثبت نشده باشد (که نباید اینطور باشد) به لاگین برگردانده شود.
-    if user_identifier not in USER_DATA:
+    user_id = session.get('user_id')
+    user = get_user_by_id(user_id) # ⬅️ بازیابی مستقیم کاربر بر اساس ID
+
+    if not user:
+         session.clear()
          return redirect(url_for('login'))
         
-    # خواندن وضعیت ادمین از USER_DATA
-    if USER_DATA[user_identifier].get('is_admin') or session.get('is_admin'):
+    if user.is_admin or session.get('is_admin'):
         return redirect(url_for('admin.admin_dashboard')) 
         
     if session.get('needs_profile_info'):
@@ -963,36 +1065,40 @@ def profile():
     if not session.get('user_id'):
         return redirect(url_for('login'))
         
-    user_identifier = get_user_identifier(session)
-    
-    user_data_item = USER_DATA.get(user_identifier, {})
-    is_premium = user_data_item.get('is_premium', False)
+    user_id = session.get('user_id')
+    user = get_user_by_id(user_id) # ⬅️ بازیابی کاربر
+
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+        
+    is_premium = user.is_premium
     level = 'premium' if is_premium else 'free'
-    
-    # ⬅️ محاسبه بودجه باقی مانده
-    today_str = date.today().isoformat()
+    today_date = datetime.utcnow().date()
     daily_limits = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]
     
+    # ⬅️ محاسبه بودجه باقی مانده
+    usage = user.usage
+
     # اطمینان از مقداردهی اولیه یا ریست روزانه (بدون کسر امتیاز)
-    usage = USER_USAGE.get(user_identifier, {})
-    if usage.get('date') != today_str or usage.get('level_check') != level:
-        # اگر تاریخ جدید است یا سطح کاربر عوض شده، بودجه را با سقف جدید پر کن
+    if not usage or usage.date != today_date or usage.level_check != level:
+        # اگر رکورد ندارد، تاریخ جدید است یا سطح کاربر عوض شده، بودجه را با سقف جدید پر کن
         chat_budget_remaining = daily_limits['chat']
         image_budget_remaining = daily_limits['image']
     else:
         # در غیر این صورت، بودجه باقیمانده فعلی را نشان بده
-        chat_budget_remaining = usage.get('chat_budget', daily_limits['chat'])
-        image_budget_remaining = usage.get('image_budget', daily_limits['image'])
+        chat_budget_remaining = usage.chat_budget
+        image_budget_remaining = usage.image_budget
 
     chat_cost = SCORE_QUOTA_CONFIG['COSTS']['chat']
     image_cost = SCORE_QUOTA_CONFIG['COSTS']['image']
     
     user_data = {
-        'identifier': user_identifier or 'هویت نامشخص',
-        'is_admin': user_data_item.get('is_admin', False),
-        'score': user_data_item.get('score', 0),
+        'identifier': user.email or user.phone or user.id,
+        'is_admin': user.is_admin,
+        'score': user.score,
         'is_premium': is_premium,
-        'is_banned': user_data_item.get('is_banned', False),
+        'is_banned': user.is_banned,
         
         # اطلاعات بودجه برای نمایش
         'chat_budget_remaining': chat_budget_remaining, 
@@ -1017,14 +1123,22 @@ def complete_profile_mock():
     if not session.get('user_id'):
         return redirect(url_for('login'))
     
-    user_identifier = get_user_identifier(session)
+    user_id = session.get('user_id')
+    user = get_user_by_id(user_id)
+    
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+        
     user_data = {
-        'identifier': user_identifier or 'نامشخص',
+        'identifier': user.email or user.phone or user.id,
     }
     
     if request.method == 'POST':
         user_name = request.form.get('user_name') 
         user_phone = request.form.get('user_phone') 
+        
+        # ⬅️ در اینجا می‌توانید نام کاربر را به مدل User اضافه کنید
         
         session.pop('needs_profile_info', None) 
         
@@ -1038,7 +1152,7 @@ def logout():
     return redirect(url_for('index')) 
     
 # =========================================================
-# 💾 مسیرهای آرشیو گفتگو 
+# 💾 مسیرهای آرشیو گفتگو - **بازنویسی شده برای DB**
 # =========================================================
 
 @app.route("/my_conversations")
@@ -1049,23 +1163,27 @@ def my_conversations():
 
 @app.route("/get_conversations_list", methods=["GET"])
 def get_conversations_list():
-    user_identifier = get_user_identifier(session)
-    if not user_identifier:
+    user_id = session.get('user_id')
+    if not user_id:
         return jsonify({"status": "error", "message": "لطفاً ابتدا وارد حساب کاربری خود شوید."}), 403
 
-    conversations = USER_CONVERSATIONS.get(user_identifier, [])
-    
-    # مرتب‌سازی بر اساس آخرین به‌روزرسانی
-    conversations.sort(key=lambda x: x.get('last_update', 0), reverse=True)
+    # ⬅️ بازیابی گفتگوها از دیتابیس
+    conversations_query = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.last_update.desc()).all()
     
     formatted_list = []
-    for chat in conversations:
-        date_str = time.strftime('%Y/%m/%d - %H:%M', time.localtime(chat['last_update']))
-        preview = chat['messages'][1]['content'][:80] + '...' if len(chat['messages']) > 1 else 'شروع گفتگو...'
+    for chat in conversations_query:
+        date_str = time.strftime('%Y/%m/%d - %H:%M', time.localtime(chat.last_update))
         
+        # بارگذاری پیام‌ها برای پیش‌نمایش
+        try:
+            messages = json.loads(chat.messages_json)
+            preview = messages[1]['content'][:80] + '...' if len(messages) > 1 else 'شروع گفتگو...'
+        except Exception:
+            preview = 'خطا در بارگذاری پیام‌ها...'
+
         formatted_list.append({
-            'id': chat['id'],
-            'title': chat['title'],
+            'id': chat.id,
+            'title': chat.title,
             'last_update': date_str,
             'preview': preview
         })
@@ -1075,18 +1193,21 @@ def get_conversations_list():
 @app.route("/load_conversation/<chat_id>", methods=["POST"])
 def load_conversation(chat_id):
     """API برای بارگذاری یک گفتگوی خاص در سشن کاربر."""
-    user_identifier = get_user_identifier(session)
-    if not user_identifier:
+    user_id = session.get('user_id')
+    if not user_id:
         return jsonify({"status": "error", "message": "مجوز دسترسی ندارید."}), 403
 
-    conversations = USER_CONVERSATIONS.get(user_identifier, [])
-    
-    chat_entry = next((c for c in conversations if c['id'] == chat_id), None)
+    # ⬅️ بازیابی از دیتابیس
+    chat_entry = Conversation.query.filter_by(id=chat_id, user_id=user_id).first()
     
     if chat_entry:
-        session['conversation'] = chat_entry['messages']
-        session['current_chat_id'] = chat_entry['id'] 
-        return jsonify({"status": "success", "message": "گفتگو با موفقیت بارگذاری شد.", "redirect": url_for('index')})
+        try:
+            # تبدیل رشته JSON به لیست پیام‌ها و ذخیره در سشن
+            session['conversation'] = json.loads(chat_entry.messages_json)
+            session['current_chat_id'] = chat_entry.id 
+            return jsonify({"status": "success", "message": "گفتگو با موفقیت بارگذاری شد.", "redirect": url_for('index')})
+        except Exception:
+            return jsonify({"status": "error", "message": "خطا در پردازش داده‌های گفتگو."}), 500
     else:
         return jsonify({"status": "error", "message": "گفتگوی مورد نظر یافت نشد."}), 404
 
@@ -1099,8 +1220,11 @@ if __name__ == "__main__":
     if os.environ.get("FLASK_ENV") != "production":
         cleanup_old_images() 
     
-    load_user_data() 
-    load_user_usage() 
+    # ⬅️ جایگزینی load_user_data/load_user_usage با ایجاد جداول
+    with app.app_context():
+        # ⚠️ این خط جداول را بر اساس مدل‌های بالا در دیتابیس Supabase ایجاد می کند (فقط یکبار در شروع نیاز است)
+        db.create_all() 
+        print("Database tables created successfully on Supabase.")
         
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
