@@ -12,9 +12,9 @@
         "level_check": "free"
     },
     "09023287024": {
-        "date": "2025-12-05",
+        "date": "2025-12-06",
         "chat_budget": 50,
-        "image_budget": 40,
+        "image_budget": 0,
         "level_check": "free"
     }
 }
