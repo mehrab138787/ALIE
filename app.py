@@ -22,7 +22,8 @@ from sqlalchemy import or_
 
 # 🤖 کتابخانه های تلگرام
 from telegram import Update, Bot
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Dispatcher, CallbackContext
+from telegram.ext import CommandHandler, MessageHandler, Dispatcher, CallbackContext # حذف Updater و Filters
+from telegram.ext import filters # ⬅️ خط ۲۶: وارد کردن ماژول filters
 
 # =========================================================
 # 🛠️ تنظیمات اولیه و اتصال به دیتابیس
@@ -1264,7 +1265,7 @@ def setup_telegram_dispatcher():
     dispatcher = Dispatcher(bot, None, use_context=True)
     dispatcher.add_handler(CommandHandler("start", start_command))
     dispatcher.add_handler(CommandHandler("clear_history", clear_history_command))
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, chat_handler))
+    dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_handler)) # ✅ اصلاح شد
     return dispatcher
 
 
