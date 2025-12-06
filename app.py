@@ -34,29 +34,6 @@ ADMIN_PHONE_NUMBER = '09962935294'
 # 🔔 شماره تلفن برای دریافت هشدار اتمام توکن
 TOKEN_ALERT_PHONE_NUMBER = '09023287024'
 
-# ⬅️ تغییر مهم: اضافه شدن لیست کلیدهای API اوپن‌روتر
-API_KEYS = []
-for i in range(1, 6): # از 1 تا 5
-    key_name = f"OPENROUTER_API_KEY_{i}"
-    key = os.getenv(key_name)
-    if key:
-        API_KEYS.append((key, key_name)) # ذخیره کلید و نام متغیر محیطی
-    else:
-        print(f"⚠️ متغیر محیطی {key_name} پیدا نشد. این API نادیده گرفته می‌شود.")
-
-if not API_KEYS:
-    # اگر هیچ کلیدی پیدا نشد
-    # برای سازگاری با کد قبلی، کلید قدیمی را هم چک می‌کنیم
-    legacy_key = os.getenv("OPENROUTER_API_KEY")
-    if legacy_key:
-        API_KEYS.append((legacy_key, "OPENROUTER_API_KEY"))
-    else:
-        raise ValueError("❌ هیچ متغیر محیطی OPENROUTER_API_KEY یا OPENROUTER_API_KEY_i پیدا نشد! لطفاً حداقل یکی را تنظیم کنید.")
-
-# ⬅️ متغیر سراسری برای نگهداری وضعیت کلیدها (مثلاً اتمام توکن)
-# (اگرچه اتمام توکن را نمی‌توان دقیقاً از API فهمید، این مکانیزم برای شکست درخواست‌های متوالی است.)
-API_KEY_STATUS = {name: True for _, name in API_KEYS}
-
 # ----------------- 💾 تنظیمات PostgreSQL (Render Internal) -----------------
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -87,11 +64,85 @@ SMS_API = KavenegarAPI(KAVENEGAR_API_KEY)
 phone_verification_codes = {}
 # ---------------------------------------------------------
 
+# =========================================================
+# 🔑 سیستم مدیریت کلیدهای OpenRouter (Key Rotation & Fallback)
+# =========================================================
+
+# 1. بارگذاری تمام کلیدهای تعریف شده در متغیرهای محیطی
+OPENROUTER_KEYS = {}
+for i in range(1, 6): # از 1 تا 5
+    key_name = f"OPENROUTER_API_KEY_{i}"
+    key_value = os.getenv(key_name)
+    if key_value:
+        OPENROUTER_KEYS[key_name] = key_value
+
+if not OPENROUTER_KEYS:
+    raise ValueError("❌ حداقل یک متغیر محیطی OPENROUTER_API_KEY_i پیدا نشد! لطفاً حداقل یکی را تنظیم کنید.")
+
+# 2. متغیرهای سراسری برای مدیریت حالت کلیدها
+# لیست نام کلیدها برای حفظ ترتیب چرخش
+KEY_NAMES_ORDER = list(OPENROUTER_KEYS.keys()) 
+# کلیدهایی که به دلیل خطا (402, 401) مسدود شده‌اند
+BLOCKED_KEYS = set()
+# شاخص برای شروع جستجوی کلید فعال
+KEY_INDEX = 0
+
+def send_token_alert(key_name, reason):
+    """ارسال پیامک هشدار برای اتمام/خطای کلید API."""
+    if not TOKEN_ALERT_PHONE_NUMBER:
+        print("Warning: TOKEN_ALERT_PHONE_NUMBER not set.")
+        return
+
+    try:
+        params = {
+            'sender': KAVENEGAR_SENDER,
+            'receptor': TOKEN_ALERT_PHONE_NUMBER,
+            'message': f'⚠️ اخطار! کلید OpenRouter ({key_name}) با خطا مواجه شد ({reason}). موقتا مسدود شد.',
+        }
+        SMS_API.sms_send(params)
+        print(f"🔔 هشدار پیامکی برای {key_name} ارسال شد.")
+    except Exception as e:
+        print(f"Error sending SMS alert: {e}")
+
+def handle_key_failure(key_name, status_code):
+    """مسدود کردن کلید معیوب و ارسال هشدار."""
+    if key_name not in BLOCKED_KEYS:
+        BLOCKED_KEYS.add(key_name)
+        reason = f"HTTP {status_code}"
+        send_token_alert(key_name, reason)
+        print(f"❌ کلید {key_name} به دلیل خطای {status_code} مسدود شد.")
+
+def get_openrouter_key(initial_attempt=True):
+    """برگرداندن کلید فعال بعدی به صورت چرخشی (Round-Robin)."""
+    global KEY_INDEX
+    
+    total_keys = len(KEY_NAMES_ORDER)
+    if total_keys == 0:
+        return None, None
+
+    # اگر همه کلیدها مسدود باشند، یکبار سعی می‌کنیم همه را ریست کنیم
+    if len(BLOCKED_KEYS) == total_keys and initial_attempt:
+        print("🚨 همه کلیدهای API مسدود هستند. ریست کردن و تلاش مجدد.")
+        BLOCKED_KEYS.clear()
+        
+    # شروع چرخش از شاخص فعلی
+    for _ in range(total_keys):
+        key_name = KEY_NAMES_ORDER[KEY_INDEX]
+        
+        # مهم: شاخص را برای تلاش بعدی افزایش بده
+        KEY_INDEX = (KEY_INDEX + 1) % total_keys
+
+        if key_name not in BLOCKED_KEYS:
+            return key_name, OPENROUTER_KEYS[key_name]
+    
+    # اگر بعد از چرخش کامل، هیچ کلید فعالی پیدا نشد
+    return None, None
+# ---------------------------------------------------------
+
 # 🎯 تنظیمات هزینه و بودجه امتیاز روزانه
-# ⬅️ تغییر مهم: اعمال محدودیت‌های جدید درخواستی
 SCORE_QUOTA_CONFIG = {
     'COSTS': {
-        'chat': 1, # هر چت 1 امتیاز (مطابق درخواست)
+        'chat': 1, # هر چت 1 امتیاز
         'image': 20 # هر عکس 20 امتیاز
     },
     'DAILY_BUDGET': {
@@ -105,8 +156,6 @@ SCORE_QUOTA_CONFIG = {
         }
     }
 }
-
-# ---------------------------------------------------------
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 CHAT_MODEL_NAME = "deepseek/deepseek-chat"
@@ -124,7 +173,6 @@ IMAGE_QUALITY_PARAMS = [
 if not os.path.exists(STATIC_DIR):
     os.makedirs(STATIC_DIR)
 
-# ⬅️ دستورالعمل سیستمی برای پاسخ‌های کامل و اصلی تا سقف ۴۰۰ توکن
 SYSTEM_PROMPT = """
 تو یک چت‌بات مفید هستی. پاسخ‌ها را به زبان فارسی و روان بده.
 - برای سوالات سازنده: تیم NOCTOVEX به رهبری مهراب عزیزی
@@ -132,10 +180,9 @@ SYSTEM_PROMPT = """
 - پاسخ‌ها باید **کامل، روان و دقیق** باشند و در سقف نهایی **۴۰۰ توکن** به پایان برسند. (به هیچ عنوان پاسخ را از وسط جمله قطع نکن).
 """
 
-# ⬅️ تنظیمات نهایی توکن‌ها: سقف ۴۰۰ خروجی و ۱۰۰ ورودی برای تضمین کامل بودن
-TOTAL_TOKEN_LIMIT = 550 # ⬅️ سقف کلی: ۱۰۰ ورودی + ۴۰۰ خروجی + بافر
-INPUT_TOKEN_LIMIT = 100 # ⬅️ سقف ورودی: ۱۰۰ (برای حفظ تاریخچه چت‌های طولانی)
-MAX_COMPLETION_TOKENS = 400 # ⬅️ سقف نهایی پاسخ (خروجی) به ۴۰۰ توکن تنظیم شد.
+TOTAL_TOKEN_LIMIT = 550
+INPUT_TOKEN_LIMIT = 100
+MAX_COMPLETION_TOKENS = 400
 encoder = tiktoken.get_encoding("cl100k_base")
 
 # =========================================================
@@ -152,7 +199,6 @@ class User(db.Model):
     is_banned = db.Column(db.Boolean, default=False)
     is_admin = db.Column(db.Boolean, default=False)
 
-    # رابطه برای دسترسی به بودجه روزانه
     usage = db.relationship('UserUsage', backref='user', lazy=True, uselist=False)
     conversations = db.relationship('Conversation', backref='user', lazy='dynamic')
 
@@ -162,12 +208,11 @@ class UserUsage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), unique=True, nullable=False)
 
-    # تاریخ را به صورت تاریخ ذخیره می‌کنیم
     date = db.Column(db.Date, default=datetime.utcnow().date)
 
     chat_budget = db.Column(db.Integer, default=50)
     image_budget = db.Column(db.Integer, default=60)
-    level_check = db.Column(db.String(10), nullable=True) # برای بررسی تغییر سطح
+    level_check = db.Column(db.String(10), nullable=True)
 
 
 class Conversation(db.Model):
@@ -176,10 +221,8 @@ class Conversation(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     title = db.Column(db.String(100), nullable=False, default="گفتگوی جدید...")
 
-    # زمان را به صورت تایم‌استمپ پایتون ذخیره می‌کنیم
     last_update = db.Column(db.Float, default=time.time)
 
-    # لیست پیام‌ها به صورت یک رشته بزرگ JSON
     messages_json = db.Column(db.Text, nullable=False)
 
 
@@ -225,35 +268,9 @@ def send_verification_sms(phone_number, code):
         print(f"General SMS Error: {e}")
         return False
 
-# ⬅️ تابع جدید: ارسال هشدار اتمام توکن
-def send_token_alert_sms(api_name):
-    """ارسال پیامک هشدار اتمام توکن با Kavenegar."""
-    if not TOKEN_ALERT_PHONE_NUMBER:
-        print("Warning: TOKEN_ALERT_PHONE_NUMBER not set.")
-        return False
-        
-    try:
-        params = {
-            'sender': KAVENEGAR_SENDER,
-            'receptor': TOKEN_ALERT_PHONE_NUMBER,
-            'message': f'هشدار: احتمالا توکن API {api_name} به اتمام رسیده است و از گردش خارج شد. لطفا وضعیت آن را بررسی کنید.',
-        }
-        response = SMS_API.sms_send(params)
-        print(f"Token Alert SMS Response: {response}")
-        return True
-    except APIException as e:
-        print(f"Kavenegar API Alert Error: {e}")
-        return False
-    except HTTPException as e:
-        print(f"Kavenegar HTTP Alert Error: {e}")
-        return False
-    except Exception as e:
-        print(f"General Token Alert SMS Error: {e}")
-        return False
-
 
 # =========================================================
-# 💾 توابع پایداری داده (Persistence) - **بازنویسی شده برای DB**
+# 💾 توابع پایداری داده (Persistence)
 # =========================================================
 
 def get_user_identifier(session):
@@ -291,7 +308,6 @@ def register_user_if_new(user_identifier, email=None, phone=None):
         )
         db.session.add(user)
     else:
-        # به‌روزرسانی اطلاعات لاگین
         if email:
             user.email = email
         if phone:
@@ -303,14 +319,12 @@ def register_user_if_new(user_identifier, email=None, phone=None):
     except sqlalchemy.exc.IntegrityError as e:
         db.session.rollback()
         print(f"Database Integrity Error during registration: {e}")
-        return None # در صورت وجود مشکل در ثبت (مانند Unique Constraint)
+        return None
 
 
 def check_and_deduct_score(user_identifier, usage_type):
     """
     بررسی بودجه امتیاز روزانه، کسر هزینه و ذخیره.
-    usage_type می‌تواند 'chat' یا 'image' باشد.
-    برمی‌گرداند: (True, remaining_budget) اگر مجاز بود، یا (False, پیام خطا)
     """
     user = get_user_by_identifier(user_identifier)
     if not user:
@@ -318,17 +332,14 @@ def check_and_deduct_score(user_identifier, usage_type):
 
     today_date = datetime.utcnow().date()
 
-    # 1. تعیین هزینه‌ها و بودجه‌های روزانه
     is_premium = user.is_premium
     level = 'premium' if is_premium else 'free'
     cost = SCORE_QUOTA_CONFIG['COSTS'][usage_type]
     daily_limits = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]
-    budget_key = f'{usage_type}_budget' # 'chat_budget' or 'image_budget'
+    budget_key = f'{usage_type}_budget'
 
-    # 2. بازیابی یا ایجاد رکورد UserUsage
     usage = user.usage
 
-    # اگر رکورد usage وجود ندارد، یا تاریخ گذشته یا سطح تغییر کرده، باید ایجاد/ریست شود
     if not usage:
         usage = UserUsage(
             user_id=user.id,
@@ -339,17 +350,14 @@ def check_and_deduct_score(user_identifier, usage_type):
         )
         db.session.add(usage)
     elif usage.date != today_date or usage.level_check != level:
-        # بازنشانی برای روز جدید یا سطح جدید
         usage.date = today_date
         usage.chat_budget = daily_limits['chat']
         usage.image_budget = daily_limits['image']
         usage.level_check = level
 
-    # 3. بررسی و کسر امتیاز
     current_budget = getattr(usage, budget_key, 0)
 
     if current_budget < cost:
-        # 4. پیام خطا
         action_fa = 'چت' if usage_type == 'chat' else 'تولید تصویر'
         level_fa = 'پرمیوم' if is_premium else 'عادی'
         remaining_uses = current_budget // cost
@@ -364,11 +372,10 @@ def check_and_deduct_score(user_identifier, usage_type):
 
         return False, error_message
 
-    # 5. کسر امتیاز و ذخیره
     setattr(usage, budget_key, current_budget - cost)
 
     try:
-        db.session.commit() # ⬅️ ذخیره پس از کسر
+        db.session.commit()
         remaining_budget = getattr(usage, budget_key)
         return True, remaining_budget
     except Exception as e:
@@ -383,20 +390,16 @@ def save_conversation(user_identifier, chat_id, messages, user_message):
     if not user:
         return
 
-    # 1. جستجوی گفتگوی موجود
     chat_entry = Conversation.query.filter_by(id=chat_id, user_id=user.id).first()
 
-    # تبدیل لیست پیام‌ها به رشته JSON
     messages_json_string = json.dumps(messages, ensure_ascii=False)
 
     if chat_entry:
-        # 2. به‌روزرسانی
         chat_entry.messages_json = messages_json_string
         chat_entry.last_update = time.time()
         if chat_entry.title == "گفتگوی جدید...":
              chat_entry.title = user_message[:50] + "..." if len(user_message) > 50 else user_message
     else:
-        # 3. ایجاد جدید
         new_title = user_message[:50] + "..." if len(user_message) > 50 else user_message
         chat_entry = Conversation(
             id=chat_id,
@@ -433,29 +436,8 @@ def fix_rtl_ltr(text):
 
     return "\n".join(final_lines)
 
-# ⬅️ تابع جدید: انتخاب کلید API اوپن‌روتر به صورت چرخشی
-def get_openrouter_api_key():
-    """انتخاب چرخشی کلید API فعال. اگر همه غیرفعال بودند، همه را فعال کن."""
-    global API_KEY_STATUS
-    
-    # فیلتر کردن کلیدهای فعال
-    active_keys = [(key, name) for key, name in API_KEYS if API_KEY_STATUS.get(name, True)]
-    
-    if not active_keys:
-        # اگر همه کلیدها غیرفعال شده‌اند، یکبار سعی کن همه را ریست کنی
-        print("🚨 همه کلیدهای API غیرفعال هستند. ریست کردن وضعیت کلیدها.")
-        API_KEY_STATUS = {name: True for _, name in API_KEYS}
-        active_keys = API_KEYS 
-        if not active_keys:
-            return None, None # اگر همچنان خالی بود
-    
-    # انتخاب چرخشی از کلیدهای فعال
-    # برای سادگی، فعلا تصادفی انتخاب می‌کنیم تا زمان پیاده‌سازی مکانیزم stateful پیچیده
-    key, name = random.choice(active_keys) 
-    return key, name
-
-
 def translate_prompt_to_english(persian_prompt):
+    """تلاش برای ترجمه پرامپت با استفاده از مکانیزم چرخشی کلیدها."""
     translation_system_prompt = (
         "You are an expert prompt engineer. "
         "Translate the following Persian description into a detailed, "
@@ -469,48 +451,61 @@ def translate_prompt_to_english(persian_prompt):
         {"role": "system", "content": translation_system_prompt},
         {"role": "user", "content": persian_prompt}
     ]
+    
+    max_attempts = len(OPENROUTER_KEYS)
 
-    # ⬅️ انتخاب کلید API
-    current_api_key, api_name = get_openrouter_api_key()
-    if not current_api_key:
-        print("No active API key available for translation.")
-        return persian_prompt
+    # حلقه تلاش مجدد
+    for attempt in range(max_attempts):
+        key_name, current_api_key = get_openrouter_key(initial_attempt=(attempt==0))
+        
+        if not current_api_key:
+            # اگر هیچ کلیدی فعال نیست، با پرامپت فارسی ادامه بده
+            return persian_prompt 
 
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {current_api_key}"
-    }
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {current_api_key}"
+        }
 
-    data = {
-        "model": TRANSLATION_MODEL_NAME,
-        "messages": messages,
-        "max_tokens": 150
-    }
+        data = {
+            "model": TRANSLATION_MODEL_NAME,
+            "messages": messages,
+            "max_tokens": 150
+        }
 
-    try:
-        response = requests.post(OPENROUTER_URL, json=data, headers=headers, timeout=15)
-        response.raise_for_status()
-        res_json = response.json()
-        english_prompt = res_json["choices"][0]["message"]["content"].strip()
-        return english_prompt
-    except requests.exceptions.RequestException as e:
-        print(f"Translation API Request Error (Key: {api_name}): {e}")
-        # ⬅️ اگر خطا 401/403 (احتمال اتمام توکن یا کلید نامعتبر) بود، کلید را غیرفعال کن
-        if response.status_code in [401, 403]:
-             API_KEY_STATUS[api_name] = False
-             send_token_alert_sms(api_name)
-             print(f"❌ کلید API: {api_name} به دلیل خطای 401/403 موقتاً غیرفعال شد و هشدار ارسال گردید.")
-        return persian_prompt # در صورت خطا، پرامپت فارسی را برگردان تا تولید تصویر با پرامپت فارسی انجام شود
-    except Exception as e:
-        print(f"Translation General Error: {e}")
-        return persian_prompt
+        try:
+            response = requests.post(OPENROUTER_URL, json=data, headers=headers, timeout=15)
+            response.raise_for_status()
+            res_json = response.json()
+            english_prompt = res_json["choices"][0]["message"]["content"].strip()
+            return english_prompt # موفقیت
+            
+        except requests.exceptions.RequestException as e:
+            status_code = getattr(e.response, 'status_code', 500)
+            print(f"Translation API Error (Key: {key_name}): {e}. Status: {status_code}")
+            
+            # اگر 402 یا 401 بود، کلید را مسدود و تلاش بعدی
+            if status_code in [402, 401]:
+                handle_key_failure(key_name, status_code) 
+                # اگر آخرین کلید بود، پرامپت فارسی را برگردان
+                if attempt == max_attempts - 1:
+                    return persian_prompt 
+                continue # برو به کلید بعدی
+            else:
+                return persian_prompt # خطای دیگر (مانند 500)
+        
+        except Exception as e:
+            print(f"Translation General Error: {e}")
+            return persian_prompt
+            
+    # اگر حلقه بدون موفقیت کامل شد
+    return persian_prompt
 
 def generate_and_crop_image(english_prompt):
     full_prompt = f"{english_prompt}, {', '.join(IMAGE_QUALITY_PARAMS)}"
     image_url = f"{POLLINATIONS_URL}{full_prompt.replace(' ', '%20')}"
 
     try:
-        # ⬅️ تغییر: افزایش تایم‌اوت به ۱۰۰ ثانیه
         response = requests.get(image_url, timeout=100)
         response.raise_for_status()
 
@@ -529,7 +524,6 @@ def generate_and_crop_image(english_prompt):
 
         return file_name
 
-    # ⬅️ اضافه کردن مدیریت خطای تایم‌اوت برای تشخیص در مسیر اصلی
     except requests.exceptions.Timeout:
         return "TIMEOUT_100_SEC"
 
@@ -554,7 +548,7 @@ def cleanup_old_images():
             print(f"Error deleting file {filename}: {e}")
 
 # =========================================================
-# 👑 توابع و مسیرهای پنل مدیریت (Blueprint) - **بازنویسی شده برای DB**
+# 👑 توابع و مسیرهای پنل مدیریت (Blueprint)
 # =========================================================
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin', template_folder='templates')
@@ -563,7 +557,6 @@ def admin_required(f):
     """دکوراتور برای محدود کردن دسترسی فقط به ادمین."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # ⬅️ بررسی مستقیم از دیتابیس برای اطمینان بیشتر
         user_identifier = get_user_identifier(session)
         user = get_user_by_identifier(user_identifier)
 
@@ -576,7 +569,6 @@ def admin_required(f):
 @admin_required
 def admin_dashboard():
     """داشبورد اصلی ادمین."""
-    # ⬅️ استفاده از Query برای آمار
     total_users = User.query.count()
     premium_users = User.query.filter_by(is_premium=True).count()
     banned_users = User.query.filter_by(is_banned=True).count()
@@ -593,7 +585,6 @@ def admin_dashboard():
 @admin_required
 def manage_users():
     """صفحه مدیریت و نمایش لیست کاربران."""
-    # ⬅️ بازیابی تمام کاربران از دیتابیس
     all_users = User.query.all()
 
     users_list = [
@@ -635,9 +626,7 @@ def user_action():
         status = "پرمیوم شد" if user.is_premium else "عادی شد"
         message = f"وضعیت کاربر {identifier}: {status}."
 
-        # ⬅️ نکته کلیدی: تغییر وضعیت پرمیوم، نیاز به ریست بودجه سطح در روز فعلی دارد
         if user.usage:
-            # پاک کردن level_check باعث می‌شود در اولین استفاده، بودجه روزانه بر اساس سطح جدید تنظیم شود
             user.usage.level_check = None
 
     elif action == "toggle_ban":
@@ -669,7 +658,7 @@ def user_action():
 app.register_blueprint(admin_bp)
 
 # =========================================================
-# 📧 مسیرهای احراز هویت (ایمیل و پیامک) - **بازنویسی شده برای DB**
+# 📧 مسیرهای احراز هویت (ایمیل و پیامک)
 # =========================================================
 
 @app.route("/send_code", methods=["POST"])
@@ -711,16 +700,16 @@ def verify_code():
     if entered_code == stored_data['code']:
         del verification_codes[user_email]
 
-        user = register_user_if_new(user_email, email=user_email) # ⬅️ استفاده از تابع جدید DB
+        user = register_user_if_new(user_email, email=user_email)
 
         if not user:
             return jsonify({"status": "error", "message": "خطا در ثبت/بازیابی کاربر از دیتابیس."}), 500
 
-        session.clear() # پاک کردن سشن قبلی
+        session.clear()
         session['user_id'] = user.id
         session['user_email'] = user_email
         session['needs_profile_info'] = True
-        session['is_admin'] = user.is_admin # ⬅️ خواندن مستقیم از آبجکت User
+        session['is_admin'] = user.is_admin
 
         return jsonify({"status": "success", "redirect": url_for('account')})
     else:
@@ -766,12 +755,12 @@ def verify_sms_code():
     if entered_code == stored_data['code']:
         del phone_verification_codes[phone_number]
 
-        user = register_user_if_new(phone_number, phone=phone_number) # ⬅️ استفاده از تابع جدید DB
+        user = register_user_if_new(phone_number, phone=phone_number)
 
         if not user:
             return jsonify({"status": "error", "message": "خطا در ثبت/بازیابی کاربر از دیتابیس."}), 500
 
-        is_admin = user.is_admin # ⬅️ خواندن مستقیم از آبجکت User
+        is_admin = user.is_admin
         redirect_url = url_for('admin.admin_dashboard') if is_admin else url_for('account')
 
         session.clear()
@@ -786,7 +775,7 @@ def verify_sms_code():
 
 
 # =========================================================
-# 💬 مسیر چت و بقیه مسیرها (با اعمال محدودیت) - **بازنویسی شده برای DB**
+# 💬 مسیر چت و بقیه مسیرها (با اعمال محدودیت و چرخش کلید)
 # =========================================================
 
 @app.route("/chat", methods=["POST"])
@@ -805,23 +794,22 @@ def chat():
         if user.is_banned:
             return jsonify({"reply": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."})
 
-        # 2. ⬅️ بررسی و کسر بودجه چت
+        # 2. بررسی و کسر بودجه چت
         is_allowed, result = check_and_deduct_score(user_identifier, 'chat')
         if not is_allowed:
-            return jsonify({"reply": result}) # result حاوی پیام خطا است
+            return jsonify({"reply": result})
 
+    # --- پاسخ‌های اختصاصی ---
     TRIGGER_KEYWORDS = [
         "سازندت کیه", "تو کی هستی", "چه شرکتی",
         "who made you", "who created you", "who built you",
         "لیدر تیم noctovex", "رهبر تیم noctovex", "مهراب"
     ]
-
     TEAM_MEMBERS_KEYWORDS = [
         "اعضای تیمت کیا هستن", "اعضای noctovex", "اعضای تیم noctovex",
         "noctovex members"
     ]
 
-    # ⬅️ پاسخ اختصاصی برای "مامی سازندت کیه" (جدید)
     if "مامی سازندت کیه" in lower_msg:
         return jsonify({"reply": "عسل خانوم 💖"})
 
@@ -830,36 +818,30 @@ def chat():
         return jsonify({"reply": new_reply})
 
     if any(keyword in lower_msg for keyword in TRIGGER_KEYWORDS):
-        # ⬅️ پاسخ یکپارچه برای تمام سوالات سازنده و رهبر (اصلاح‌شده)
         new_reply = "من توسط تیم NOCTOVEX توسعه داده شده‌ام. این تیم توسط **مهراب عزیزی** رهبری می‌شود که مدیریت پروژه، برنامه‌ریزی و هدایت توسعه‌دهندگان را بر عهده دارد. 👑"
         return jsonify({"reply": new_reply})
 
+    # --- مدیریت تاریخچه و توکن‌ها ---
     current_chat_id = session.get('current_chat_id')
-
+    
     if user and session.get('user_id'):
-
         if not current_chat_id:
             current_chat_id = str(uuid.uuid4())
             session['current_chat_id'] = current_chat_id
             session["conversation"] = []
-
         else:
-            # ⬅️ بازیابی گفتگو از دیتابیس
             chat_entry = Conversation.query.filter_by(id=current_chat_id, user_id=user.id).first()
             if chat_entry:
                 try:
-                    # تبدیل رشته JSON ذخیره شده به لیست پیام‌ها
                     session["conversation"] = json.loads(chat_entry.messages_json)
                 except Exception:
                     session["conversation"] = []
-                    print("Error loading conversation JSON from DB.")
             else:
                 session.pop('current_chat_id', None)
                 session["conversation"] = []
                 current_chat_id = str(uuid.uuid4())
                 session['current_chat_id'] = current_chat_id
     else:
-        # اگر لاگین نیست، از سشن معمولی استفاده کن
         session.pop('current_chat_id', None)
         if "conversation" not in session:
             session["conversation"] = []
@@ -868,80 +850,98 @@ def chat():
     messages_list.extend(session.get("conversation", []))
     messages_list.append({"role": "user", "content": user_message})
 
-    # ⬅️ حلقه کوتاه کننده تاریخچه با سقف INPUT_TOKEN_LIMIT (۱۰۰ توکن)
     while count_tokens(messages_list) >= INPUT_TOKEN_LIMIT and len(session["conversation"]) >= 2:
         session["conversation"] = session["conversation"][2:]
-
         messages_list = [{"role": "system", "content": SYSTEM_PROMPT}]
         messages_list.extend(session.get("conversation", []))
         messages_list.append({"role": "user", "content": user_message})
 
     prompt_tokens = count_tokens(messages_list)
     remaining_tokens = TOTAL_TOKEN_LIMIT - prompt_tokens
-
-    # ⬅️ محاسبه max_tokens: تضمین می‌کنیم که هرگز از ۴۰۰ بیشتر نشود
     max_tokens_calculated = max(20, remaining_tokens)
-    max_tokens = min(max_tokens_calculated, MAX_COMPLETION_TOKENS) # MAX_COMPLETION_TOKENS = 400
+    max_tokens = min(max_tokens_calculated, MAX_COMPLETION_TOKENS)
 
-    # ⬅️ پیام سیستمی منطقی‌تر برای توکن کم
     if remaining_tokens <= 120:
         messages_list.append({
             "role": "system",
             "content": "⚠️ توکن کم باقی مانده است. لطفاً پاسخ را خلاصه، کامل و روان بده، اما هرگز نصفه نباشد."
         })
 
-    # ⬅️ انتخاب کلید API
-    current_api_key, api_name = get_openrouter_api_key()
-    if not current_api_key:
-        ai_message = "❌ متأسفم، در حال حاضر هیچ کلید API فعالی برای پاسخگویی در دسترس نیست."
-        return jsonify({"reply": ai_message})
+    # --- مکانیزم چرخش کلید و تلاش مجدد ---
+    max_attempts = len(OPENROUTER_KEYS)
+    ai_message = None
 
+    for attempt in range(max_attempts):
+        key_name, current_api_key = get_openrouter_key(initial_attempt=(attempt==0))
+        
+        if not current_api_key:
+            # اگر هیچ کلید فعالی باقی نماند
+            ai_message = "❌ خطایی در سیستم رخ داد. سرور در حال به‌روزرسانی است، لطفاً کمی بعد دوباره امتحان کنید."
+            break # خروج از حلقه تلاش
 
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {current_api_key}"
-    }
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {current_api_key}"
+        }
 
-    data = {
-        "model": CHAT_MODEL_NAME,
-        "messages": messages_list,
-        "max_tokens": max_tokens
-    }
+        data = {
+            "model": CHAT_MODEL_NAME,
+            "messages": messages_list,
+            "max_tokens": max_tokens
+        }
 
-    try:
-        response = requests.post(OPENROUTER_URL, json=data, headers=headers, timeout=10)
-        response.raise_for_status()
-        res_json = response.json()
-        ai_message = res_json["choices"][0]["message"]["content"]
-
+        try:
+            response = requests.post(OPENROUTER_URL, json=data, headers=headers, timeout=10)
+            response.raise_for_status() 
+            res_json = response.json()
+            ai_message = res_json["choices"][0]["message"]["content"]
+            
+            # موفقیت: از حلقه خارج شو
+            break 
+            
+        except requests.exceptions.RequestException as e:
+            status_code = getattr(e.response, 'status_code', 500)
+            print(f"API Request Error (Key: {key_name}): {e}. Status: {status_code}")
+            
+            # مدیریت خطاهای اتمام توکن یا نامعتبر (402, 401)
+            if status_code in [402, 401]:
+                handle_key_failure(key_name, status_code) 
+                
+                if attempt == max_attempts - 1:
+                    # آخرین تلاش هم شکست خورد
+                    ai_message = "❌ خطایی در سیستم رخ داد. سرور در حال به‌روزرسانی است، لطفاً کمی بعد دوباره امتحان کنید."
+                    break
+                    
+                continue # رفتن به کلید بعدی
+                
+            else:
+                # خطای دیگر (مانند 500)
+                ai_message = "⚠️ متأسفم، مشکلی در اتصال به سرور پیش آمد. لطفاً دوباره امتحان کنید."
+                break
+                
+        except Exception as e:
+            print(f"General Error: {e}")
+            ai_message = "⚠️ مشکلی پیش اومد!"
+            break
+            
+    # --- ذخیره‌سازی و پاسخ نهایی ---
+    
+    if ai_message:
         ai_message = fix_rtl_ltr(ai_message)
+    else:
+        # اگر به هر دلیلی ai_message در حلقه بالا مقداردهی نشد
+        ai_message = "❌ خطایی در سیستم رخ داد. سرور در حال به‌روزرسانی است، لطفاً کمی بعد دوباره امتحان کنید."
 
-        usage = res_json.get("usage", {})
-        print(f"💡 توکن مصرف شده (Key: {api_name}): {usage.get('total_tokens',0)} "
-              f"(Prompt: {usage.get('prompt_tokens',0)}, Completion: {usage.get('completion_tokens',0)})")
+    # اگر پیام موفقیت آمیز باشد، آن را به تاریخچه اضافه کن
+    if not ai_message.startswith(("❌", "⚠️", "⛔")):
+        session["conversation"].append({"role": "user", "content": user_message})
+        session["conversation"].append({"role": "assistant", "content": ai_message})
 
-    except requests.exceptions.RequestException as e:
-        print(f"API Request Error (Key: {api_name}): {e}")
-        ai_message = "⚠️ متأسفم، مشکلی در اتصال به API پیش آمد. لطفاً دوباره امتحان کنید."
-        # ⬅️ اگر خطا 401/403 (احتمال اتمام توکن یا کلید نامعتبر) بود، کلید را غیرفعال کن
-        if response.status_code in [401, 403]:
-             API_KEY_STATUS[api_name] = False
-             send_token_alert_sms(api_name)
-             print(f"❌ کلید API: {api_name} به دلیل خطای 401/403 موقتاً غیرفعال شد و هشدار ارسال گردید.")
+        if user and session.get('user_id'):
+            save_conversation(user_identifier, session['current_chat_id'], session["conversation"], user_message)
 
-    except Exception as e:
-        print(f"General Error: {e}")
-        ai_message = "⚠️ مشکلی پیش اومد!"
-
-    session["conversation"].append({"role": "user", "content": user_message})
-    session["conversation"].append({"role": "assistant", "content": ai_message})
-
-    if user and session.get('user_id'):
-        # ⬅️ استفاده از تابع جدید DB
-        save_conversation(user_identifier, session['current_chat_id'], session["conversation"], user_message)
-
-    if len(session["conversation"]) > 50:
-        session["conversation"] = session["conversation"][-50:]
+        if len(session["conversation"]) > 50:
+            session["conversation"] = session["conversation"][-50:]
 
     return jsonify({"reply": ai_message})
 
@@ -954,7 +954,7 @@ def clear_history():
 
 
 # =========================================================
-# 🖼️ مسیر تولید تصویر (با اعمال محدودیت) - **بازنویسی شده برای DB**
+# 🖼️ مسیر تولید تصویر (با اعمال محدودیت)
 # =========================================================
 
 @app.route("/image_generator", methods=["POST"])
@@ -964,23 +964,19 @@ def image_generator():
     user_identifier = get_user_identifier(session)
     user = get_user_by_identifier(user_identifier)
 
-    # 1. بررسی لاگین
     if not user:
         return jsonify({"status": "error", "message": "لطفاً ابتدا وارد حساب کاربری خود شوید."}), 403
 
-    # 2. بررسی وضعیت بن
     if user.is_banned:
         return jsonify({
             "status": "error",
             "message": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."
         }), 403
 
-    # 3. ⬅️ بررسی و کسر بودجه تولید تصویر (تابع جدید DB)
     is_allowed, result = check_and_deduct_score(user_identifier, 'image')
     if not is_allowed:
-        return jsonify({"status": "error", "message": result}), 429 # 429 Too Many Requests
+        return jsonify({"status": "error", "message": result}), 429
 
-    # 4. بررسی پرامپت
     if not persian_prompt or len(persian_prompt.split()) < 1:
         return jsonify({
             "status": "error",
@@ -988,10 +984,10 @@ def image_generator():
         }), 400
 
     try:
+        # ترجمه با مکانیزم چرخش کلید
         english_prompt = translate_prompt_to_english(persian_prompt)
         file_name = generate_and_crop_image(english_prompt)
 
-        # ⬅️ مدیریت خطای تایم‌اوت جدید: اگر مقدار خاصی که در Timeout تابع تعریف کردیم، برگردانده شود.
         if file_name == "TIMEOUT_100_SEC":
              return jsonify({
                 "status": "error",
@@ -1016,7 +1012,7 @@ def image_generator():
         print(f"Image Generator Handler Error: {e}")
         return jsonify({
             "status": "error",
-            "message": f"❌ خطای داخلی سرور هنگام پردازش تصویر: {e}"
+            "message": f"❌ خطای داخلی سرور هنگام پردازش تصویر."
         }), 500
 
 
@@ -1088,7 +1084,7 @@ def account():
         return redirect(url_for('login'))
 
     user_id = session.get('user_id')
-    user = get_user_by_id(user_id) # ⬅️ بازیابی مستقیم کاربر بر اساس ID
+    user = get_user_by_id(user_id)
 
     if not user:
          session.clear()
@@ -1137,7 +1133,7 @@ def profile():
         return redirect(url_for('login'))
 
     user_id = session.get('user_id')
-    user = get_user_by_id(user_id) # ⬅️ بازیابی کاربر
+    user = get_user_by_id(user_id)
 
     if not user:
         session.clear()
@@ -1148,16 +1144,12 @@ def profile():
     today_date = datetime.utcnow().date()
     daily_limits = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]
 
-    # ⬅️ محاسبه بودجه باقی مانده
     usage = user.usage
 
-    # اطمینان از مقداردهی اولیه یا ریست روزانه (بدون کسر امتیاز)
     if not usage or usage.date != today_date or usage.level_check != level:
-        # اگر رکورد ندارد، تاریخ جدید است یا سطح کاربر عوض شده، بودجه را با سقف جدید پر کن
         chat_budget_remaining = daily_limits['chat']
         image_budget_remaining = daily_limits['image']
     else:
-        # در غیر این صورت، بودجه باقیمانده فعلی را نشان بده
         chat_budget_remaining = usage.chat_budget
         image_budget_remaining = usage.image_budget
 
@@ -1171,17 +1163,14 @@ def profile():
         'is_premium': is_premium,
         'is_banned': user.is_banned,
 
-        # اطلاعات بودجه برای نمایش
         'chat_budget_remaining': chat_budget_remaining,
         'image_budget_remaining': image_budget_remaining,
         'chat_cost': chat_cost,
         'image_cost': image_cost,
 
-        # محاسبه تعداد استفاده باقی مانده
         'chats_remaining': chat_budget_remaining // chat_cost,
         'images_remaining': image_budget_remaining // image_cost,
 
-        # حداکثر بودجه برای نمایش در داشبورد
         'max_chats': daily_limits['chat'] // chat_cost,
         'max_images': daily_limits['image'] // image_cost,
 
@@ -1209,8 +1198,6 @@ def complete_profile_mock():
         user_name = request.form.get('user_name')
         user_phone = request.form.get('user_phone')
 
-        # ⬅️ در اینجا می‌توانید نام کاربر را به مدل User اضافه کنید
-
         session.pop('needs_profile_info', None)
 
         return redirect(url_for('account'))
@@ -1223,7 +1210,7 @@ def logout():
     return redirect(url_for('index'))
 
 # =========================================================
-# 💾 مسیرهای آرشیو گفتگو - **بازنویسی شده برای DB**
+# 💾 مسیرهای آرشیو گفتگو
 # =========================================================
 
 @app.route("/my_conversations")
@@ -1238,14 +1225,12 @@ def get_conversations_list():
     if not user_id:
         return jsonify({"status": "error", "message": "لطفاً ابتدا وارد حساب کاربری خود شوید."}), 403
 
-    # ⬅️ بازیابی گفتگوها از دیتابیس
     conversations_query = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.last_update.desc()).all()
 
     formatted_list = []
     for chat in conversations_query:
         date_str = time.strftime('%Y/%m/%d - %H:%M', time.localtime(chat.last_update))
 
-        # بارگذاری پیام‌ها برای پیش‌نمایش
         try:
             messages = json.loads(chat.messages_json)
             preview = messages[1]['content'][:80] + '...' if len(messages) > 1 else 'شروع گفتگو...'
@@ -1268,12 +1253,10 @@ def load_conversation(chat_id):
     if not user_id:
         return jsonify({"status": "error", "message": "مجوز دسترسی ندارید."}), 403
 
-    # ⬅️ بازیابی از دیتابیس
     chat_entry = Conversation.query.filter_by(id=chat_id, user_id=user_id).first()
 
     if chat_entry:
         try:
-            # تبدیل رشته JSON به لیست پیام‌ها و ذخیره در سشن
             session['conversation'] = json.loads(chat_entry.messages_json)
             session['current_chat_id'] = chat_entry.id
             return jsonify({"status": "success", "message": "گفتگو با موفقیت بارگذاری شد.", "redirect": url_for('index')})
