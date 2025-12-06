@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, Blueprint
 import requests
-import requests.exceptions # ⬅️ اضافه شدن برای مدیریت خطای Timeout
+import requests.exceptions
 import tiktoken
 import re
 from PIL import Image
@@ -17,8 +17,12 @@ import json
 # ⬅️ تغییر مهم: وارد کردن SQLAlchemy و datetime برای مدل‌ها
 from flask_sqlalchemy import SQLAlchemy 
 from datetime import date, datetime 
-import sqlalchemy.exc # برای مدیریت خطاهای دیتابیس
+import sqlalchemy.exc
 from sqlalchemy import or_
+
+# 🤖 کتابخانه های تلگرام
+from telegram import Update, Bot
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Dispatcher, CallbackContext
 
 # =========================================================
 # 🛠️ تنظیمات اولیه و اتصال به دیتابیس
@@ -32,18 +36,49 @@ app.secret_key = "supersecretkey123"
 # 👑 شماره تلفن ادمین برای دسترسی مستقیم
 ADMIN_PHONE_NUMBER = '09962935294' 
 
-API_KEY = os.getenv("OPENROUTER_API_KEY")
-if not API_KEY:
-    raise ValueError("❌ متغیر محیطی OPENROUTER_API_KEY پیدا نشد! لطفاً آن را تنظیم کنید.")
+# ----------------- 🔑 مدیریت کلیدهای API OpenRouter و تلگرام -----------------
+# ⬅️ توکن ربات تلگرام شما (استخراج شده از پیام شما)
+TELEGRAM_BOT_TOKEN = '8528461294:AAG4FV0M9viRUNft_dHPFMygovP1t3p3J0k'
+# ⬅️ چت آیدی ادمین (باید به صورت متغیر محیطی در Render تنظیم شود)
+TELEGRAM_ADMIN_CHAT_ID = os.getenv("TELEGRAM_ADMIN_CHAT_ID") 
+
+# ⬅️ تعریف نام متغیرهای محیطی که باید در Render تنظیم شوند: (افزایش به 8)
+API_KEY_NAMES = [
+    "OPENROUTER_API_KEY_1", 
+    "OPENROUTER_API_KEY_2", 
+    "OPENROUTER_API_KEY_3",
+    "OPENROUTER_API_KEY_4",
+    "OPENROUTER_API_KEY_5",
+    "OPENROUTER_API_KEY_6",
+    "OPENROUTER_API_KEY_7",
+    "OPENROUTER_API_KEY_8"
+]
+
+# لیست کلیدهای API فعال برای استفاده چرخشی (Round-Robin)
+ACTIVE_API_KEYS = []
+
+# بارگیری و اعتبارسنجی کلیدها
+for i, name in enumerate(API_KEY_NAMES):
+    key = os.getenv(name)
+    if key:
+        ACTIVE_API_KEYS.append({
+            "name": f"API{i+1}", # نام داخلی برای گزارش‌دهی
+            "key": key,
+            "status": "active" # active یا exhausted
+        })
+
+if not ACTIVE_API_KEYS:
+    raise ValueError("❌ حداقل یک متغیر محیطی OPENROUTER_API_KEY_X پیدا نشد! لطفاً آنها را تنظیم کنید.")
+
+# متغیر گلوبال برای چرخاندن بین کلیدها
+CURRENT_API_KEY_INDEX = 0
+
+# -----------------------------------------------------------------------------
 
 # ----------------- 💾 تنظیمات PostgreSQL (Render Internal) -----------------
-# ⚠️ این بخش برای اتصال به دیتابیس داخلی Render (یا هر سرویسی که متغیر DATABASE_URL را تنظیم کند)
-# ⚠️ تنظیم شده است. نیاز به تعریف دستی رمز عبور و هاست نیست.
-
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    # برای محیط توسعه لوکال (اختیاری)
     raise ValueError("❌ متغیر محیطی DATABASE_URL (اتصال به دیتابیس) پیدا نشد! لطفاً آن را تنظیم کنید.")
 
 # تنظیمات Flask-SQLAlchemy
@@ -70,27 +105,20 @@ SMS_API = KavenegarAPI(KAVENEGAR_API_KEY)
 phone_verification_codes = {} 
 # ---------------------------------------------------------
 
-# ❌ حذف کدهای ذخیره‌سازی JSON
-# USER_CONVERSATIONS = {}  # دیگر لازم نیست
-# USER_DATA = {} # دیگر لازم نیست
-# USER_DATA_FILE = 'user_data.json' # دیگر لازم نیست
-# USER_USAGE = {} # دیگر لازم نیست
-# USAGE_DATA_FILE = 'user_usage.json' # دیگر لازم نیست
-
-# 🎯 تنظیمات هزینه و بودجه امتیاز روزانه
+# 🎯 تنظیمات هزینه و بودجه امتیاز روزانه (بروزرسانی شده)
 SCORE_QUOTA_CONFIG = {
     'COSTS': {
-        'chat': 1, # هر چت 1 امتیاز (مطابق درخواست)
+        'chat': 1, # هر چت 1 امتیاز
         'image': 20 # هر عکس 20 امتیاز
     },
     'DAILY_BUDGET': {
         'free': {
-            'chat': 50,  # 50 امتیاز برای چت (50 چت)
-            'image': 60  # 60 امتیاز برای تصویر (3 عکس)
+            'chat': 30,  # 30 امتیاز برای چت (30 چت)
+            'image': 80  # 80 امتیاز برای تصویر (4 عکس)
         },
         'premium': {
-            'chat': 100, # 100 امتیاز برای چت (100 چت)
-            'image': 120 # 120 امتیاز برای تصویر (6 عکس)
+            'chat': 80, # 80 امتیاز برای چت (80 چت)
+            'image': 200 # 200 امتیاز برای تصویر (10 عکس)
         }
     }
 }
@@ -136,6 +164,7 @@ class User(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email = db.Column(db.String(120), unique=True, nullable=True)
     phone = db.Column(db.String(15), unique=True, nullable=True)
+    telegram_id = db.Column(db.BigInteger, unique=True, nullable=True) # ⬅️ اضافه شدن برای تلگرام
     score = db.Column(db.Integer, default=0)
     is_premium = db.Column(db.Boolean, default=False)
     is_banned = db.Column(db.Boolean, default=False)
@@ -154,8 +183,8 @@ class UserUsage(db.Model):
     # تاریخ را به صورت تاریخ ذخیره می‌کنیم
     date = db.Column(db.Date, default=datetime.utcnow().date) 
     
-    chat_budget = db.Column(db.Integer, default=50)
-    image_budget = db.Column(db.Integer, default=60)
+    chat_budget = db.Column(db.Integer, default=30) # ⬅️ به روز رسانی
+    image_budget = db.Column(db.Integer, default=80) # ⬅️ به روز رسانی
     level_check = db.Column(db.String(10), nullable=True) # برای بررسی تغییر سطح
 
 
@@ -173,8 +202,51 @@ class Conversation(db.Model):
 
 
 # =========================================================
+# 📢 توابع گزارش‌دهی تلگرام
+# =========================================================
+
+def send_telegram_alert(api_name, error_type="quota_exhausted"):
+    """ارسال پیام به ادمین در تلگرام در مورد اتمام اعتبار API."""
+    
+    if not TELEGRAM_ADMIN_CHAT_ID:
+        print("⚠️ TELEGRAM_ADMIN_CHAT_ID تنظیم نشده است. گزارش تلگرام ارسال نشد.")
+        return False
+        
+    if error_type == "quota_exhausted":
+        message_text = (
+            f"❌ هشدار اتمام اعتبار: "
+            f"اعتبار کلید **{api_name}** به پایان رسید یا با خطای Quota/Rate Limit مواجه شد. "
+            f"کلید از چرخه خارج و کلید بعدی فعال شد. "
+            f"لطفاً کلید جدید را در اسرع وقت شارژ یا جایگزین کنید."
+        )
+    elif error_type == "unauthorized_key":
+         message_text = (
+            f"🚨 هشدار کلید نامعتبر: "
+            f"کلید **{api_name}** نامعتبر تشخیص داده شد (خطای 401). "
+            f"کلید از چرخه خارج و کلید بعدی فعال شد."
+        )
+    else:
+        message_text = f"🚨 خطای ناشناخته در کلید **{api_name}**: {error_type}"
+
+    telegram_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    
+    payload = {
+        'chat_id': TELEGRAM_ADMIN_CHAT_ID,
+        'text': message_text,
+        'parse_mode': 'Markdown'
+    }
+
+    try:
+        response = requests.post(telegram_url, json=payload, timeout=5)
+        response.raise_for_status()
+        print(f"✅ گزارش تلگرام برای {api_name} ارسال شد.")
+        return True
+    except Exception as e:
+        print(f"❌ خطا در ارسال گزارش تلگرام: {e}")
+        return False
+
+# =========================================================
 # ⚙️ توابع احراز هویت و ایمیل/پیامک
-# (این توابع بدون تغییر باقی می‌مانند)
 # =========================================================
 
 def generate_verification_code():
@@ -216,17 +288,20 @@ def send_verification_sms(phone_number, code):
         return False
 
 # =========================================================
-# 💾 توابع پایداری داده (Persistence) - **بازنویسی شده برای DB**
+# 💾 توابع پایداری داده (Persistence)
 # =========================================================
-
-# ❌ توابع load_user_data/save_user_data/load_user_usage/save_user_usage حذف شدند.
 
 def get_user_identifier(session):
     """برگرداندن ایمیل یا شماره تلفن برای ذخیره‌سازی گفتگو."""
-    return session.get('user_email') or session.get('user_phone')
+    # ⬅️ اضافه شدن تلگرام: در تلگرام، چت آیدی را به عنوان شناسه موقت قرار می‌دهیم.
+    return session.get('user_email') or session.get('user_phone') or session.get('telegram_chat_id')
 
 def get_user_by_identifier(identifier):
-    """یافتن کاربر بر اساس ایمیل یا شماره تلفن."""
+    """یافتن کاربر بر اساس ایمیل، شماره تلفن یا تلگرام آیدی."""
+    # تلگرام آیدی عددی است، بقیه رشته
+    if isinstance(identifier, int):
+        return User.query.filter_by(telegram_id=identifier).first()
+        
     return User.query.filter(
         or_(User.email == identifier, User.phone == identifier)
     ).first()
@@ -236,12 +311,16 @@ def get_user_by_id(user_id):
     return User.query.get(user_id)
 
 
-def register_user_if_new(user_identifier, email=None, phone=None):
+def register_user_if_new(user_identifier, email=None, phone=None, telegram_id=None):
     """
     اگر کاربر جدید است، آن را در دیتابیس ثبت می‌کند.
-    اگر موجود است، اطلاعات لاگین (email/phone) را به‌روز می‌کند و آبجکت User را برمی‌گرداند.
+    اگر موجود است، اطلاعات لاگین (email/phone/telegram_id) را به‌روز می‌کند و آبجکت User را برمی‌گرداند.
     """
-    user = get_user_by_identifier(user_identifier)
+    # 1. تلاش برای یافتن کاربر
+    if telegram_id:
+        user = User.query.filter_by(telegram_id=telegram_id).first()
+    else:
+        user = get_user_by_identifier(user_identifier)
 
     if not user:
         is_admin = (phone == ADMIN_PHONE_NUMBER)
@@ -249,6 +328,7 @@ def register_user_if_new(user_identifier, email=None, phone=None):
             id=str(uuid.uuid4()),
             email=email,
             phone=phone,
+            telegram_id=telegram_id, # ⬅️ اضافه شدن
             score=0, 
             is_premium=False,
             is_banned=False,
@@ -261,6 +341,8 @@ def register_user_if_new(user_identifier, email=None, phone=None):
             user.email = email
         if phone:
             user.phone = phone
+        if telegram_id and not user.telegram_id: # ⬅️ اگر قبلا ثبت نشده، تلگرام آیدی را ثبت کن
+            user.telegram_id = telegram_id
             
     try:
         db.session.commit()
@@ -268,7 +350,7 @@ def register_user_if_new(user_identifier, email=None, phone=None):
     except sqlalchemy.exc.IntegrityError as e:
         db.session.rollback()
         print(f"Database Integrity Error during registration: {e}")
-        return None # در صورت وجود مشکل در ثبت (مانند Unique Constraint)
+        return None 
 
 
 def check_and_deduct_score(user_identifier, usage_type):
@@ -278,6 +360,11 @@ def check_and_deduct_score(user_identifier, usage_type):
     برمی‌گرداند: (True, remaining_budget) اگر مجاز بود، یا (False, پیام خطا)
     """
     user = get_user_by_identifier(user_identifier)
+    
+    # ⬅️ اگر شناسه، تلگرام آیدی است
+    if isinstance(user_identifier, int):
+        user = User.query.filter_by(telegram_id=user_identifier).first()
+        
     if not user:
         return False, "خطای داخلی: کاربر در دیتابیس یافت نشد."
 
@@ -333,7 +420,7 @@ def check_and_deduct_score(user_identifier, usage_type):
     setattr(usage, budget_key, current_budget - cost)
     
     try:
-        db.session.commit() # ⬅️ ذخیره پس از کسر
+        db.session.commit()
         remaining_budget = getattr(usage, budget_key)
         return True, remaining_budget
     except Exception as e:
@@ -344,7 +431,12 @@ def check_and_deduct_score(user_identifier, usage_type):
 
 def save_conversation(user_identifier, chat_id, messages, user_message):
     """ذخیره یا به‌روزرسانی گفتگو در دیتابیس."""
-    user = get_user_by_identifier(user_identifier)
+    # ⬅️ اگر شناسه، تلگرام آیدی است
+    if isinstance(user_identifier, int):
+        user = User.query.filter_by(telegram_id=user_identifier).first()
+    else:
+        user = get_user_by_identifier(user_identifier)
+        
     if not user:
         return
 
@@ -383,7 +475,6 @@ def save_conversation(user_identifier, chat_id, messages, user_message):
 # ⚙️ توابع کمکی، شمارنده و محدودیت (Quota)
 # =========================================================
 
-# (بقیه توابع کمکی مانند count_tokens, fix_rtl_ltr, translate_prompt_to_english بدون تغییر باقی می‌مانند)
 def count_tokens(messages):
     return sum(len(encoder.encode_ordinary(m["content"])) for m in messages)
 
@@ -398,6 +489,99 @@ def fix_rtl_ltr(text):
         final_lines.append(f"\u200F{line}")
 
     return "\n".join(final_lines)
+
+
+# ⬅️ توابع مدیریت کلید API و چرخاندن آنها
+def get_current_api_key_data():
+    """برگرداندن اطلاعات کلید API جاری."""
+    global CURRENT_API_KEY_INDEX
+    # اطمینان از اینکه ایندکس همیشه معتبر است
+    CURRENT_API_KEY_INDEX = CURRENT_API_KEY_INDEX % len(ACTIVE_API_KEYS)
+    return ACTIVE_API_KEYS[CURRENT_API_KEY_INDEX]
+
+def rotate_api_key():
+    """چرخاندن به کلید API بعدی."""
+    global CURRENT_API_KEY_INDEX
+    CURRENT_API_KEY_INDEX = (CURRENT_API_KEY_INDEX + 1) % len(ACTIVE_API_KEYS)
+
+def call_openrouter_with_fallback(data, usage_context):
+    """
+    تلاش برای فراخوانی API با کلید جاری و در صورت خطا، چرخاندن به کلید بعدی.
+    usage_context: 'chat' یا 'translation'
+    """
+    global CURRENT_API_KEY_INDEX
+    
+    initial_index = CURRENT_API_KEY_INDEX
+    max_retries = len(ACTIVE_API_KEYS)
+    
+    for _ in range(max_retries):
+        key_data = get_current_api_key_data()
+        current_api_key = key_data['key']
+        current_api_name = key_data['name']
+        
+        if key_data['status'] == 'exhausted':
+            print(f"⚠️ کلید {current_api_name} در حال حاضر خارج از سرویس است. چرخاندن به کلید بعدی.")
+            rotate_api_key()
+            if CURRENT_API_KEY_INDEX == initial_index:
+                 # ⬅️ تغییر: پیام خطای عمومی برای کاربر
+                 return None, "❌ تمام کلیدهای API فعال در حال حاضر خارج از سرویس هستند. لطفاً بعداً امتحان کنید."
+            continue
+            
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {current_api_key}"
+        }
+
+        try:
+            timeout = 15 if usage_context == 'translation' else 10 
+            response = requests.post(OPENROUTER_URL, json=data, headers=headers, timeout=timeout)
+            
+            # 1. بررسی خطای Rate Limit یا Quota (429)
+            if response.status_code == 429:
+                print(f"❌ خطای 429 (Rate Limit/Quota) برای کلید {current_api_name}.")
+                key_data['status'] = 'exhausted'
+                send_telegram_alert(current_api_name, "quota_exhausted")
+                
+                rotate_api_key()
+                if CURRENT_API_KEY_INDEX == initial_index:
+                    return None, "❌ تمام کلیدهای API به دلیل اتمام سهمیه از سرویس خارج شده‌اند."
+                continue
+                
+            response.raise_for_status() 
+            
+            # 2. موفقیت
+            return response.json(), None
+            
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 401:
+                # ⬅️ کلید غیرمعتبر: گزارش و تغییر کلید
+                print(f"❌ خطای 401 (Unauthorized) برای کلید {current_api_name}.")
+                key_data['status'] = 'exhausted'
+                send_telegram_alert(current_api_name, "unauthorized_key")
+                
+                rotate_api_key()
+                if CURRENT_API_KEY_INDEX == initial_index:
+                    return None, "❌ تمام کلیدهای API نامعتبر شدند."
+                continue
+            
+            # 3. سایر خطاهای HTTP
+            # ⬅️ تغییر: پیام خطای عمومی
+            print(f"خطای HTTP برای کلید {current_api_name}: {e}")
+            return None, f"خطای ارتباط با سرور مدل‌های هوش مصنوعی. لطفاً دوباره تلاش کنید."
+            
+        except requests.exceptions.RequestException as e:
+            # 4. سایر خطاهای درخواست (Timeout, Connection, etc.)
+            # ⬅️ تغییر: پیام خطای عمومی
+            print(f"خطای درخواست برای کلید {current_api_name}: {e}")
+            return None, f"خطای شبکه یا اتصال. لطفاً وضعیت اینترنت خود را بررسی کرده و مجدداً تلاش کنید."
+        except Exception as e:
+            # ⬅️ تغییر: پیام خطای عمومی
+            print(f"خطای عمومی برای کلید {current_api_name}: {e}")
+            return None, f"خطای عمومی در پردازش درخواست."
+
+    # اگر از حلقه خارج شدیم و نتوانستیم پاسخی بگیریم
+    return None, "❌ تلاش برای اتصال به API ناموفق بود. تمام منابع بررسی شدند."
+
 
 def translate_prompt_to_english(persian_prompt):
     translation_system_prompt = (
@@ -414,33 +598,31 @@ def translate_prompt_to_english(persian_prompt):
         {"role": "user", "content": persian_prompt}
     ]
     
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {API_KEY}"
-    }
-
     data = {
         "model": TRANSLATION_MODEL_NAME,
         "messages": messages,
         "max_tokens": 150 
     }
 
+    res_json, error = call_openrouter_with_fallback(data, 'translation')
+    
+    if error:
+        print(f"Translation Error: {error}")
+        return persian_prompt
+
     try:
-        response = requests.post(OPENROUTER_URL, json=data, headers=headers, timeout=15)
-        response.raise_for_status()
-        res_json = response.json()
         english_prompt = res_json["choices"][0]["message"]["content"].strip()
         return english_prompt
     except Exception as e:
-        print(f"Translation Error: {e}")
+        print(f"Translation Response Parse Error: {e}")
         return persian_prompt
+
 
 def generate_and_crop_image(english_prompt):
     full_prompt = f"{english_prompt}, {', '.join(IMAGE_QUALITY_PARAMS)}"
     image_url = f"{POLLINATIONS_URL}{full_prompt.replace(' ', '%20')}"
     
     try:
-        # ⬅️ تغییر: افزایش تایم‌اوت به ۱۰۰ ثانیه
         response = requests.get(image_url, timeout=100) 
         response.raise_for_status() 
         
@@ -459,7 +641,6 @@ def generate_and_crop_image(english_prompt):
         
         return file_name
         
-    # ⬅️ اضافه کردن مدیریت خطای تایم‌اوت برای تشخیص در مسیر اصلی
     except requests.exceptions.Timeout:
         return "TIMEOUT_100_SEC"
         
@@ -484,7 +665,7 @@ def cleanup_old_images():
             print(f"Error deleting file {filename}: {e}")
 
 # =========================================================
-# 👑 توابع و مسیرهای پنل مدیریت (Blueprint) - **بازنویسی شده برای DB**
+# 👑 توابع و مسیرهای پنل مدیریت (Blueprint)
 # =========================================================
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin', template_folder='templates')
@@ -493,7 +674,6 @@ def admin_required(f):
     """دکوراتور برای محدود کردن دسترسی فقط به ادمین."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # ⬅️ بررسی مستقیم از دیتابیس برای اطمینان بیشتر
         user_identifier = get_user_identifier(session)
         user = get_user_by_identifier(user_identifier)
         
@@ -506,7 +686,6 @@ def admin_required(f):
 @admin_required
 def admin_dashboard():
     """داشبورد اصلی ادمین."""
-    # ⬅️ استفاده از Query برای آمار
     total_users = User.query.count()
     premium_users = User.query.filter_by(is_premium=True).count()
     banned_users = User.query.filter_by(is_banned=True).count()
@@ -523,7 +702,6 @@ def admin_dashboard():
 @admin_required
 def manage_users():
     """صفحه مدیریت و نمایش لیست کاربران."""
-    # ⬅️ بازیابی تمام کاربران از دیتابیس
     all_users = User.query.all()
     
     users_list = [
@@ -567,7 +745,6 @@ def user_action():
         
         # ⬅️ نکته کلیدی: تغییر وضعیت پرمیوم، نیاز به ریست بودجه سطح در روز فعلی دارد
         if user.usage:
-            # پاک کردن level_check باعث می‌شود در اولین استفاده، بودجه روزانه بر اساس سطح جدید تنظیم شود
             user.usage.level_check = None 
         
     elif action == "toggle_ban":
@@ -599,11 +776,8 @@ def user_action():
 app.register_blueprint(admin_bp)
 
 # =========================================================
-# 📧 مسیرهای احراز هویت (ایمیل و پیامک) - **بازنویسی شده برای DB**
+# 📧 مسیرهای احراز هویت (ایمیل و پیامک)
 # =========================================================
-
-# (مسیرهای send_code, verify_code, send_sms_code, verify_sms_code بدون تغییر باقی می‌مانند، 
-# اما از توابع جدید register_user_if_new و get_user_by_identifier استفاده می‌کنند.)
 
 @app.route("/send_code", methods=["POST"])
 def send_code():
@@ -612,10 +786,6 @@ def send_code():
     
     if not user_email:
         return jsonify({"status": "error", "message": "لطفاً ایمیل خود را وارد کنید."}), 400
-
-    # ⬅️ بررسی وجود کاربر برای لاگین (اختیاری)
-    # اگر کاربر از طریق ایمیل قبلاً ثبت شده باشد
-    # user_exists = get_user_by_identifier(user_email)
 
     code = generate_verification_code()
     
@@ -648,16 +818,16 @@ def verify_code():
     if entered_code == stored_data['code']:
         del verification_codes[user_email]
         
-        user = register_user_if_new(user_email, email=user_email) # ⬅️ استفاده از تابع جدید DB
+        user = register_user_if_new(user_email, email=user_email)
         
         if not user:
             return jsonify({"status": "error", "message": "خطا در ثبت/بازیابی کاربر از دیتابیس."}), 500
             
-        session.clear() # پاک کردن سشن قبلی
+        session.clear() 
         session['user_id'] = user.id
         session['user_email'] = user_email
         session['needs_profile_info'] = True 
-        session['is_admin'] = user.is_admin # ⬅️ خواندن مستقیم از آبجکت User
+        session['is_admin'] = user.is_admin 
         
         return jsonify({"status": "success", "redirect": url_for('account')})
     else:
@@ -703,12 +873,12 @@ def verify_sms_code():
     if entered_code == stored_data['code']:
         del phone_verification_codes[phone_number]
         
-        user = register_user_if_new(phone_number, phone=phone_number) # ⬅️ استفاده از تابع جدید DB
+        user = register_user_if_new(phone_number, phone=phone_number)
         
         if not user:
             return jsonify({"status": "error", "message": "خطا در ثبت/بازیابی کاربر از دیتابیس."}), 500
             
-        is_admin = user.is_admin # ⬅️ خواندن مستقیم از آبجکت User
+        is_admin = user.is_admin 
         redirect_url = url_for('admin.admin_dashboard') if is_admin else url_for('account')
         
         session.clear() 
@@ -723,7 +893,7 @@ def verify_sms_code():
 
 
 # =========================================================
-# 💬 مسیر چت و بقیه مسیرها (با اعمال محدودیت) - **بازنویسی شده برای DB**
+# 💬 مسیر چت و بقیه مسیرها (با اعمال محدودیت)
 # =========================================================
 
 @app.route("/chat", methods=["POST"])
@@ -742,13 +912,11 @@ def chat():
         if user.is_banned:
             return jsonify({"reply": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."})
         
-        # 2. ⬅️ بررسی و کسر بودجه چت
+        # 2. بررسی و کسر بودجه چت
         is_allowed, result = check_and_deduct_score(user_identifier, 'chat')
         if not is_allowed:
-            return jsonify({"reply": result}) # result حاوی پیام خطا است
+            return jsonify({"reply": result})
             
-        # remaining_chat_budget = result # امتیاز چت باقی مانده
-
     
     TRIGGER_KEYWORDS = [
         "سازندت کیه", "تو کی هستی", "چه شرکتی",
@@ -761,7 +929,6 @@ def chat():
         "noctovex members"
     ]
     
-    # ⬅️ پاسخ اختصاصی برای "مامی سازندت کیه" (جدید)
     if "مامی سازندت کیه" in lower_msg:
         return jsonify({"reply": "عسل خانوم 💖"})
         
@@ -770,7 +937,6 @@ def chat():
         return jsonify({"reply": new_reply})
 
     if any(keyword in lower_msg for keyword in TRIGGER_KEYWORDS):
-        # ⬅️ پاسخ یکپارچه برای تمام سوالات سازنده و رهبر (اصلاح‌شده)
         new_reply = "من توسط تیم NOCTOVEX توسعه داده شده‌ام. این تیم توسط **مهراب عزیزی** رهبری می‌شود که مدیریت پروژه، برنامه‌ریزی و هدایت توسعه‌دهندگان را بر عهده دارد. 👑"
         return jsonify({"reply": new_reply})
             
@@ -784,11 +950,9 @@ def chat():
             session["conversation"] = []
             
         else:
-            # ⬅️ بازیابی گفتگو از دیتابیس
             chat_entry = Conversation.query.filter_by(id=current_chat_id, user_id=user.id).first()
             if chat_entry:
                 try:
-                    # تبدیل رشته JSON ذخیره شده به لیست پیام‌ها
                     session["conversation"] = json.loads(chat_entry.messages_json)
                 except Exception:
                     session["conversation"] = []
@@ -799,7 +963,6 @@ def chat():
                 current_chat_id = str(uuid.uuid4())
                 session['current_chat_id'] = current_chat_id
     else:
-        # اگر لاگین نیست، از سشن معمولی استفاده کن
         session.pop('current_chat_id', None)
         if "conversation" not in session:
             session["conversation"] = []
@@ -808,7 +971,6 @@ def chat():
     messages_list.extend(session.get("conversation", []))
     messages_list.append({"role": "user", "content": user_message})
 
-    # ⬅️ حلقه کوتاه کننده تاریخچه با سقف INPUT_TOKEN_LIMIT (۱۰۰ توکن)
     while count_tokens(messages_list) >= INPUT_TOKEN_LIMIT and len(session["conversation"]) >= 2:
         session["conversation"] = session["conversation"][2:]
         
@@ -819,21 +981,14 @@ def chat():
     prompt_tokens = count_tokens(messages_list)
     remaining_tokens = TOTAL_TOKEN_LIMIT - prompt_tokens
     
-    # ⬅️ محاسبه max_tokens: تضمین می‌کنیم که هرگز از ۴۰۰ بیشتر نشود
     max_tokens_calculated = max(20, remaining_tokens) 
-    max_tokens = min(max_tokens_calculated, MAX_COMPLETION_TOKENS) # MAX_COMPLETION_TOKENS = 400
+    max_tokens = min(max_tokens_calculated, MAX_COMPLETION_TOKENS) 
 
-    # ⬅️ پیام سیستمی منطقی‌تر برای توکن کم
     if remaining_tokens <= 120: 
         messages_list.append({
             "role": "system",
             "content": "⚠️ توکن کم باقی مانده است. لطفاً پاسخ را خلاصه، کامل و روان بده، اما هرگز نصفه نباشد."
         })
-
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {API_KEY}"
-    }
 
     data = {
         "model": CHAT_MODEL_NAME, 
@@ -841,30 +996,30 @@ def chat():
         "max_tokens": max_tokens
     }
 
-    try:
-        response = requests.post(OPENROUTER_URL, json=data, headers=headers, timeout=10)
-        response.raise_for_status() 
-        res_json = response.json()
-        ai_message = res_json["choices"][0]["message"]["content"]
+    res_json, error = call_openrouter_with_fallback(data, 'chat')
+    
+    if error:
+        print(f"Chat API Request Error: {error}")
+        # ⬅️ تغییر: نمایش خطای عمومی از تابع call_openrouter_with_fallback
+        ai_message = f"⚠️ متأسفم، مشکلی در اتصال پیش آمد: {error}"
+    else:
+        try:
+            ai_message = res_json["choices"][0]["message"]["content"]
+            ai_message = fix_rtl_ltr(ai_message)
 
-        ai_message = fix_rtl_ltr(ai_message)
+            usage = res_json.get("usage", {})
+            print(f"💡 توکن مصرف شده: {usage.get('total_tokens',0)} "
+                  f"(Prompt: {usage.get('prompt_tokens',0)}, Completion: {usage.get('completion_tokens',0)})")
 
-        usage = res_json.get("usage", {})
-        print(f"💡 توکن مصرف شده: {usage.get('total_tokens',0)} "
-              f"(Prompt: {usage.get('prompt_tokens',0)}, Completion: {usage.get('completion_tokens',0)})")
+        except Exception as e:
+            print(f"General Error: {e}")
+            ai_message = "⚠️ مشکلی پیش اومد در تحلیل پاسخ!"
 
-    except requests.exceptions.RequestException as e:
-        print(f"API Request Error: {e}")
-        ai_message = "⚠️ متأسفم، مشکلی در اتصال به API پیش آمد. لطفاً دوباره امتحان کنید."
-    except Exception as e:
-        print(f"General Error: {e}")
-        ai_message = "⚠️ مشکلی پیش اومد!"
 
     session["conversation"].append({"role": "user", "content": user_message})
     session["conversation"].append({"role": "assistant", "content": ai_message})
 
     if user and session.get('user_id'):
-        # ⬅️ استفاده از تابع جدید DB
         save_conversation(user_identifier, session['current_chat_id'], session["conversation"], user_message)
 
     if len(session["conversation"]) > 50:
@@ -881,7 +1036,7 @@ def clear_history():
 
 
 # =========================================================
-# 🖼️ مسیر تولید تصویر (با اعمال محدودیت) - **بازنویسی شده برای DB**
+# 🖼️ مسیر تولید تصویر (با اعمال محدودیت)
 # =========================================================
 
 @app.route("/image_generator", methods=["POST"])
@@ -891,25 +1046,20 @@ def image_generator():
     user_identifier = get_user_identifier(session)
     user = get_user_by_identifier(user_identifier)
     
-    # 1. بررسی لاگین
     if not user:
         return jsonify({"status": "error", "message": "لطفاً ابتدا وارد حساب کاربری خود شوید."}), 403
         
-    # 2. بررسی وضعیت بن
     if user.is_banned:
         return jsonify({
             "status": "error",
             "message": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."
         }), 403
 
-    # 3. ⬅️ بررسی و کسر بودجه تولید تصویر (تابع جدید DB)
+    # 3. بررسی و کسر بودجه تولید تصویر
     is_allowed, result = check_and_deduct_score(user_identifier, 'image')
     if not is_allowed:
-        return jsonify({"status": "error", "message": result}), 429 # 429 Too Many Requests
+        return jsonify({"status": "error", "message": result}), 429
         
-    # remaining_image_budget = result # امتیاز عکس باقی مانده
-        
-    # 4. بررسی پرامپت
     if not persian_prompt or len(persian_prompt.split()) < 1:
         return jsonify({
             "status": "error",
@@ -920,7 +1070,6 @@ def image_generator():
         english_prompt = translate_prompt_to_english(persian_prompt)
         file_name = generate_and_crop_image(english_prompt)
         
-        # ⬅️ مدیریت خطای تایم‌اوت جدید: اگر مقدار خاصی که در Timeout تابع تعریف کردیم، برگردانده شود.
         if file_name == "TIMEOUT_100_SEC": 
              return jsonify({
                 "status": "error",
@@ -948,6 +1097,190 @@ def image_generator():
             "message": f"❌ خطای داخلی سرور هنگام پردازش تصویر: {e}"
         }), 500
 
+
+# =========================================================
+# 🤖 مسیرهای API تلگرام (Blueprint)
+# =========================================================
+
+telegram_bp = Blueprint('telegram', __name__, url_prefix='/telegram')
+bot = Bot(TELEGRAM_BOT_TOKEN)
+
+# نگهداری سشن های تلگرام به صورت موقت در حافظه (در یک پروژه بزرگتر، این باید در دیتابیس یا Redis ذخیره شود)
+TELEGRAM_CONVERSATIONS = {}
+
+def get_telegram_conversation(chat_id):
+    """بارگذاری یا ایجاد سشن گفتگو برای تلگرام."""
+    chat_id = str(chat_id)
+    if chat_id not in TELEGRAM_CONVERSATIONS:
+        # 1. تلاش برای بارگذاری از دیتابیس (آخرین گفتگو)
+        user = User.query.filter_by(telegram_id=chat_id).first()
+        if user:
+            last_conversation = Conversation.query.filter_by(user_id=user.id).order_by(Conversation.last_update.desc()).first()
+            if last_conversation:
+                try:
+                    messages = json.loads(last_conversation.messages_json)
+                    TELEGRAM_CONVERSATIONS[chat_id] = {
+                        'messages': messages,
+                        'chat_id': last_conversation.id,
+                        'user_id': user.id
+                    }
+                    return TELEGRAM_CONVERSATIONS[chat_id]
+                except Exception:
+                    pass
+
+        # 2. ایجاد جدید
+        TELEGRAM_CONVERSATIONS[chat_id] = {
+            'messages': [],
+            'chat_id': str(uuid.uuid4()),
+            'user_id': user.id if user else None
+        }
+    return TELEGRAM_CONVERSATIONS[chat_id]
+
+def save_telegram_conversation(chat_id, messages, user_message, user_id):
+    """ذخیره گفتگو در دیتابیس برای تلگرام."""
+    chat_id_str = str(chat_id)
+    conv_data = get_telegram_conversation(chat_id_str)
+    conv_data['messages'] = messages
+    
+    # اگر کاربر دیتابیس پیدا شده است
+    if user_id:
+        with app.app_context():
+            save_conversation(
+                user_identifier=chat_id_str, # از chat_id به عنوان identifier موقت برای get_user استفاده می کنیم
+                chat_id=conv_data['chat_id'], 
+                messages=messages, 
+                user_message=user_message
+            )
+
+
+def start_command(update: Update, context: CallbackContext):
+    """پاسخ به دستور /start و ثبت کاربر."""
+    chat_id = update.effective_chat.id
+    username = update.effective_user.username
+    
+    with app.app_context():
+        # ثبت کاربر با telegram_id
+        user = register_user_if_new(chat_id, telegram_id=chat_id)
+        
+        if user and user.is_banned:
+            update.message.reply_text("⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است.")
+            return
+
+        welcome_message = (
+            f"👋 سلام {username or 'کاربر گرامی'}! به Cyrus AI خوش آمدید.\n"
+            f"من یک ربات هوش مصنوعی از تیم NOCTOVEX هستم.\n"
+            f"برای شروع گفتگو، پیامتان را ارسال کنید. می‌توانید با دستور /clear_history تاریخچه را پاک کنید."
+        )
+        
+        update.message.reply_text(welcome_message)
+        
+def clear_history_command(update: Update, context: CallbackContext):
+    """پاک کردن تاریخچه گفتگو."""
+    chat_id = update.effective_chat.id
+    
+    # پاک کردن سشن در حافظه
+    if str(chat_id) in TELEGRAM_CONVERSATIONS:
+        TELEGRAM_CONVERSATIONS.pop(str(chat_id), None)
+        
+    update.message.reply_text("✅ تاریخچه گفتگو پاک شد. می‌توانید چت جدیدی را شروع کنید.")
+
+def chat_handler(update: Update, context: CallbackContext):
+    """پردازش پیام‌های متنی از کاربر."""
+    user_message = update.message.text
+    chat_id = update.effective_chat.id
+    
+    with app.app_context():
+        
+        # 1. بازیابی کاربر و بررسی بن
+        user = User.query.filter_by(telegram_id=chat_id).first()
+        if not user:
+             user = register_user_if_new(chat_id, telegram_id=chat_id)
+             
+        if user.is_banned:
+            update.message.reply_text("⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است.")
+            return
+
+        # 2. بررسی و کسر بودجه چت
+        is_allowed, result = check_and_deduct_score(chat_id, 'chat')
+        if not is_allowed:
+            update.message.reply_text(result)
+            return
+
+        # 3. بازیابی سشن
+        conv_data = get_telegram_conversation(chat_id)
+        messages = conv_data['messages']
+        
+        # 4. آماده‌سازی پیام‌ها
+        messages_list = [{"role": "system", "content": SYSTEM_PROMPT}]
+        messages_list.extend(messages)
+        messages_list.append({"role": "user", "content": user_message})
+
+        # 5. کوتاه کردن تاریخچه (همانند تابع chat وب)
+        while count_tokens(messages_list) >= INPUT_TOKEN_LIMIT and len(messages) >= 2:
+            messages = messages[2:]
+            
+            messages_list = [{"role": "system", "content": SYSTEM_PROMPT}]
+            messages_list.extend(messages)
+            messages_list.append({"role": "user", "content": user_message})
+            
+        prompt_tokens = count_tokens(messages_list)
+        remaining_tokens = TOTAL_TOKEN_LIMIT - prompt_tokens
+        max_tokens_calculated = max(20, remaining_tokens) 
+        max_tokens = min(max_tokens_calculated, MAX_COMPLETION_TOKENS)
+
+        data = {
+            "model": CHAT_MODEL_NAME, 
+            "messages": messages_list,
+            "max_tokens": max_tokens
+        }
+
+        # 6. فراخوانی API
+        res_json, error = call_openrouter_with_fallback(data, 'chat')
+        
+        if error:
+            ai_message = f"⚠️ متأسفم، مشکلی در اتصال پیش آمد: {error}"
+        else:
+            try:
+                ai_message = res_json["choices"][0]["message"]["content"]
+                ai_message = fix_rtl_ltr(ai_message)
+            except Exception:
+                ai_message = "⚠️ مشکلی پیش اومد در تحلیل پاسخ!"
+
+        # 7. ذخیره‌سازی و پاسخ
+        messages.append({"role": "user", "content": user_message})
+        messages.append({"role": "assistant", "content": ai_message})
+        
+        if len(messages) > 50:
+            messages = messages[-50:]
+            
+        # ذخیره در دیتابیس
+        save_telegram_conversation(chat_id, messages, user_message, user.id)
+        
+        update.message.reply_text(ai_message, parse_mode='Markdown')
+
+
+# 8. راه‌اندازی Dispatcher و اضافه کردن هندلرها
+def setup_telegram_dispatcher():
+    dispatcher = Dispatcher(bot, None, use_context=True)
+    dispatcher.add_handler(CommandHandler("start", start_command))
+    dispatcher.add_handler(CommandHandler("clear_history", clear_history_command))
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, chat_handler))
+    return dispatcher
+
+
+# 9. مسیر اصلی برای وب‌هوک تلگرام
+@telegram_bp.route(f"/{TELEGRAM_BOT_TOKEN}", methods=["POST"])
+def webhook():
+    """دریافت وب‌هوک از سرور تلگرام."""
+    if request.method == "POST":
+        update = Update.de_json(request.get_json(force=True), bot)
+        dispatcher = setup_telegram_dispatcher()
+        dispatcher.process_update(update)
+        return "ok"
+    return "Method not allowed", 405
+
+# 🔗 ثبت Blueprint تلگرام
+app.register_blueprint(telegram_bp)
 
 # =========================================================
 # 🏠 مسیرهای سرویس‌دهی صفحات HTML
@@ -1017,7 +1350,7 @@ def account():
         return redirect(url_for('login'))
         
     user_id = session.get('user_id')
-    user = get_user_by_id(user_id) # ⬅️ بازیابی مستقیم کاربر بر اساس ID
+    user = get_user_by_id(user_id)
 
     if not user:
          session.clear()
@@ -1066,7 +1399,7 @@ def profile():
         return redirect(url_for('login'))
         
     user_id = session.get('user_id')
-    user = get_user_by_id(user_id) # ⬅️ بازیابی کاربر
+    user = get_user_by_id(user_id)
 
     if not user:
         session.clear()
@@ -1077,16 +1410,12 @@ def profile():
     today_date = datetime.utcnow().date()
     daily_limits = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]
     
-    # ⬅️ محاسبه بودجه باقی مانده
     usage = user.usage
 
-    # اطمینان از مقداردهی اولیه یا ریست روزانه (بدون کسر امتیاز)
     if not usage or usage.date != today_date or usage.level_check != level:
-        # اگر رکورد ندارد، تاریخ جدید است یا سطح کاربر عوض شده، بودجه را با سقف جدید پر کن
         chat_budget_remaining = daily_limits['chat']
         image_budget_remaining = daily_limits['image']
     else:
-        # در غیر این صورت، بودجه باقیمانده فعلی را نشان بده
         chat_budget_remaining = usage.chat_budget
         image_budget_remaining = usage.image_budget
 
@@ -1100,17 +1429,14 @@ def profile():
         'is_premium': is_premium,
         'is_banned': user.is_banned,
         
-        # اطلاعات بودجه برای نمایش
         'chat_budget_remaining': chat_budget_remaining, 
         'image_budget_remaining': image_budget_remaining,
         'chat_cost': chat_cost,
         'image_cost': image_cost,
         
-        # محاسبه تعداد استفاده باقی مانده
         'chats_remaining': chat_budget_remaining // chat_cost,
         'images_remaining': image_budget_remaining // image_cost,
         
-        # حداکثر بودجه برای نمایش در داشبورد
         'max_chats': daily_limits['chat'] // chat_cost,
         'max_images': daily_limits['image'] // image_cost,
 
@@ -1138,8 +1464,6 @@ def complete_profile_mock():
         user_name = request.form.get('user_name') 
         user_phone = request.form.get('user_phone') 
         
-        # ⬅️ در اینجا می‌توانید نام کاربر را به مدل User اضافه کنید
-        
         session.pop('needs_profile_info', None) 
         
         return redirect(url_for('account')) 
@@ -1152,7 +1476,7 @@ def logout():
     return redirect(url_for('index')) 
     
 # =========================================================
-# 💾 مسیرهای آرشیو گفتگو - **بازنویسی شده برای DB**
+# 💾 مسیرهای آرشیو گفتگو
 # =========================================================
 
 @app.route("/my_conversations")
@@ -1167,14 +1491,12 @@ def get_conversations_list():
     if not user_id:
         return jsonify({"status": "error", "message": "لطفاً ابتدا وارد حساب کاربری خود شوید."}), 403
 
-    # ⬅️ بازیابی گفتگوها از دیتابیس
     conversations_query = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.last_update.desc()).all()
     
     formatted_list = []
     for chat in conversations_query:
         date_str = time.strftime('%Y/%m/%d - %H:%M', time.localtime(chat.last_update))
         
-        # بارگذاری پیام‌ها برای پیش‌نمایش
         try:
             messages = json.loads(chat.messages_json)
             preview = messages[1]['content'][:80] + '...' if len(messages) > 1 else 'شروع گفتگو...'
@@ -1197,12 +1519,10 @@ def load_conversation(chat_id):
     if not user_id:
         return jsonify({"status": "error", "message": "مجوز دسترسی ندارید."}), 403
 
-    # ⬅️ بازیابی از دیتابیس
     chat_entry = Conversation.query.filter_by(id=chat_id, user_id=user_id).first()
     
     if chat_entry:
         try:
-            # تبدیل رشته JSON به لیست پیام‌ها و ذخیره در سشن
             session['conversation'] = json.loads(chat_entry.messages_json)
             session['current_chat_id'] = chat_entry.id 
             return jsonify({"status": "success", "message": "گفتگو با موفقیت بارگذاری شد.", "redirect": url_for('index')})
@@ -1221,5 +1541,9 @@ if __name__ == "__main__":
     if os.environ.get("FLASK_ENV") != "production":
         cleanup_old_images() 
         
+    # ⬅️ نکته: در رندر نباید در محیط اصلی برنامه یک وب‌هوک تنظیم شود.
+    # باید از طریق پنل تلگرام وب‌هوک را تنظیم کنید: 
+    # https://api.telegram.org/bot[YOUR_TOKEN]/setWebhook?url=[YOUR_RENDER_URL]/telegram/[YOUR_TOKEN]
+    
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
