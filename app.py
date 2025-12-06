@@ -36,15 +36,15 @@ API_KEY = os.getenv("OPENROUTER_API_KEY")
 if not API_KEY:
     raise ValueError("❌ متغیر محیطی OPENROUTER_API_KEY پیدا نشد! لطفاً آن را تنظیم کنید.")
 
-# ----------------- 💾 تنظیمات PostgreSQL (Supabase) -----------------
-# ⚠️ مهم: YOUR_NEW_PASSWORD را با رمز عبور جدیدی که در Supabase ریست کردید، جایگزین کنید!
-DB_PASSWORD = "مهراب0902328" 
-DB_HOST = "db.qkiewpjxvsmhynpilmgr.supabase.co"
-DB_NAME = "postgres"
-DB_USER = "postgres"
+# ----------------- 💾 تنظیمات PostgreSQL (Render Internal) -----------------
+# ⚠️ این بخش برای اتصال به دیتابیس داخلی Render (یا هر سرویسی که متغیر DATABASE_URL را تنظیم کند)
+# ⚠️ تنظیم شده است. نیاز به تعریف دستی رمز عبور و هاست نیست.
 
-# ساخت رشته اتصال PostgreSQL
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_NAME}"
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    # برای محیط توسعه لوکال (اختیاری)
+    raise ValueError("❌ متغیر محیطی DATABASE_URL (اتصال به دیتابیس) پیدا نشد! لطفاً آن را تنظیم کنید.")
 
 # تنظیمات Flask-SQLAlchemy
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
