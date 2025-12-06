@@ -1217,14 +1217,9 @@ def load_conversation(chat_id):
 # =========================================================
 
 if __name__ == "__main__":
+    
     if os.environ.get("FLASK_ENV") != "production":
         cleanup_old_images() 
-    
-    # ⬅️ جایگزینی load_user_data/load_user_usage با ایجاد جداول
-    with app.app_context():
-        # ⚠️ این خط جداول را بر اساس مدل‌های بالا در دیتابیس Supabase ایجاد می کند (فقط یکبار در شروع نیاز است)
-        db.create_all() 
-        print("Database tables created successfully on Supabase.")
         
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
