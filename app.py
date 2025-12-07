@@ -1276,31 +1276,32 @@ def load_conversation(chat_id):
 @app.route("/bazaar_login")
 def bazaar_login():
     """هدایت کاربر به صفحه لاگین بازار."""
-    # وارد کردن آدرس دقیق بازگشت با HTTPS برای جلوگیری از خطای 404 یا پروتکل
+    # آدرس بازگشت دقیقاً طبق درخواست شما
     redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
     
     bazaar_auth_url = (
         f"https://account.cafebazaar.ir/oauth2/authorize/?"
         f"response_type=code&client_id={BAZAAR_CLIENT_ID}&redirect_uri={redirect_uri}"
-    @app.route("/bazaar_callback")
+    )
+    return redirect(bazaar_auth_url)
+
+@app.route("/bazaar_callback")
 def bazaar_callback():
     """دریافت کد تایید از بازار و تبادل آن با Access Token."""
     auth_code = request.args.get('code')
     if not auth_code:
         return "Authentication failed: No code received from Bazaar", 400
 
-    # آدرس بازگشت (دقیقاً مشابه مقداری که در پنل بازار ذخیره کردید)
     redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
     token_url = "https://account.cafebazaar.ir/oauth2/token/"
     
-    # تنظیم متغیر data با رعایت دقیق تورفتگی و کوتیشن‌ها
+    # استفاده از مقادیر دقیق ClientID و Secret تعریف شده در ابتدای فایل
     data = {
         'grant_type': 'authorization_code',
         'code': auth_code,
         'client_id': '8Fk3ykSaqDNnBs54',
         'client_secret': 'GQfRhVPuPyvOJ0L86BTpq2lgH6wnPojq',
         'redirect_uri': 'https://alie-0die.onrender.com/bazaar_callback'
-
     }
     
     try:
@@ -1308,10 +1309,10 @@ def bazaar_callback():
         response.raise_for_status()
         tokens = response.json()
         
-        # در این مرحله Access Token دریافت شده است
+        # دریافت Access Token
         access_token = tokens.get('access_token')
         
-        # ثبت کاربر با یک شناسه یکتا از بازار
+        # ثبت یا بازیابی کاربر
         bazaar_user_id = f"bazaar_{uuid.uuid4().hex[:8]}" 
         
         user = register_user_if_new(bazaar_user_id)
@@ -1338,7 +1339,6 @@ def bazaar_callback():
 # =========================================================
 
 if __name__ == "__main__":
-
     if os.environ.get("FLASK_ENV") != "production":
         cleanup_old_images()
 
