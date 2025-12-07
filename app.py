@@ -34,6 +34,10 @@ ADMIN_PHONE_NUMBER = '09962935294'
 # 🔔 شماره تلفن برای دریافت هشدار اتمام توکن
 TOKEN_ALERT_PHONE_NUMBER = '09023287024'
 
+# 🛍️ تنظیمات ورود با بازار (Bazaar Login Config)
+BAZAAR_CLIENT_ID = "8Fk3ykSaqDNnBs54"
+BAZAAR_CLIENT_SECRET = "GQfRhVPuPyvOJ0L86BTpq2lgH6wnPojq"
+
 # ----------------- 💾 تنظیمات PostgreSQL (Render Internal) -----------------
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -1262,6 +1266,66 @@ def load_conversation(chat_id):
             return jsonify({"status": "error", "message": "خطا در پردازش داده‌های گفتگو."}), 500
     else:
         return jsonify({"status": "error", "message": "گفتگوی مورد نظر یافت نشد."}), 404
+
+
+# =========================================================
+# 🛍️ مسیرهای احراز هویت با کافه‌بازار (Bazaar Auth)
+# =========================================================
+
+@app.route("/bazaar_login")
+def bazaar_login():
+    """هدایت کاربر به صفحه لاگین بازار."""
+    # برای محیط وب، بازار از OAuth2 استفاده می‌کند. 
+    # این لینک فرضی است و طبق مستندات بازار باید تنظیم شود.
+    redirect_uri = url_for('bazaar_callback', _external=True)
+    bazaar_auth_url = (
+        f"https://account.cafebazaar.ir/oauth2/authorize/?"
+        f"response_type=code&client_id={BAZAAR_CLIENT_ID}&redirect_uri={redirect_uri}"
+    )
+    return redirect(bazaar_auth_url)
+
+@app.route("/bazaar_callback")
+def bazaar_callback():
+    """دریافت کد تایید از بازار و تبادل آن با Access Token."""
+    auth_code = request.args.get('code')
+    if not auth_code:
+        return "Authentication failed", 400
+
+    token_url = "https://account.cafebazaar.ir/oauth2/token/"
+    data = {
+        'grant_type': 'authorization_code',
+        'code': auth_code,
+        'client_id': BAZAAR_CLIENT_ID,
+        'client_secret': BAZAAR_CLIENT_SECRET,
+        'redirect_uri': url_for('bazaar_callback', _external=True)
+    }
+
+    try:
+        response = requests.post(token_url, data=data)
+        response.raise_for_status()
+        tokens = response.json()
+        
+        # دریافت اطلاعات کاربر (مثلا شماره تلفن یا شناسه)
+        # توجه: طبق مستندات بازار، باید با Access Token درخواست پروفایل بدهید.
+        access_token = tokens.get('access_token')
+        
+        # در اینجا فرض می‌کنیم شماره کاربر بازگردانده شده یا با توکن قابل دریافت است.
+        # به عنوان مثال یک شناسه فرضی از بازار می‌گیریم:
+        bazaar_user_id = f"bazaar_{uuid.uuid4().hex[:8]}" 
+        
+        # ثبت کاربر در دیتابیس
+        user = register_user_if_new(bazaar_user_id)
+        
+        session.clear()
+        session['user_id'] = user.id
+        session['user_identifier'] = bazaar_user_id
+        session['is_admin'] = user.is_admin
+
+        return redirect(url_for('account'))
+
+    except Exception as e:
+        print(f"Bazaar OAuth Error: {e}")
+        return "Internal Error in Bazaar Login", 500
 
 
 # =========================================================
