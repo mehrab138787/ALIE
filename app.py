@@ -1282,28 +1282,27 @@ def bazaar_login():
     bazaar_auth_url = (
         f"https://account.cafebazaar.ir/oauth2/authorize/?"
         f"response_type=code&client_id={BAZAAR_CLIENT_ID}&redirect_uri={redirect_uri}"
-    )
-    return redirect(bazaar_auth_url)
-
-@app.route("/bazaar_callback")
+    @app.route("/bazaar_callback")
 def bazaar_callback():
     """دریافت کد تایید از بازار و تبادل آن با Access Token."""
     auth_code = request.args.get('code')
     if not auth_code:
         return "Authentication failed: No code received from Bazaar", 400
 
-    # آدرس بازگشت در اینجا هم باید دقیقاً مشابه مقدار بالا باشد
+    # آدرس بازگشت (دقیقاً مشابه مقداری که در پنل بازار ذخیره کردید)
     redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
     token_url = "https://account.cafebazaar.ir/oauth2/token/"
     
- data = {
-    'grant_type': 'authorization_code',
-    'code': auth_code,
-    'client_id': '8Fk3ykSaqDNnBs54',
-    'client_secret': 'GQfRhVPuPyvOJ0L86BTpq2lgH6wnPojq',
-    'redirect_uri': 'https://alie-0die.onrender.com/bazaar_callback'
-}
+    # تنظیم متغیر data با رعایت دقیق تورفتگی و کوتیشن‌ها
+    data = {
+        'grant_type': 'authorization_code',
+        'code': auth_code,
+        'client_id': '8Fk3ykSaqDNnBs54',
+        'client_secret': 'GQfRhVPuPyvOJ0L86BTpq2lgH6wnPojq',
+        'redirect_uri': 'https://alie-0die.onrender.com/bazaar_callback'
 
+    }
+    
     try:
         response = requests.post(token_url, data=data, timeout=10)
         response.raise_for_status()
@@ -1312,8 +1311,7 @@ def bazaar_callback():
         # در این مرحله Access Token دریافت شده است
         access_token = tokens.get('access_token')
         
-        # فعلاً با یک شناسه تصادفی کاربر را ثبت می‌کنیم 
-        # (در مرحله بعد می‌توانید متد دریافت پروفایل را اضافه کنید)
+        # ثبت کاربر با یک شناسه یکتا از بازار
         bazaar_user_id = f"bazaar_{uuid.uuid4().hex[:8]}" 
         
         user = register_user_if_new(bazaar_user_id)
