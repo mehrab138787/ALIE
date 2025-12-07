@@ -1296,13 +1296,13 @@ def bazaar_callback():
     redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
     token_url = "https://account.cafebazaar.ir/oauth2/token/"
     
-    data = {
-        'grant_type': 'authorization_code',
-        'code': auth_code,
-        'client_id': BAZAAR_CLIENT_ID,
-        'client_secret': BAZAAR_CLIENT_SECRET,
-        'redirect_uri': redirect_uri
-    }
+ data = {
+    'grant_type': 'authorization_code',
+    'code': auth_code,
+    'client_id': '8Fk3ykSaqDNnBs54',
+    'client_secret': 'GQfRhVPuPyvOJ0L86BTpq2lgH6wnPojq',
+    'redirect_uri': 'https://alie-0die.onrender.com/bazaar_callback'
+}
 
     try:
         response = requests.post(token_url, data=data, timeout=10)
