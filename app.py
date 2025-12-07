@@ -1,4 +1,5 @@
 import os
+from urllib.parse import quote # کتابخانه مورد نیاز برای انکود کردن آدرس بازار
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, Blueprint
 import requests
 import requests.exceptions
@@ -562,7 +563,7 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         user_identifier = get_user_identifier(session)
-        user = get_user_by_identifier(user_identifier)
+        user = get_user_by_identifier(identifier=user_identifier)
 
         if not user or not user.is_admin:
             return redirect(url_for('login', next=request.url))
