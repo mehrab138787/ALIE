@@ -1275,9 +1275,9 @@ def load_conversation(chat_id):
 @app.route("/bazaar_login")
 def bazaar_login():
     """هدایت کاربر به صفحه لاگین بازار."""
-    # برای محیط وب، بازار از OAuth2 استفاده می‌کند. 
-    # این لینک فرضی است و طبق مستندات بازار باید تنظیم شود.
-    redirect_uri = url_for('bazaar_callback', _external=True)
+    # وارد کردن آدرس دقیق بازگشت با HTTPS برای جلوگیری از خطای 404 یا پروتکل
+    redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
+    
     bazaar_auth_url = (
         f"https://account.cafebazaar.ir/oauth2/authorize/?"
         f"response_type=code&client_id={BAZAAR_CLIENT_ID}&redirect_uri={redirect_uri}"
@@ -1289,33 +1289,37 @@ def bazaar_callback():
     """دریافت کد تایید از بازار و تبادل آن با Access Token."""
     auth_code = request.args.get('code')
     if not auth_code:
-        return "Authentication failed", 400
+        return "Authentication failed: No code received from Bazaar", 400
 
+    # آدرس بازگشت در اینجا هم باید دقیقاً مشابه مقدار بالا باشد
+    redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
     token_url = "https://account.cafebazaar.ir/oauth2/token/"
+    
     data = {
         'grant_type': 'authorization_code',
         'code': auth_code,
         'client_id': BAZAAR_CLIENT_ID,
         'client_secret': BAZAAR_CLIENT_SECRET,
-        'redirect_uri': url_for('bazaar_callback', _external=True)
+        'redirect_uri': redirect_uri
     }
 
     try:
-        response = requests.post(token_url, data=data)
+        response = requests.post(token_url, data=data, timeout=10)
         response.raise_for_status()
         tokens = response.json()
         
-        # دریافت اطلاعات کاربر (مثلا شماره تلفن یا شناسه)
-        # توجه: طبق مستندات بازار، باید با Access Token درخواست پروفایل بدهید.
+        # در این مرحله Access Token دریافت شده است
         access_token = tokens.get('access_token')
         
-        # در اینجا فرض می‌کنیم شماره کاربر بازگردانده شده یا با توکن قابل دریافت است.
-        # به عنوان مثال یک شناسه فرضی از بازار می‌گیریم:
+        # فعلاً با یک شناسه تصادفی کاربر را ثبت می‌کنیم 
+        # (در مرحله بعد می‌توانید متد دریافت پروفایل را اضافه کنید)
         bazaar_user_id = f"bazaar_{uuid.uuid4().hex[:8]}" 
         
-        # ثبت کاربر در دیتابیس
         user = register_user_if_new(bazaar_user_id)
         
+        if not user:
+             return "Internal Error: Could not create user from Bazaar account", 500
+
         session.clear()
         session['user_id'] = user.id
         session['user_identifier'] = bazaar_user_id
@@ -1323,10 +1327,12 @@ def bazaar_callback():
 
         return redirect(url_for('account'))
 
+    except requests.exceptions.RequestException as e:
+        print(f"Bazaar Token Exchange Error: {e}")
+        return f"Error exchanging token with Bazaar: {str(e)}", 500
     except Exception as e:
-        print(f"Bazaar OAuth Error: {e}")
-        return "Internal Error in Bazaar Login", 500
-
+        print(f"Bazaar OAuth General Error: {e}")
+        return "Internal Server Error during Bazaar Login", 500
 
 # =========================================================
 # ▶️ اجرای برنامه
