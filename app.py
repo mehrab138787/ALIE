@@ -63,7 +63,7 @@ mail = Mail(app)
 verification_codes = {}
 
 # ----------------- 📱 تنظیمات Kavenegar -----------------
-KAVENEGAR_API_KEY = '44357543787965376E467856632B64397A4E59592F6E6170665172726B4C4B33513345432F35775A4B65303D'
+KAVENEGAR_API_KEY = '44357543787965376E467856632B64397A4E59592F6E6170665172726B4C4B33513345432F35775A4B65Z503D'
 KAVENEGAR_SENDER = '2000300261'
 SMS_API = KavenegarAPI(KAVENEGAR_API_KEY)
 phone_verification_codes = {}
@@ -148,16 +148,19 @@ def get_openrouter_key(initial_attempt=True):
 SCORE_QUOTA_CONFIG = {
     'COSTS': {
         'chat': 1, # هر چت 1 امتیاز
-        'image': 20 # هر عکس 20 امتیاز
+        'image': 20, # هر عکس 20 امتیاز
+        'long_response': 1 # 💡 هزینه هر پاسخ بلند
     },
     'DAILY_BUDGET': {
         'free': {
             'chat': 30,  # 30 امتیاز برای چت (30 چت)
-            'image': 80  # 80 امتیاز برای تصویر (4 عکس)
+            'image': 80,  # 80 امتیاز برای تصویر (4 عکس)
+            'long_response': 5 # 💡 5 پاسخ بلند روزانه
         },
         'premium': {
             'chat': 80, # 80 امتیاز برای چت (80 چت)
-            'image': 200 # 200 امتیاز برای تصویر (10 عکس)
+            'image': 200, # 200 امتیاز برای تصویر (10 عکس)
+            'long_response': 15 # 💡 15 پاسخ بلند روزانه
         }
     }
 }
@@ -184,6 +187,11 @@ SYSTEM_PROMPT = """
 - **فقط مهم‌ترین و اصلی‌ترین نکات** موضوع را ذکر کن.
 - پاسخ‌ها باید **کامل، روان و دقیق** باشند و در سقف نهایی **۴۰۰ توکن** به پایان برسند. (به هیچ عنوان پاسخ را از وسط جمله قطع نکن).
 """
+# 💡 ثابت‌های جدید برای حالت پاسخ بلند
+LONG_RESPONSE_TOKEN_THRESHOLD = 300 # آستانه توکن ورودی برای پاسخ بلند
+LONG_RESPONSE_MAX_COMPLETION_TOKENS = 3000 # حداکثر توکن خروجی برای پاسخ بلند
+LONG_RESPONSE_TOTAL_TOKEN_LIMIT = 3200 # سقف کل توکن (ورودی + خروجی) برای پاسخ بلند
+
 
 TOTAL_TOKEN_LIMIT = 550
 INPUT_TOKEN_LIMIT = 100
@@ -217,6 +225,7 @@ class UserUsage(db.Model):
 
     chat_budget = db.Column(db.Integer, default=50)
     image_budget = db.Column(db.Integer, default=60)
+    long_response_budget = db.Column(db.Integer, default=5) # 💡 فیلد جدید
     level_check = db.Column(db.String(10), nullable=True)
 
 
@@ -351,6 +360,7 @@ def check_and_deduct_score(user_identifier, usage_type):
             date=today_date,
             chat_budget=daily_limits['chat'],
             image_budget=daily_limits['image'],
+            long_response_budget=daily_limits.get('long_response', 0), # 💡 به‌روزرسانی سهمیه اولیه
             level_check=level
         )
         db.session.add(usage)
@@ -358,12 +368,17 @@ def check_and_deduct_score(user_identifier, usage_type):
         usage.date = today_date
         usage.chat_budget = daily_limits['chat']
         usage.image_budget = daily_limits['image']
+        usage.long_response_budget = daily_limits.get('long_response', 0) # 💡 به‌روزرسانی سهمیه ریست روزانه
         usage.level_check = level
 
     current_budget = getattr(usage, budget_key, 0)
 
     if current_budget < cost:
-        action_fa = 'چت' if usage_type == 'chat' else 'تولید تصویر'
+        action_fa = (
+            'چت' if usage_type == 'chat' else 
+            'تولید تصویر' if usage_type == 'image' else 
+            'پاسخ بلند' # 💡 اضافه شدن نوع استفاده
+        )
         level_fa = 'پرمیوم' if is_premium else 'عادی'
         remaining_uses = current_budget // cost
 
@@ -793,18 +808,41 @@ def chat():
 
     user_identifier = get_user_identifier(session)
     user = get_user_by_identifier(user_identifier)
-
+    
+    # --- تعیین نوع استفاده و بررسی توکن ---
+    # توکن‌های پیام کاربر را محاسبه کن
+    user_message_tokens = count_tokens([{"role": "user", "content": user_message}])
+    
+    # 💡 منطق جدید برای پاسخ بلند
+    is_long_response = False
+    usage_type = 'chat'
+    
     if user and user_identifier:
+        if user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
+            # کاربر وارد شده، پیامش هم بلند است -> فعال‌سازی حالت پاسخ بلند
+            usage_type = 'long_response'
+            is_long_response = True
+        
         # 1. بررسی وضعیت بن
         if user.is_banned:
             return jsonify({"reply": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."})
 
-        # 2. بررسی و کسر بودجه چت
-        is_allowed, result = check_and_deduct_score(user_identifier, 'chat')
+        # 2. بررسی و کسر بودجه چت/پاسخ بلند
+        is_allowed, result = check_and_deduct_score(user_identifier, usage_type)
         if not is_allowed:
             return jsonify({"reply": result})
+            
+    else:
+        # 💡 مدیریت کاربران مهمان برای پاسخ بلند
+        if user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
+            return jsonify({
+                "reply": "⛔ متأسفم، این پیام طولانی است و برای پاسخ به آن، نیاز به **حالت پاسخ بلند** است. این حالت برای کاربران مهمان در دسترس نیست. لطفاً وارد شوید یا پیام خود را خلاصه کنید."
+            })
+        
+        # اگر مهمان و پیام کوتاه بود، با سهمیه پیش‌فرض چت ادامه بده (و کسر امتیازی نخواهد بود)
 
-    # --- پاسخ‌های اختصاصی ---
+
+    # --- پاسخ‌های اختصاصی (حذف نشده) ---
     TRIGGER_KEYWORDS = [
         "سازندت کیه", "تو کی هستی", "چه شرکتی",
         "who made you", "who created you", "who built you",
@@ -851,22 +889,44 @@ def chat():
         if "conversation" not in session:
             session["conversation"] = []
 
-    messages_list = [{"role": "system", "content": SYSTEM_PROMPT}]
+    
+    # 💡 تنظیم سقف توکن و System Prompt بر اساس حالت پاسخ بلند
+    if is_long_response:
+        current_total_token_limit = LONG_RESPONSE_TOTAL_TOKEN_LIMIT
+        current_max_completion_tokens = LONG_RESPONSE_MAX_COMPLETION_TOKENS
+        
+        # در حالت پاسخ بلند، پیام سیستم را برای پاسخ کامل‌تر تنظیم کن
+        system_prompt_to_use = """
+        تو یک چت‌بات مفید هستی. پاسخ‌ها را به زبان فارسی و روان بده.
+        - برای سوالات سازنده: تیم NOCTOVEX به رهبری مهراب عزیزی
+        - پاسخ‌ها باید **فوق‌العاده کامل، مفصل و دقیق** باشند و در سقف نهایی **۳۰۰۰ توکن** به پایان برسند. (به هیچ عنوان پاسخ را از وسط جمله قطع نکن).
+        """
+        
+    else:
+        current_total_token_limit = TOTAL_TOKEN_LIMIT
+        current_max_completion_tokens = MAX_COMPLETION_TOKENS
+        system_prompt_to_use = SYSTEM_PROMPT
+
+
+    messages_list = [{"role": "system", "content": system_prompt_to_use}]
     messages_list.extend(session.get("conversation", []))
     messages_list.append({"role": "user", "content": user_message})
 
-    while count_tokens(messages_list) >= INPUT_TOKEN_LIMIT and len(session["conversation"]) >= 2:
+    # --- فشرده‌سازی تاریخچه و محاسبه توکن ---
+    while count_tokens(messages_list) >= current_total_token_limit and len(session["conversation"]) >= 2:
         session["conversation"] = session["conversation"][2:]
-        messages_list = [{"role": "system", "content": SYSTEM_PROMPT}]
+        # مجدداً لیست پیام‌ها را با تاریخچه کوتاه‌تر بازسازی کن
+        messages_list = [{"role": "system", "content": system_prompt_to_use}]
         messages_list.extend(session.get("conversation", []))
         messages_list.append({"role": "user", "content": user_message})
 
     prompt_tokens = count_tokens(messages_list)
-    remaining_tokens = TOTAL_TOKEN_LIMIT - prompt_tokens
+    remaining_tokens = current_total_token_limit - prompt_tokens
     max_tokens_calculated = max(20, remaining_tokens)
-    max_tokens = min(max_tokens_calculated, MAX_COMPLETION_TOKENS)
+    max_tokens = min(max_tokens_calculated, current_max_completion_tokens)
 
-    if remaining_tokens <= 120:
+    if remaining_tokens <= 120 and not is_long_response:
+        # اگر پاسخ بلند نیست و توکن کم است، هشدار بده
         messages_list.append({
             "role": "system",
             "content": "⚠️ توکن کم باقی مانده است. لطفاً پاسخ را خلاصه، کامل و روان بده، اما هرگز نصفه نباشد."
@@ -1152,12 +1212,15 @@ def profile():
     if not usage or usage.date != today_date or usage.level_check != level:
         chat_budget_remaining = daily_limits['chat']
         image_budget_remaining = daily_limits['image']
+        long_response_budget_remaining = daily_limits.get('long_response', 0) # 💡 سهمیه پاسخ بلند
     else:
         chat_budget_remaining = usage.chat_budget
         image_budget_remaining = usage.image_budget
+        long_response_budget_remaining = usage.long_response_budget # 💡 سهمیه پاسخ بلند
 
     chat_cost = SCORE_QUOTA_CONFIG['COSTS']['chat']
     image_cost = SCORE_QUOTA_CONFIG['COSTS']['image']
+    long_response_cost = SCORE_QUOTA_CONFIG['COSTS'].get('long_response', 1) # 💡 هزینه پاسخ بلند
 
     user_data = {
         'identifier': user.email or user.phone or user.id,
@@ -1168,15 +1231,18 @@ def profile():
 
         'chat_budget_remaining': chat_budget_remaining,
         'image_budget_remaining': image_budget_remaining,
+        'long_response_budget_remaining': long_response_budget_remaining, # 💡 اضافه شده
         'chat_cost': chat_cost,
         'image_cost': image_cost,
+        'long_response_cost': long_response_cost, # 💡 اضافه شده
 
         'chats_remaining': chat_budget_remaining // chat_cost,
         'images_remaining': image_budget_remaining // image_cost,
+        'long_responses_remaining': long_response_budget_remaining // long_response_cost if long_response_cost > 0 else long_response_budget_remaining, # 💡 اضافه شده
 
         'max_chats': daily_limits['chat'] // chat_cost,
         'max_images': daily_limits['image'] // image_cost,
-
+        'max_long_responses': daily_limits.get('long_response', 0) // long_response_cost if long_response_cost > 0 else daily_limits.get('long_response', 0), # 💡 اضافه شده
     }
 
     return render_template("account_profile.html", user_data=user_data)
