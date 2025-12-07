@@ -159,7 +159,7 @@ SCORE_QUOTA_CONFIG = {
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 CHAT_MODEL_NAME = "deepseek/deepseek-chat"
-TRANSLATION_MODEL_NAME = "openai/gpt-3.5-turbo"
+TRANSLATION_MODEL_NAME = "google/gemini-2.0-flash-exp:free"
 
 POLLINATIONS_URL = "https://image.pollinations.ai/prompt/"
 STATIC_DIR = os.path.join(app.root_path, 'static', 'temp_images')
@@ -964,19 +964,23 @@ def image_generator():
     user_identifier = get_user_identifier(session)
     user = get_user_by_identifier(user_identifier)
 
+    # ۱. بررسی وجود کاربر
     if not user:
         return jsonify({"status": "error", "message": "لطفاً ابتدا وارد حساب کاربری خود شوید."}), 403
 
+    # ۲. بررسی بن بودن
     if user.is_banned:
         return jsonify({
             "status": "error",
             "message": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."
         }), 403
 
+    # ۳. بررسی امتیاز و کسر آن
     is_allowed, result = check_and_deduct_score(user_identifier, 'image')
     if not is_allowed:
         return jsonify({"status": "error", "message": result}), 429
 
+    # ۴. بررسی خالی نبودن متن ورودی
     if not persian_prompt or len(persian_prompt.split()) < 1:
         return jsonify({
             "status": "error",
@@ -984,29 +988,23 @@ def image_generator():
         }), 400
 
     try:
-        # ترجمه با مکانیزم چرخش کلید
+        # ۵. ترجمه پرامپت به انگلیسی (با استفاده از چرخش کلیدهای OpenRouter)
         english_prompt = translate_prompt_to_english(persian_prompt)
-        file_name = generate_and_crop_image(english_prompt)
 
-        if file_name == "TIMEOUT_100_SEC":
-             return jsonify({
-                "status": "error",
-                "message": "⚠️ سرور تولید تصویر شلوغ است. صبور باشید و مجدداً امتحان کنید."
-            }), 503
+        # ۶. تولید لینک هوشمند (بدون دانلود توسط سرور)
+        # اضافه کردن Seed تصادفی برای جلوگیری از تکرار و کش شدن
+        seed = random.randint(1, 1000000)
+        quality = "%20".join(IMAGE_QUALITY_PARAMS)
+        
+        # لینک مستقیم به Pollinations
+        direct_image_url = f"{POLLINATIONS_URL}{english_prompt.replace(' ', '%20')}%20{quality}?nologo=true&seed={seed}"
 
-        if file_name:
-            local_image_url = url_for('static', filename=f'temp_images/{file_name}')
-
-            return jsonify({
-                "status": "success",
-                "message": f"تصویر شما با پرامپت '{persian_prompt}' تولید شد. 🖼️",
-                "image_url": local_image_url
-            })
-        else:
-            return jsonify({
-                "status": "error",
-                "message": "⚠️ متأسفم، در تولید تصویر مشکلی پیش آمد. (خطا در دانلود یا برش تصویر). لطفاً پرامپت دیگری را امتحان کنید."
-            }), 500
+        # ۷. بازگرداندن لینک به مرورگر کاربر
+        return jsonify({
+            "status": "success",
+            "message": f"تصویر شما با پرامپت '{persian_prompt}' تولید شد. 🖼️",
+            "image_url": direct_image_url
+        })
 
     except Exception as e:
         print(f"Image Generator Handler Error: {e}")

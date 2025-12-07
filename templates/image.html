@@ -11,15 +11,13 @@
             --app-height: 100vh;
             --bg-dark: #070707; 
             --card-dark: rgba(28, 28, 28, 0.85); 
-            --neum-dark: rgba(0, 0, 0, 0.9);
-            --neum-light: rgba(255, 255, 255, 0.05); 
             --highlight-color: #03A9F4; 
             --text-color: #FAFAFA;
             --muted-text: #999999;
             --border-radius: 15px; 
             --success-color: #00CC66; 
             --error-color: #FF4444; 
-            --loading-color: #FFA500; /* رنگ نارنجی برای لودینگ */
+            --loading-color: #FFA500;
         }
 
         * { margin:0; padding:0; box-sizing:border-box; }
@@ -31,192 +29,85 @@
             display: flex; justify-content: center; align-items: center;
         }
         #app-container {
-            width: 100%; height: var(--app-height); max-width: 700px; /* حداکثر عرض بیشتر برای نمایش بهتر تصویر */
+            width: 100%; height: var(--app-height); max-width: 700px;
             display: flex; flex-direction: column;
             background: var(--card-dark);
-            backdrop-filter: blur(10px); 
-            -webkit-backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
-            border-radius: 0; padding: 15px;
-            overflow: hidden;
+            backdrop-filter: blur(10px); padding: 15px; overflow: hidden;
         }
 
-        /* 🖼️ Header */
         #img-header {
-            padding: 20px 20px; background: var(--card-dark); color: var(--text-color);
-            text-align: center; font-size: 2rem; font-weight: 900;
-            border-bottom: 2px solid var(--highlight-color); 
-            box-shadow: 0 1px 10px rgba(3, 169, 244, 0.3);
-            position: relative; z-index: 10; margin-bottom: 15px;
-            text-shadow: 0 0 8px rgba(3, 169, 244, 0.8); 
+            padding: 20px; text-align: center; font-size: 2rem; font-weight: 900;
+            border-bottom: 2px solid var(--highlight-color); margin-bottom: 15px;
+            position: relative;
         }
 
         #back-btn {
             position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
-            background: var(--bg-dark); border: none; border-radius: 50%;
-            width: 45px; height: 45px; color: var(--muted-text);
-            font-size: 1.1rem;
-            box-shadow: 5px 5px 12px var(--neum-dark), -5px -5px 12px var(--neum-light);
-            transition: all 0.2s ease;
-            cursor: pointer;
+            background: var(--bg-dark); border: none; border-radius: 50%; width: 45px; height: 45px;
+            color: var(--muted-text); cursor: pointer;
         }
-        #back-btn:hover { color: var(--highlight-color); box-shadow: 0 0 10px var(--highlight-color); }
 
-        /* 🖼️ Display Area */
         #display-area {
-            flex: 1; padding: 15px; overflow-y: auto; scrollbar-width: none;
-            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-            background: rgba(0, 0, 0, 0.4); 
-            border-radius: var(--border-radius); 
-            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
-            margin-bottom: 15px;
-            position: relative;
+            flex: 1; padding: 15px; overflow-y: auto;
+            display: flex; flex-direction: column; align-items: center;
+            background: rgba(0, 0, 0, 0.4); border-radius: var(--border-radius);
         }
-        #display-area::-webkit-scrollbar { width: 0; }
 
-        #image-placeholder {
-            font-size: 1.2rem; font-weight: 500; color: var(--muted-text);
-            text-align: center; padding: 50px 20px; opacity: 0.6;
-            margin-top: 100px;
-        }
-        
-        /* 🖼️ Generated Image */
-        #generated-image {
-            max-width: 100%;
-            height: auto;
+        /* 🖼️ اصلاح طلایی: قاب برش تصویر برای حذف لوگو */
+        #image-crop-container {
+            width: 100%;
+            max-width: 512px;
+            aspect-ratio: 512 / 465; /* عرض کامل، اما ارتفاع کمتر برای برش لوگوی پایین */
+            overflow: hidden; /* مخفی کردن لوگو */
+            position: relative;
             border-radius: var(--border-radius);
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.8);
             margin: 20px 0;
-            opacity: 0;
-            transform: scale(0.98);
-            /* 💡 انیمیشن نرم و جذاب */
-            transition: opacity 0.8s ease-in-out, transform 0.8s ease-in-out;
-        }
-        #generated-image.visible {
-            opacity: 1;
-            transform: scale(1);
-        }
-
-        /* ⬇️ دکمه دانلود */
-        #download-btn {
-            background: var(--highlight-color); color: var(--bg-dark);
-            border: none; border-radius: 10px; padding: 10px 20px;
-            font-size: 1.1rem; font-weight: 700; cursor: pointer;
-            margin-top: 10px; margin-bottom: 20px;
-            transition: all 0.2s ease;
             display: none;
-        }
-        #download-btn:hover { background: #0077C0; }
-        
-        /* 💬 پیام وضعیت */
-        #status-message {
-            margin-top: 10px;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 500;
-            text-align: center;
-            opacity: 0;
-            transition: opacity 0.5s ease;
-            direction: rtl;
-        }
-        #status-message.success {
-            background: rgba(0, 204, 102, 0.2);
-            color: var(--success-color);
-            opacity: 1;
-        }
-        #status-message.error {
-            background: rgba(255, 68, 68, 0.2);
-            color: var(--error-color);
-            opacity: 1;
-        }
-        #status-message.loading {
-            background: rgba(255, 165, 0, 0.2);
-            color: var(--loading-color);
-            opacity: 1;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
 
-
-        /* ⌨️ Input Area */
-        #input-container {
-            display: flex; background: var(--card-dark); padding: 15px; align-items: center;
-            border: 1px solid var(--highlight-color); border-radius: var(--border-radius);
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7); z-index: 20;
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-        }
-
-        #prompt-input {
-            flex: 1; padding: 18px 25px; border: none; border-radius: 35px; outline: none;
-            font-size: 1.1rem; 
-            background: var(--bg-dark); color: var(--text-color);
-            margin: 0 10px; 
-            box-shadow: inset 5px 5px 10px var(--neum-dark), inset -5px -5px 10px var(--neum-light);
-            direction: rtl;
-        }
-
-        /* 💡 حالت غیرفعال بهتر */
-        #prompt-input:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            background: #111;
-        }
-        
-        #generate-btn {
-            width: 60px; height: 60px; border: none; border-radius: 50%; cursor: pointer;
-            font-size: 1.5rem; color: var(--bg-dark);
-            background: var(--highlight-color);
-            box-shadow: 5px 5px 10px var(--neum-dark), -5px -5px 10px var(--neum-light);
-            transition: transform 0.1s ease;
-            position: relative;
-        }
-        #generate-btn:active:not(:disabled) { 
-            background: #0077C0; 
-            transform: scale(0.9); 
-            box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light); 
-        }
-        
-        /* 💡 حالت غیرفعال دکمه */
-        #generate-btn:disabled {
-            background: #555;
-            cursor: wait;
-        }
-
-        /* 🔄 لودینگ - داخل دکمه */
-        .loading-animation {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid var(--text-color);
-            border-radius: 50%;
-            width: 25px;
-            height: 25px;
-            animation: spin 1s linear infinite;
-            display: none;
+        #generated-image {
+            width: 100%;
+            height: auto;
+            display: block;
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 0; /* چسباندن تصویر به بالا برای بریدن لوگو از پایین */
+            left: 0;
+            transition: opacity 0.8s ease;
         }
-        #generate-btn.generating .fas {
-            display: none; /* آیکون اصلی را پنهان کن */
+
+        #status-message {
+            margin-top: 10px; padding: 10px; border-radius: 8px; font-size: 1rem;
+            opacity: 0; transition: 0.5s; direction: rtl;
         }
-        #generate-btn.generating .loading-animation {
-            display: block; /* لودینگ را نمایش بده */
+        #status-message.loading { background: rgba(255,165,0,0.2); color: var(--loading-color); opacity:1; }
+        #status-message.error { background: rgba(255,68,68,0.2); color: var(--error-color); opacity:1; }
+        #status-message.success { background: rgba(0,204,102,0.2); color: var(--success-color); opacity:1; }
+
+        #input-container {
+            display: flex; background: var(--card-dark); padding: 15px;
+            border: 1px solid var(--highlight-color); border-radius: var(--border-radius); margin-top: 10px;
         }
-        @keyframes spin {
-            0% { transform: translate(-50%, -50%) rotate(0deg); }
-            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        #prompt-input {
+            flex: 1; padding: 15px; border: none; border-radius: 30px; background: var(--bg-dark);
+            color: white; outline: none; direction: rtl;
         }
-        
-        /* 📱 Mobile Optimization */
-        @media (max-width: 600px) {
-            #app-container { max-width: 100%; padding: 10px; }
-            #img-header { font-size: 1.6rem; padding: 15px 15px; }
-            #back-btn { width: 38px; height: 38px; font-size: 1rem; }
-            #prompt-input { padding: 12px 15px; font-size: 1rem; margin: 0 5px; }
-            #generate-btn { width: 50px; height: 50px; font-size: 1.2rem; }
-            #input-container { padding: 10px; }
-            #image-placeholder { margin-top: 50px; font-size: 1rem; }
-            #status-message { font-size: 0.9rem; }
+        #generate-btn {
+            width: 60px; height: 60px; border-radius: 50%; border: none; background: var(--highlight-color);
+            cursor: pointer; position: relative;
+        }
+
+        .loading-animation {
+            border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid white;
+            border-radius: 50%; width: 25px; height: 25px; animation: spin 1s linear infinite;
+            display: none; position: absolute; top:50%; left:50%; transform: translate(-50%, -50%);
+        }
+
+        @keyframes spin { 0%{transform:translate(-50%,-50%) rotate(0)} 100%{transform:translate(-50%,-50%) rotate(360deg)} }
+
+        #download-btn {
+            background: var(--highlight-color); border: none; border-radius: 10px; padding: 10px 20px;
+            color: black; font-weight: bold; margin: 10px 0; display: none; cursor: pointer;
         }
     </style>
 </head>
@@ -224,31 +115,27 @@
 
 <div id="app-container">
     <div id="img-header">
-        <button id="back-btn" title="بازگشت"> 
-            <i class="fas fa-arrow-right"></i>
-        </button>
+        <button id="back-btn"><i class="fas fa-arrow-right"></i></button>
         تولید تصویر هوشمند
     </div>
     
     <div id="display-area">
-        <div id="image-placeholder">
-            موضوع تصویر مورد نظرتان را به فارسی وارد کنید (مثلاً: یک اژدهای نئونی، نقاشی دیجیتال). 
+        <div id="image-placeholder" style="margin-top:50px; color:#666; text-align:center;">
+            موضوع تصویر مورد نظرتان را به فارسی وارد کنید...
         </div>
         
         <div id="status-message"></div>
 
-        <img id="generated-image" src="" alt="تصویر تولید شده">
+        <div id="image-crop-container">
+            <img id="generated-image" src="" alt="AI Image">
+        </div>
         
-        <a id="download-link" download="cyrus_ai_image.jpg">
-            <button id="download-btn">
-                <i class="fas fa-download"></i> دانلود با کیفیت بالا
-            </button>
-        </a>
+        <button id="download-btn"><i class="fas fa-download"></i> دانلود تصویر</button>
     </div>
     
     <div id="input-container">
-        <input type="text" id="prompt-input" placeholder="پرامپت خود را اینجا بنویسید (مثلاً: یک شهر سایبرپانک، 4k)...">
-        <button id="generate-btn" title="تولید تصویر">
+        <input type="text" id="prompt-input" placeholder="پرامپت خود را بنویسید...">
+        <button id="generate-btn">
             <i class="fas fa-magic"></i>
             <div class="loading-animation"></div>
         </button>
@@ -256,142 +143,77 @@
 </div>
 
 <script>
-    // عناصر DOM
     const promptInput = document.getElementById("prompt-input");
     const generateBtn = document.getElementById("generate-btn");
-    const imagePlaceholder = document.getElementById("image-placeholder");
+    const imageContainer = document.getElementById("image-crop-container");
     const generatedImage = document.getElementById("generated-image");
+    const statusMsg = document.getElementById("status-message");
     const downloadBtn = document.getElementById("download-btn");
-    const downloadLink = document.getElementById("download-link");
-    const statusMessage = document.getElementById("status-message");
-    const backBtn = document.getElementById('back-btn'); 
-
-    const LOCAL_STORAGE_KEY = 'cyrus_image_prompt';
-
-    function setAppHeight() {
-        document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
-    }
-    window.addEventListener('resize', setAppHeight);
-    window.addEventListener('orientationchange', setAppHeight);
-    setAppHeight();
-    
-    // 💡 تابع کمکی برای نمایش پیام وضعیت
-    function showStatus(message, type) {
-        statusMessage.innerHTML = message; // از innerHTML به جای textContent برای آیکون
-        statusMessage.className = ''; 
-        statusMessage.classList.add(type);
-        statusMessage.style.opacity = 1;
-        // اسکرول به بالا برای نمایش پیام وضعیت
-        document.getElementById('display-area').scrollTop = 0; 
-    }
-    
-    function hideStatus() {
-        statusMessage.style.opacity = 0;
-        statusMessage.textContent = '';
-    }
-    
-    // 💡 بازیابی آخرین پرامپت از لوکال استوریج
-    function loadLastPrompt() {
-        const lastPrompt = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (lastPrompt) {
-            promptInput.value = lastPrompt;
-        }
-    }
-    loadLastPrompt();
-
+    const placeholder = document.getElementById("image-placeholder");
 
     async function generateImage() {
         const prompt = promptInput.value.trim();
-        if (!prompt) {
-            showStatus("لطفاً یک پرامپت مناسب برای تولید تصویر وارد کنید. ✍️", 'error');
-            promptInput.focus();
-            return;
-        }
-        
-        // ذخیره پرامپت در لوکال استوریج
-        localStorage.setItem(LOCAL_STORAGE_KEY, prompt);
+        if (!prompt) return;
 
-        // 1. تنظیم وضعیت UI
+        // UI Reset
         generateBtn.disabled = true;
-        generateBtn.classList.add('generating'); // افزودن کلاس لودینگ
-        promptInput.disabled = true;
-        generatedImage.classList.remove('visible');
-        downloadBtn.style.display = 'none';
-        generatedImage.src = ""; // حذف تصویر قبلی
-        imagePlaceholder.style.display = 'none';
+        generateBtn.querySelector('.fas').style.display = 'none';
+        generateBtn.querySelector('.loading-animation').style.display = 'block';
         
-        // **✅ تغییر اعمال شده: جایگزینی فاز ۱ با آیکون ستاره در حال چرخش**
-        showStatus('💡 در حال تولید... <i class="fas fa-star fa-spin"></i>', 'loading');
-
+        statusMsg.textContent = "در حال ترجمه و آماده‌سازی لینک... ⏳";
+        statusMsg.className = "loading";
+        downloadBtn.style.display = 'none';
+        placeholder.style.display = 'none';
 
         try {
-            // 2. ارسال درخواست به مسیر image_generator
-            const response = await fetch("/image_generator", {
+            // ۱. ارسال به سرور برای ترجمه و گرفتن لینک (بسیار سریع چون پردازش عکس در سرور حذف شده)
+            const res = await fetch("/image_generator", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ prompt: prompt })
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({prompt})
             });
+            const data = await res.json();
 
-            const data = await response.json();
-
-            if (response.ok && data.status === "success") {
-                // 3. موفقیت: نمایش تصویر و دکمه دانلود
-                
-                // 💡 فیدبک دقیق‌تر
-                showStatus("✅ تصویر تولید شد! ...", 'success');
+            if (res.ok && data.status === "success") {
+                // ۲. لود تصویر مستقیم توسط مرورگر کاربر (جلوگیری از بلاک شدن IP سرور)
+                statusMsg.textContent = "لینک ساخته شد. مرورگر در حال لود تصویر است... 🎨";
                 
                 generatedImage.src = data.image_url;
                 generatedImage.onload = () => {
-                    generateBtn.classList.remove('generating');
-                    generatedImage.classList.add('visible'); // انیمیشن Fade-in اجرا می‌شود
-                    downloadBtn.style.display = 'block';
-                    
-                    downloadLink.href = data.image_url;
-                    downloadLink.download = `cyrus_ai_image_${new Date().getTime()}.jpg`;
-                    
-                    showStatus("تصویر شما با موفقیت آماده شد! 🎉", 'success');
-                    
-                    // اسکرول به بالا برای دیدن تصویر
-                    document.getElementById('display-area').scrollTop = 0;
+                    statusMsg.textContent = "تصویر با موفقیت تولید شد! 🎉";
+                    statusMsg.className = "success";
+                    imageContainer.style.display = "block";
+                    downloadBtn.style.display = "block";
+                    resetBtn();
                 };
-                
-                // در صورت بروز خطا در لود تصویر (مثلاً CDN یا...)
-                generatedImage.onerror = () => {
-                    generateBtn.classList.remove('generating');
-                    showStatus("⚠️ تصویر تولید شد اما در نمایش آن خطایی رخ داد.", 'error');
-                    imagePlaceholder.style.display = 'block';
-                };
-
+                generatedImage.onerror = () => { throw new Error("خطا در بارگذاری تصویر"); };
             } else {
-                // 4. خطا
-                generateBtn.classList.remove('generating');
-                showStatus(`❌ ${data.message || "خطا در تولید تصویر رخ داد."} لطفاً پرامپت دیگری را امتحان کنید.`, 'error');
-                imagePlaceholder.style.display = 'block';
+                throw new Error(data.message || "خطا در تولید تصویر");
             }
-
         } catch (e) {
-            console.error("Image generation error:", e);
-            generateBtn.classList.remove('generating');
-            showStatus("⚠️ خطای شبکه یا سرور. لطفاً اتصال خود را بررسی کنید.", 'error');
-            imagePlaceholder.style.display = 'block';
-        } finally {
-            // 5. بازنشانی وضعیت UI
-            generateBtn.disabled = false;
-            promptInput.disabled = false;
+            statusMsg.textContent = "❌ خطا: " + e.message;
+            statusMsg.className = "error";
+            resetBtn();
         }
     }
 
-    // Event Listeners
+    function resetBtn() {
+        generateBtn.disabled = false;
+        generateBtn.querySelector('.fas').style.display = 'block';
+        generateBtn.querySelector('.loading-animation').style.display = 'none';
+    }
+
     generateBtn.addEventListener("click", generateImage);
-    promptInput.addEventListener("keypress", e => { 
-        if (e.key === "Enter" && !generateBtn.disabled) generateImage(); 
+    promptInput.addEventListener("keypress", e => { if(e.key === "Enter") generateImage(); });
+    
+    downloadBtn.addEventListener("click", () => {
+        const link = document.createElement("a");
+        link.href = generatedImage.src;
+        link.download = `cyrus_image_${Date.now()}.jpg`;
+        link.click();
     });
 
-    // 💡 اصلاح مهم برای افزایش سرعت دکمه برگشت: استفاده از history.back()
-    backBtn.addEventListener('click', () => {
-        // این متد اغلب از کش مرورگر (BFCache) استفاده می‌کند و سرعت بازگشت را بسیار بالا می‌برد.
-        window.history.back();
-    });
+    document.getElementById('back-btn').addEventListener('click', () => window.history.back());
 </script>
 </body>
 </html>
