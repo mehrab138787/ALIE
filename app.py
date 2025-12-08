@@ -1377,40 +1377,42 @@ def bazaar_callback():
     # استفاده از session.get برای جلوگیری از خطای "Invalid state parameter"
     expected_state = session.get('state') 
 
-    # بررسی امنیتی state و دریافت کد
+    # 1. بررسی خطا و دریافت کد
     if not auth_code:
         return "Authentication failed: No code received from Bazaar", 400
+
+    # 2. بررسی امنیتی state
     if expected_state and received_state != expected_state:
         return "Authentication failed: Invalid state parameter", 400
     if received_state and not expected_state:
         return "Authentication failed: Session expired or state missing.", 400
         
     redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
-    token_url = "https://cafebazaar.ir/user/oauth/token/" 
     
-    # 💡 تمام پارامترها را دوباره برمی‌گردانیم، چون حذف redirect_uri مشکل را حل نکرد.
+    # ✅ گام ۴: تصحیح نهایی Token URL بر اساس مستندات بازار
+    token_url = "https://account.cafebazaar.ir/api/v0/tokens" 
+    
     data = {
         'grant_type': 'authorization_code',
         'code': auth_code,
         'client_id': BAZAAR_CLIENT_ID,
         'client_secret': BAZAAR_CLIENT_SECRET,
-        'redirect_uri': redirect_uri # دوباره اضافه شد
+        # ❌ پارامتر redirect_uri حذف شد، چون در مستندات بازار برای Request Body گام ۴ وجود ندارد.
     }
     
-    # 🛠️ تنظیم Content-Type Header به صورت صریح برای اطمینان بیشتر
+    # 🛠️ تنظیم Content-Type Header به صورت صریح
     headers = {
         'Content-Type': 'application/x-www-form-urlencoded'
     }
     
     try:
-        # ارسال درخواست با هدر
         response = requests.post(token_url, data=data, headers=headers, timeout=10)
         
-        # 🚨 خطایابی: اگر کد HTTP غیر 200 بود، متن خطا را نمایش می‌دهیم.
+        # 🚨 خطایابی: اگر کد HTTP غیر 200 بود
         if response.status_code != 200:
             print(f"Bazaar Token Exchange Failed. HTTP Status: {response.status_code}")
             print(f"Bazaar Response Text: {response.text}") 
-            # اگر بازار خطا داد (مثلاً 400)، دلیل واقعی آن را چاپ می‌کنیم.
+            # اگر پاسخ متنی بود، آن را نمایش می‌دهیم.
             return f"Error {response.status_code}: {response.text}", response.status_code
         
         # مدیریت خطای JSON Decode (برای خطای "خطا")
@@ -1441,6 +1443,10 @@ def bazaar_callback():
         session['user_identifier'] = bazaar_user_id
         session['is_admin'] = user.is_admin
 
+        # 💡 گام ۵ (اختیاری): اگر نیاز به اطلاعات کاربر (userinfo) دارید، باید درخواست GET به آدرس زیر بزنید:
+        # http://account.cafebazaar.ir/api/v0/userinfo
+        # با هدر Authorization: Bearer <access_token>
+        
         return redirect(url_for('account'))
 
     except requests.exceptions.RequestException as e:
