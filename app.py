@@ -1374,39 +1374,43 @@ def bazaar_callback():
     auth_code = request.args.get('code')
     received_state = request.args.get('state')
     
-    # استفاده از session.get برای جلوگیری از خطای "Invalid state parameter" در رفرش‌ها
+    # استفاده از session.get برای جلوگیری از خطای "Invalid state parameter"
     expected_state = session.get('state') 
 
-    # 1. بررسی خطا و دریافت کد
+    # بررسی امنیتی state و دریافت کد
     if not auth_code:
         return "Authentication failed: No code received from Bazaar", 400
-
-    # 2. بررسی امنیتی state
     if expected_state and received_state != expected_state:
         return "Authentication failed: Invalid state parameter", 400
     if received_state and not expected_state:
         return "Authentication failed: Session expired or state missing.", 400
         
     redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
-    # آدرس صحیح تبادل توکن:
     token_url = "https://cafebazaar.ir/user/oauth/token/" 
     
+    # 💡 تمام پارامترها را دوباره برمی‌گردانیم، چون حذف redirect_uri مشکل را حل نکرد.
     data = {
         'grant_type': 'authorization_code',
         'code': auth_code,
         'client_id': BAZAAR_CLIENT_ID,
         'client_secret': BAZAAR_CLIENT_SECRET,
-        # ✅ تغییر نهایی و حیاتی: حذف پارامتر 'redirect_uri'
-        # بسیاری از سرورهای OAuth نیازی به ارسال مجدد این پارامتر در مرحله توکن ندارند.
+        'redirect_uri': redirect_uri # دوباره اضافه شد
+    }
+    
+    # 🛠️ تنظیم Content-Type Header به صورت صریح برای اطمینان بیشتر
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded'
     }
     
     try:
-        response = requests.post(token_url, data=data, timeout=10)
+        # ارسال درخواست با هدر
+        response = requests.post(token_url, data=data, headers=headers, timeout=10)
         
         # 🚨 خطایابی: اگر کد HTTP غیر 200 بود، متن خطا را نمایش می‌دهیم.
         if response.status_code != 200:
             print(f"Bazaar Token Exchange Failed. HTTP Status: {response.status_code}")
             print(f"Bazaar Response Text: {response.text}") 
+            # اگر بازار خطا داد (مثلاً 400)، دلیل واقعی آن را چاپ می‌کنیم.
             return f"Error {response.status_code}: {response.text}", response.status_code
         
         # مدیریت خطای JSON Decode (برای خطای "خطا")
@@ -1417,6 +1421,10 @@ def bazaar_callback():
             print(f"Bazaar Non-JSON Response Text: {response.text}")
             return f"Error exchanging token: Invalid response format from Bazaar. Response: {response.text}", 500
 
+        # حذف state از سشن فقط پس از موفقیت کامل
+        if 'state' in session:
+            session.pop('state') 
+            
         # ... (بقیه منطق پردازش توکن و لاگین)
         access_token = tokens.get('access_token')
         
@@ -1428,10 +1436,6 @@ def bazaar_callback():
         if not user:
              return "Internal Error: Could not create user from Bazaar account", 500
 
-        # حذف state از سشن فقط پس از موفقیت کامل
-        if 'state' in session:
-            session.pop('state') 
-            
         session.clear()
         session['user_id'] = user.id
         session['user_identifier'] = bazaar_user_id
