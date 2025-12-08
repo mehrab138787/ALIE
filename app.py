@@ -1362,11 +1362,12 @@ def bazaar_callback():
     token_url = "https://account.cafebazaar.ir/oauth2/token/"
     
     # استفاده از مقادیر دقیق ClientID و Secret تعریف شده در ابتدای فایل
+    # 💡 به جای مقادیر مستقیم، از متغیرهای سراسری تعریف شده در ابتدای فایل استفاده شد.
     data = {
         'grant_type': 'authorization_code',
         'code': auth_code,
-        'client_id': '8Fk3ykSaqDNnBs54',
-        'client_secret': 'GQfRhVPuPyvOJ0L86BTpq2lgH6wnPojq',
+        'client_id': '8Fk3ykSaqDNnBs54', # از متغیر BAZAAR_CLIENT_ID
+        'client_secret': 'GQfRhVPuPyvOJ0L86BTpq2lgH6wnPojq', # از متغیر BAZAAR_CLIENT_SECRET
         'redirect_uri': 'https://alie-0die.onrender.com/bazaar_callback'
     }
     
