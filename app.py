@@ -1342,37 +1342,59 @@ def load_conversation(chat_id):
 @app.route("/bazaar_login")
 def bazaar_login():
     """هدایت کاربر به صفحه لاگین بازار."""
+    
     # آدرس بازگشت دقیقاً طبق درخواست شما
     redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
     
-    # ✅ این آدرس صحیح است و مشکل 404 اولیه را رفع می‌کند.
+    # 1. انکود کردن آدرس بازگشت (طبق درخواست بازار: escape شده)
+    from urllib.parse import quote
+    encoded_redirect_uri = quote(redirect_uri, safe='') 
+    
+    # 2. ایجاد پارامتر امنیتی 'state' برای جلوگیری از حملات CSRF
+    state = uuid.uuid4().hex
+    session['state'] = state # ذخیره state در سشن برای بررسی در مرحله بعد
+
+    # 3. URL جدید و صحیح برای ورود با بازار (بر اساس مستندات جدید بازار: /user/oauth)
     bazaar_auth_url = (
-        f"https://pardakht.cafebazaar.ir/devapi/v2/auth/authorize/?"
-        f"response_type=code&client_id={BAZAAR_CLIENT_ID}&redirect_uri={redirect_uri}"
+        f"https://cafebazaar.ir/user/oauth?"
+        f"redirect_url={encoded_redirect_uri}"
+        f"&client_id={BAZAAR_CLIENT_ID}" # استفاده از متغیر سراسری
+        f"&state={state}"
     )
+    
     return redirect(bazaar_auth_url)
 
+# =========================================================
+# ✅ تابع اصلاح شده برای دریافت کد و تبادل توکن (Callback URL)
+# =========================================================
 @app.route("/bazaar_callback")
 def bazaar_callback():
     """دریافت کد تایید از بازار و تبادل آن با Access Token."""
     auth_code = request.args.get('code')
+    received_state = request.args.get('state')
+    expected_state = session.pop('state', None) # دریافت و حذف state از سشن
+
+    # 1. بررسی خطا و دریافت کد
     if not auth_code:
-        # اگر این خطا را دیدید، یعنی فرآیند لاگین از گام اول شروع نشده است.
         return "Authentication failed: No code received from Bazaar", 400
+
+    # 2. بررسی امنیتی state
+    if not received_state or received_state != expected_state:
+        # اگر state ارسال نشده یا با سشن مطابقت ندارد، درخواست را رد کنید.
+        return "Authentication failed: Invalid state parameter", 400
 
     redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
     
-    # 🔴 اصلاح شد: آدرس تبادل توکن نیز باید به آدرس جدید تغییر کند.
-    token_url = "https://pardakht.cafebazaar.ir/devapi/v2/auth/token/"
+    # 🔴 هشدار بسیار مهم: این آدرس تبادل توکن (Token URL) احتمالاً غلط است!
+    # این آدرس برای API توسعه‌دهندگان بود، نه جریان جدید لاگین کاربران.
+    # اگر در مرحله بعد خطا دریافت کردید، باید آدرس صحیح تبادل توکن برای جریان /user/oauth را از مستندات بازار پیدا کرده و اینجا قرار دهید.
+    token_url = "https://pardakht.cafebazaar.ir/devapi/v2/auth/token/" 
     
-    # توجه: بهتر است از متغیرهای BAZAAR_CLIENT_ID و BAZAAR_CLIENT_SECRET
-    # که در ابتدای فایل تعریف شده‌اند، استفاده کنید تا کدهای هاردکد را حذف کنید.
-    # فرض بر این است که این متغیرها در بالای app.py تعریف شده‌اند.
     data = {
         'grant_type': 'authorization_code',
         'code': auth_code,
-        'client_id': BAZAAR_CLIENT_ID,        # استفاده از متغیر
-        'client_secret': BAZAAR_CLIENT_SECRET,  # استفاده از متغیر
+        'client_id': BAZAAR_CLIENT_ID,        # استفاده از متغیر سراسری
+        'client_secret': BAZAAR_CLIENT_SECRET,  # استفاده از متغیر سراسری
         'redirect_uri': redirect_uri
     }
     
@@ -1381,13 +1403,10 @@ def bazaar_callback():
         response.raise_for_status()
         tokens = response.json()
         
-        # دریافت Access Token و Refresh Token
+        # ... (بقیه منطق پردازش توکن و لاگین)
         access_token = tokens.get('access_token')
         
-        # 💡 نکته: اگر نیاز به اطلاعات کاربر دارید، باید یک درخواست API جداگانه
-        # با استفاده از access_token به بازار ارسال کنید.
-        
-        # ثبت یا بازیابی کاربر (منطق فعلی شما)
+        # ثبت یا بازیابی کاربر
         bazaar_user_id = f"bazaar_{uuid.uuid4().hex[:8]}" 
         
         user = register_user_if_new(bazaar_user_id)
@@ -1395,16 +1414,15 @@ def bazaar_callback():
         if not user:
              return "Internal Error: Could not create user from Bazaar account", 500
 
-        # تنظیم سشن (Session) و لاگین کردن کاربر
         session.clear()
         session['user_id'] = user.id
         session['user_identifier'] = bazaar_user_id
         session['is_admin'] = user.is_admin
 
-        # هدایت نهایی به صفحه حساب کاربری
         return redirect(url_for('account'))
 
     except requests.exceptions.RequestException as e:
+        # اگر در این مرحله خطا داشتید، احتمال زیاد به خاطر همان token_url اشتباه است.
         print(f"Bazaar Token Exchange Error: {e}")
         return f"Error exchanging token with Bazaar: {str(e)}", 500
     except Exception as e:
