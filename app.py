@@ -1370,41 +1370,46 @@ def bazaar_login():
 
 @app.route("/bazaar_callback")
 def bazaar_callback():
-    # ... کدهای ابتدایی شما ...
+    """دریافت کد تایید از بازار و تبادل آن با Access Token."""
     auth_code = request.args.get('code')
     received_state = request.args.get('state')
-    expected_state = session.pop('state', None)
+    
+    # استفاده از session.get برای جلوگیری از خطای "Invalid state parameter" در رفرش‌ها
+    expected_state = session.get('state') 
 
+    # 1. بررسی خطا و دریافت کد
     if not auth_code:
         return "Authentication failed: No code received from Bazaar", 400
-    if not received_state or received_state != expected_state:
+
+    # 2. بررسی امنیتی state
+    if expected_state and received_state != expected_state:
         return "Authentication failed: Invalid state parameter", 400
-
+    if received_state and not expected_state:
+        return "Authentication failed: Session expired or state missing.", 400
+        
     redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
-    token_url = "https://cafebazaar.ir/user/oauth/token/" # آدرس صحیح
-
+    # آدرس صحیح تبادل توکن:
+    token_url = "https://cafebazaar.ir/user/oauth/token/" 
+    
     data = {
         'grant_type': 'authorization_code',
         'code': auth_code,
         'client_id': BAZAAR_CLIENT_ID,
         'client_secret': BAZAAR_CLIENT_SECRET,
-        'redirect_uri': redirect_uri
+        # ✅ تغییر نهایی و حیاتی: حذف پارامتر 'redirect_uri'
+        # بسیاری از سرورهای OAuth نیازی به ارسال مجدد این پارامتر در مرحله توکن ندارند.
     }
     
     try:
         response = requests.post(token_url, data=data, timeout=10)
         
-        # 🚨 خطایابی جدید: اگر کد HTTP غیر 200 بود، به جای raise_for_status، ابتدا متن را بررسی می‌کنیم.
+        # 🚨 خطایابی: اگر کد HTTP غیر 200 بود، متن خطا را نمایش می‌دهیم.
         if response.status_code != 200:
-            # اگر بازار با خطا (مثلاً 400 یا 500) پاسخ دهد
             print(f"Bazaar Token Exchange Failed. HTTP Status: {response.status_code}")
-            # چاپ متن پاسخ برای دیدن علت اصلی خطا
             print(f"Bazaar Response Text: {response.text}") 
-            # اگر پاسخ متنی بود، آن را نمایش می‌دهیم.
             return f"Error {response.status_code}: {response.text}", response.status_code
         
-        # اگر کد HTTP 200 بود، اما JSON نبود، خطای 'Expecting value' می‌دهد.
-        # در این حالت، متن پاسخ را برای بررسی چاپ کنید.
+        # مدیریت خطای JSON Decode (برای خطای "خطا")
         try:
             tokens = response.json()
         except json.JSONDecodeError as e:
@@ -1423,6 +1428,10 @@ def bazaar_callback():
         if not user:
              return "Internal Error: Could not create user from Bazaar account", 500
 
+        # حذف state از سشن فقط پس از موفقیت کامل
+        if 'state' in session:
+            session.pop('state') 
+            
         session.clear()
         session['user_id'] = user.id
         session['user_identifier'] = bazaar_user_id
