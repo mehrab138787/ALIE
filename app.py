@@ -1367,42 +1367,51 @@ def bazaar_login():
 # =========================================================
 # ✅ تابع اصلاح شده برای دریافت کد و تبادل توکن (Callback URL)
 # =========================================================
+
 @app.route("/bazaar_callback")
 def bazaar_callback():
-    """دریافت کد تایید از بازار و تبادل آن با Access Token."""
+    # ... کدهای ابتدایی شما ...
     auth_code = request.args.get('code')
     received_state = request.args.get('state')
-    expected_state = session.pop('state', None) # دریافت و حذف state از سشن
+    expected_state = session.pop('state', None)
 
-    # 1. بررسی خطا و دریافت کد
     if not auth_code:
         return "Authentication failed: No code received from Bazaar", 400
-
-    # 2. بررسی امنیتی state
     if not received_state or received_state != expected_state:
-        # اگر state ارسال نشده یا با سشن مطابقت ندارد، درخواست را رد کنید.
         return "Authentication failed: Invalid state parameter", 400
 
     redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
-    
-    # 🔴 هشدار بسیار مهم: این آدرس تبادل توکن (Token URL) احتمالاً غلط است!
-    # این آدرس برای API توسعه‌دهندگان بود، نه جریان جدید لاگین کاربران.
-    # اگر در مرحله بعد خطا دریافت کردید، باید آدرس صحیح تبادل توکن برای جریان /user/oauth را از مستندات بازار پیدا کرده و اینجا قرار دهید.
-    token_url = "https://cafebazaar.ir/user/oauth/token/" 
-    
+    token_url = "https://cafebazaar.ir/user/oauth/token/" # آدرس صحیح
+
     data = {
         'grant_type': 'authorization_code',
         'code': auth_code,
-        'client_id': BAZAAR_CLIENT_ID,        # استفاده از متغیر سراسری
-        'client_secret': BAZAAR_CLIENT_SECRET,  # استفاده از متغیر سراسری
+        'client_id': BAZAAR_CLIENT_ID,
+        'client_secret': BAZAAR_CLIENT_SECRET,
         'redirect_uri': redirect_uri
     }
     
     try:
         response = requests.post(token_url, data=data, timeout=10)
-        response.raise_for_status()
-        tokens = response.json()
         
+        # 🚨 خطایابی جدید: اگر کد HTTP غیر 200 بود، به جای raise_for_status، ابتدا متن را بررسی می‌کنیم.
+        if response.status_code != 200:
+            # اگر بازار با خطا (مثلاً 400 یا 500) پاسخ دهد
+            print(f"Bazaar Token Exchange Failed. HTTP Status: {response.status_code}")
+            # چاپ متن پاسخ برای دیدن علت اصلی خطا
+            print(f"Bazaar Response Text: {response.text}") 
+            # اگر پاسخ متنی بود، آن را نمایش می‌دهیم.
+            return f"Error {response.status_code}: {response.text}", response.status_code
+        
+        # اگر کد HTTP 200 بود، اما JSON نبود، خطای 'Expecting value' می‌دهد.
+        # در این حالت، متن پاسخ را برای بررسی چاپ کنید.
+        try:
+            tokens = response.json()
+        except json.JSONDecodeError as e:
+            print(f"JSON Decode Error: {e}")
+            print(f"Bazaar Non-JSON Response Text: {response.text}")
+            return f"Error exchanging token: Invalid response format from Bazaar. Response: {response.text}", 500
+
         # ... (بقیه منطق پردازش توکن و لاگین)
         access_token = tokens.get('access_token')
         
@@ -1422,9 +1431,8 @@ def bazaar_callback():
         return redirect(url_for('account'))
 
     except requests.exceptions.RequestException as e:
-        # اگر در این مرحله خطا داشتید، احتمال زیاد به خاطر همان token_url اشتباه است.
-        print(f"Bazaar Token Exchange Error: {e}")
-        return f"Error exchanging token with Bazaar: {str(e)}", 500
+        print(f"Bazaar Token Exchange Network Error: {e}")
+        return f"Error exchanging token with Bazaar: Network Error: {str(e)}", 500
     except Exception as e:
         print(f"Bazaar OAuth General Error: {e}")
         return "Internal Server Error during Bazaar Login", 500
