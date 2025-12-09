@@ -288,9 +288,8 @@ def send_verification_sms(phone_number, code):
 # =========================================================
 
 def get_user_identifier(session):
-    """برگرداندن ایمیل، شماره تلفن یا شناسه بازار برای ذخیره‌سازی گفتگو."""
-    # 🔴 تغییر اعمال شده برای شناسایی کاربران بازار
-    return session.get('user_email') or session.get('user_phone') or session.get('user_identifier')
+    """برگرداندن ایمیل یا شماره تلفن برای ذخیره‌سازی گفتگو."""
+    return session.get('user_email') or session.get('user_phone')
 
 def get_user_by_identifier(identifier):
     """یافتن کاربر بر اساس ایمیل یا شماره تلفن."""
@@ -369,7 +368,7 @@ def check_and_deduct_score(user_identifier, usage_type):
         usage.date = today_date
         usage.chat_budget = daily_limits['chat']
         usage.image_budget = daily_limits['image']
-        usage.long_response_budget = daily_limits.get('long_response', 0), # 💡 به‌روزرسانی سهمیه ریست روزانه
+        usage.long_response_budget = daily_limits.get('long_response', 0) # 💡 به‌روزرسانی سهمیه ریست روزانه
         usage.level_check = level
 
     current_budget = getattr(usage, budget_key, 0)
@@ -808,26 +807,9 @@ def chat():
         return jsonify({"reply": "لطفاً پیامی ارسال کنید."})
 
     user_identifier = get_user_identifier(session)
-    
-    # 🔴 تغییر اعمال شده: کوتاه کردن متن پیام برای کاربران لاگین‌نشده
-    if not user_identifier:
-        return jsonify({
-            "reply": "برای چت با ربات، نیازمند وارد شدن به حساب کاربری هستید.", 
-            "needs_login": True # فلگ کمکی برای سمت فرانت‌اند
-        }), 403 
-
     user = get_user_by_identifier(user_identifier)
     
-    # اگر شناسه در سشن بود اما کاربر از دیتابیس پاک شده بود
-    if not user:
-        session.clear()
-        return jsonify({
-            "reply": "⛔ خطای احراز هویت: حساب کاربری شما پیدا نشد. لطفاً مجدداً وارد شوید.",
-            "needs_login": True
-        }), 403
-
-
-    # --- تعیین نوع استفاده و بررسی توکن (تنها برای کاربران لاگین شده) ---
+    # --- تعیین نوع استفاده و بررسی توکن ---
     # توکن‌های پیام کاربر را محاسبه کن
     user_message_tokens = count_tokens([{"role": "user", "content": user_message}])
     
@@ -835,22 +817,30 @@ def chat():
     is_long_response = False
     usage_type = 'chat'
     
-    # 🔴 بلوک if/else برای کاربران مهمان حذف شده است.
-    
-    if user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
-        # کاربر وارد شده، پیامش هم بلند است -> فعال‌سازی حالت پاسخ بلند
-        usage_type = 'long_response'
-        is_long_response = True
-    
-    # 1. بررسی وضعیت بن
-    if user.is_banned:
-        return jsonify({"reply": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."})
+    if user and user_identifier:
+        if user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
+            # کاربر وارد شده، پیامش هم بلند است -> فعال‌سازی حالت پاسخ بلند
+            usage_type = 'long_response'
+            is_long_response = True
+        
+        # 1. بررسی وضعیت بن
+        if user.is_banned:
+            return jsonify({"reply": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."})
 
-    # 2. بررسی و کسر بودجه چت/پاسخ بلند
-    is_allowed, result = check_and_deduct_score(user_identifier, usage_type)
-    if not is_allowed:
-        return jsonify({"reply": result})
+        # 2. بررسی و کسر بودجه چت/پاسخ بلند
+        is_allowed, result = check_and_deduct_score(user_identifier, usage_type)
+        if not is_allowed:
+            return jsonify({"reply": result})
             
+    else:
+        # 💡 مدیریت کاربران مهمان برای پاسخ بلند
+        if user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
+            return jsonify({
+                "reply": "⛔ متأسفم، این پیام طولانی است و برای پاسخ به آن، نیاز به **حالت پاسخ بلند** است. این حالت برای کاربران مهمان در دسترس نیست. لطفاً وارد شوید یا پیام خود را خلاصه کنید."
+            })
+        
+        # اگر مهمان و پیام کوتاه بود، با سهمیه پیش‌فرض چت ادامه بده (و کسر امتیازی نخواهد بود)
+
 
     # --- پاسخ‌های اختصاصی (حذف نشده) ---
     TRIGGER_KEYWORDS = [
@@ -895,7 +885,6 @@ def chat():
                 current_chat_id = str(uuid.uuid4())
                 session['current_chat_id'] = current_chat_id
     else:
-        # ⚠️ این بلوک با توجه به لاگین اجباری در ابتدای تابع، عملا اجرا نخواهد شد، اما برای محکم‌کاری حفظ می‌شود
         session.pop('current_chat_id', None)
         if "conversation" not in session:
             session["conversation"] = []
@@ -1448,7 +1437,6 @@ def bazaar_callback():
 
         session.clear()
         session['user_id'] = user.id
-        # 🔴 تغییر اعمال شده: ذخیره شناسه بازار در 'user_identifier'
         session['user_identifier'] = bazaar_user_id
         session['is_admin'] = user.is_admin
 
