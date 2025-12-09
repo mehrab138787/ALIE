@@ -32,7 +32,7 @@
         
         /* 💥 استایل کارت با سایه‌های عمیق */
         .login-card { 
-            position: relative; /* برای موقعیت‌دهی دکمه بازگشت */
+            position: relative; 
             background: var(--card-dark); 
             padding: 35px; 
             border-radius: var(--border-radius); 
@@ -40,15 +40,15 @@
             max-width: 400px; 
             /* سایه‌های چندگانه برای عمق */
             box-shadow: 
-                0 10px 30px rgba(0, 0, 0, 0.6), /* سایه تاریک‌تر */
-                0 0 0 1px rgba(255, 255, 255, 0.05); /* حاشیه داخلی ظریف */
+                0 10px 30px rgba(0, 0, 0, 0.6), 
+                0 0 0 1px rgba(255, 255, 255, 0.05); 
             direction: rtl;
             transform: scale(1);
             transition: transform 0.3s ease-in-out;
         }
 
         .login-card:hover {
-            transform: scale(1.01); /* افکت کوچک هاور روی کارت */
+            transform: scale(1.01); 
         }
 
         /* --- استایل جدید برای دکمه بازگشت --- */
@@ -129,7 +129,7 @@
         }
         
         /* استایل دکمه اصلی (Primary Button) */
-        button:not(.back-button) { /* انتخاب دکمه‌های غیر از دکمه بازگشت */
+        button:not(.back-button) { 
             width: 100%; 
             padding: 14px; 
             border: none; 
@@ -141,11 +141,12 @@
             cursor: pointer; 
             /* انیمیشن برای هاور */
             transition: background-color 0.3s, opacity 0.3s, transform 0.2s, box-shadow 0.3s;
-            box-shadow: 0 4px 15px rgba(3, 169, 244, 0.4); /* سایه برای برجستگی */
+            box-shadow: 0 4px 15px rgba(3, 169, 244, 0.4); 
+            margin-top: 20px; /* اضافه شده برای فاصله از دکمه بازار */
         }
         button:not(.back-button):hover:not(:disabled) { 
             background: var(--highlight-color-light); 
-            transform: translateY(-2px); /* کمی بالا آمدن در هاور */
+            transform: translateY(-2px); 
             box-shadow: 0 6px 20px rgba(3, 169, 244, 0.6);
         }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -196,33 +197,58 @@
         }
 
         .switch-link:hover {
-            background: var(--highlight-color); /* تغییر رنگ به آبی */
-            color: var(--bg-dark); /* تغییر رنگ متن به تیره */
+            background: var(--highlight-color); 
+            color: var(--bg-dark); 
             transform: translateY(-1px);
         }
 
-        /* 🟢 استایل دکمه بازار */
+        /* 🟢 استایل دکمه بازار (اصلاح شده برای بنر) */
+        .bazaar-container {
+            position: relative; /* برای موقعیت دهی بنر */
+            margin-bottom: 25px; /* فاصله از divider */
+        }
+
         .bazaar-btn {
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 10px; 
-            padding: 12px;
+            padding: 14px; /* کمی بزرگتر برای تأکید */
             border-radius: 10px;
             background: var(--bazaar-color);
             color: white;
             text-decoration: none;
-            font-size: 1.05rem;
+            font-size: 1.1rem; /* کمی بزرگتر برای تأکید */
             font-weight: 700;
             transition: opacity 0.3s, transform 0.2s;
-            box-shadow: 0 4px 10px rgba(0, 122, 55, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 122, 55, 0.5); /* سایه عمیق‌تر */
         }
 
         .bazaar-btn:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
+            opacity: 0.95;
+            transform: translateY(-2px); /* کمی بالا آمدن در هاور */
+            box-shadow: 0 6px 20px rgba(0, 122, 55, 0.7);
         }
         
+        /* ⭐️ استایل بنر پیشنهادی و سریع */
+        .bazaar-badge {
+            position: absolute;
+            top: -10px; 
+            right: -10px; 
+            background: var(--highlight-color); /* رنگ آبی برای تأکید */
+            color: var(--bg-dark);
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            transform: rotate(3deg); /* کمی چرخش برای جلب توجه */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+        /* -------------------------------------- */
+
+
         .status-message { margin-top: 20px; padding: 10px; border-radius: 8px; text-align: center; }
         .status-message.error { background: rgba(255, 68, 68, 0.2); color: var(--error-color); }
         .status-message.success { background: rgba(0, 204, 102, 0.2); color: var(--success-color); }
@@ -230,15 +256,15 @@
         /* --- استایل جدید برای متن پذیرش شرایط --- */
         .terms-acceptance {
             text-align: center;
-            margin-top: 25px; /* فاصله از دکمه بالا */
+            margin-top: 25px; 
             font-size: 0.9rem;
             color: #999;
             line-height: 1.6;
         }
 
         .terms-acceptance .policy-link {
-            color: var(--highlight-color); /* استفاده از رنگ آبی */
-            text-decoration: none; /* حذف زیرخط پیش فرض مرورگر */
+            color: var(--highlight-color); 
+            text-decoration: none; 
             font-weight: 700;
             transition: color 0.2s;
         }
@@ -250,7 +276,7 @@
         
         .terms-acceptance .fas {
             margin-left: 5px;
-            color: var(--success-color); /* آیکون تیک سبز */
+            color: var(--success-color); 
         }
         /* ------------------------------------------- */
     </style>
@@ -260,15 +286,28 @@
 <div class="login-card">
     
     <button class="back-button" onclick="history.back()">
-        <i class="fas fa-arrow-right"></i> </button>
+        <i class="fas fa-arrow-right"></i> 
+    </button>
     
     <h2><i class="fas fa-envelope-open-text"></i> ورود یا ثبت نام</h2>
+
+    <div class="bazaar-container">
+        <div class="bazaar-badge">پیشنهادی و سریع</div>
+        <a href="/bazaar_login" class="bazaar-btn">
+            <i class="fas fa-shopping-bag"></i>
+            ورود با حساب بازار
+        </a>
+    </div>
+
+    <div class="divider">یا ورود با ایمیل</div>
+    
     <div class="input-group">
         <label for="email">آدرس ایمیل</label>
         
         <div class="input-with-icon">
             <span class="icon-wrapper">
-                <i class="fas fa-at"></i> </span>
+                <i class="fas fa-at"></i> 
+            </span>
             <input type="email" id="email" placeholder="مثلاً: yourname@gmail.com" required>
         </div>
 
@@ -285,11 +324,6 @@
     <a href="/login_phone" class="switch-link">
         <i class="fas fa-mobile-alt"></i> 
         ورود با شماره تلفن
-    </a>
-
-    <a href="/bazaar_login" class="bazaar-btn">
-        <i class="fas fa-shopping-bag"></i>
-        ورود با حساب بازار
     </a>
     
     <p class="terms-acceptance">
