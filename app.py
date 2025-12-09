@@ -188,13 +188,13 @@ SYSTEM_PROMPT = """
 """
 # 💡 ثابت‌های جدید برای حالت پاسخ بلند
 LONG_RESPONSE_TOKEN_THRESHOLD = 300 # آستانه توکن ورودی برای پاسخ بلند
-LONG_RESPONSE_MAX_COMPLETION_TOKENS = 4000 # حداکثر توکن خروجی برای پاسخ بلند (افزایش به ۴۰۰۰)
+LONG_RESPONSE_MAX_COMPLETION_TOKENS = 2500 # حداکثر توکن خروجی برای پاسخ بلند (افزایش به ۴۰۰۰)
 LONG_RESPONSE_TOTAL_TOKEN_LIMIT = 4096 # سقف کل توکن (ورودی + خروجی) برای پاسخ بلند (افزایش به ۴۰۹۶)
 
 
 TOTAL_TOKEN_LIMIT = 4096 # افزایش سقف کل توکن به حداکثر ممکن
 INPUT_TOKEN_LIMIT = 4096 # افزایش سقف توکن ورودی
-MAX_COMPLETION_TOKENS = 4000 # افزایش سقف توکن خروجی به حداکثر ممکن
+MAX_COMPLETION_TOKENS = 750 # افزایش سقف توکن خروجی به حداکثر ممکن
 
 # 💡 ثابت جدید برای محدودیت چت مهمان
 GUEST_CHAT_LIMIT = 5 
@@ -913,11 +913,17 @@ def chat():
             session["conversation"] = []
 
     
-    # 💡 تنظیم سقف توکن بالا برای پاسخ‌های کامل (۴۰۹۶/۴۰۰۰)
+    # 💡 تنظیم سقف توکن بر اساس حالت پاسخ بلند
     # -----------------------------------------------------------------------
-    # از بالاترین سقف توکن استفاده کن تا پاسخ‌ها کامل باشند.
-    current_total_token_limit = LONG_RESPONSE_TOTAL_TOKEN_LIMIT
-    current_max_completion_tokens = MAX_COMPLETION_TOKENS
+    if is_long_response:
+        # حالت پاسخ بلند: سقف کل ۴۰۹۶ و خروجی ۲۵۰۰
+        current_total_token_limit = LONG_RESPONSE_TOTAL_TOKEN_LIMIT
+        current_max_completion_tokens = LONG_RESPONSE_MAX_COMPLETION_TOKENS
+    else:
+        # حالت عادی: سقف کل ۴۰۹۶ و خروجی ۷۵۰
+        current_total_token_limit = TOTAL_TOKEN_LIMIT
+        current_max_completion_tokens = MAX_COMPLETION_TOKENS # این مقدار ۷۵۰ است
+        
     system_prompt_to_use = SYSTEM_PROMPT # استفاده از SYSTEM_PROMPT به‌روز شده
     # -----------------------------------------------------------------------
 
