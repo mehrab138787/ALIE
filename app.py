@@ -288,8 +288,9 @@ def send_verification_sms(phone_number, code):
 # =========================================================
 
 def get_user_identifier(session):
-    """برگرداندن ایمیل یا شماره تلفن برای ذخیره‌سازی گفتگو."""
-    return session.get('user_email') or session.get('user_phone')
+    """برگرداندن ایمیل، شماره تلفن یا شناسه بازار برای ذخیره‌سازی گفتگو."""
+    # 🔴 تغییر اعمال شده برای شناسایی کاربران بازار
+    return session.get('user_email') or session.get('user_phone') or session.get('user_identifier')
 
 def get_user_by_identifier(identifier):
     """یافتن کاربر بر اساس ایمیل یا شماره تلفن."""
@@ -368,7 +369,7 @@ def check_and_deduct_score(user_identifier, usage_type):
         usage.date = today_date
         usage.chat_budget = daily_limits['chat']
         usage.image_budget = daily_limits['image']
-        usage.long_response_budget = daily_limits.get('long_response', 0) # 💡 به‌روزرسانی سهمیه ریست روزانه
+        usage.long_response_budget = daily_limits.get('long_response', 0), # 💡 به‌روزرسانی سهمیه ریست روزانه
         usage.level_check = level
 
     current_budget = getattr(usage, budget_key, 0)
@@ -808,10 +809,10 @@ def chat():
 
     user_identifier = get_user_identifier(session)
     
-    # 🔴 تغییر اصلی: بررسی اجباری لاگین و برگرداندن پیام مناسب
+    # 🔴 تغییر اعمال شده: کوتاه کردن متن پیام برای کاربران لاگین‌نشده
     if not user_identifier:
         return jsonify({
-            "reply": "⛔ برای استفاده از چت، لطفاً ابتدا وارد حساب کاربری خود شوید.", 
+            "reply": "برای چت با ربات، نیازمند وارد شدن به حساب کاربری هستید.", 
             "needs_login": True # فلگ کمکی برای سمت فرانت‌اند
         }), 403 
 
@@ -1447,6 +1448,7 @@ def bazaar_callback():
 
         session.clear()
         session['user_id'] = user.id
+        # 🔴 تغییر اعمال شده: ذخیره شناسه بازار در 'user_identifier'
         session['user_identifier'] = bazaar_user_id
         session['is_admin'] = user.is_admin
 
