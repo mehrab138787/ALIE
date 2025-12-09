@@ -21,343 +21,267 @@
         }
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Vazirmatn', sans-serif;}
         body { 
-            background: var(--bg-dark); 
-            color: var(--text-color); 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
-            padding: 20px;
-        }
-        
-        /* 💥 استایل کارت با سایه‌های عمیق */
-        .login-card { 
-            position: relative; /* برای موقعیت‌دهی دکمه بازگشت */
-            background: var(--card-dark); 
-            padding: 35px; 
-            border-radius: var(--border-radius); 
-            width: 90%; 
-            max-width: 400px; 
-            /* سایه‌های چندگانه برای عمق */
-            box-shadow: 
-                0 10px 30px rgba(0, 0, 0, 0.6), /* سایه تاریک‌تر */
-                0 0 0 1px rgba(255, 255, 255, 0.05); /* حاشیه داخلی ظریف */
-            direction: rtl;
-            transform: scale(1);
-            transition: transform 0.3s ease-in-out;
-        }
-
-        .login-card:hover {
-            transform: scale(1.01); /* افکت کوچک هاور روی کارت */
-        }
-
-        /* --- استایل جدید برای دکمه بازگشت --- */
-        .back-button {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: #333;
+            background-color: var(--bg-dark);
             color: var(--text-color);
-            border: none;
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            cursor: pointer;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 1.1rem;
-            transition: background-color 0.2s, color 0.2s, transform 0.2s;
+            min-height: 100vh;
+            padding: 20px;
+            direction: rtl; /* تنظیم جهت راست به چپ */
         }
-
-        .back-button:hover {
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            background-color: var(--card-dark);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: var(--highlight-color-light);
+            font-weight: 700;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            color: #ccc;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background-color: #2a2a2a;
+            color: var(--text-color);
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--highlight-color);
+            box-shadow: 0 0 5px rgba(3, 169, 244, 0.5);
+        }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            font-weight: 700;
+            margin-top: 10px;
+        }
+        .btn-primary {
             background-color: var(--highlight-color);
             color: var(--card-dark);
-            transform: scale(1.05);
         }
-        /* -------------------------------------- */
-
-
-        .login-card h2 { 
-            text-align: center; 
-            color: var(--highlight-color); 
-            margin-bottom: 30px; 
-            font-size: 1.8rem;
+        .btn-primary:hover {
+            background-color: var(--highlight-color-light);
+            transform: translateY(-2px);
         }
-        .input-group { margin-bottom: 25px; }
-        .input-group label { display: block; margin-bottom: 8px; font-size: 0.95rem; color: #aaa; }
-        
-        /* استایل فیلد ایمیل با آیکون و جداکننده */
-        .input-with-icon {
-            display: flex;
-            /* استایل مرز کمی روشن‌تر */
-            border: 1px solid #3d3d3d; 
-            border-radius: 10px;
-            background: #2a2a2a;
-            overflow: hidden;
-            transition: border-color 0.3s;
-            direction: ltr;
-        }
-        
-        .input-with-icon:focus-within {
-            border-color: var(--highlight-color); 
-            box-shadow: 0 0 8px rgba(3, 169, 244, 0.5); /* سایه نئونی در فوکوس */
+        .btn-primary:disabled {
+            background-color: #555;
+            cursor: not-allowed;
         }
 
-        .icon-wrapper {
-            /* جداکننده عمودی قوی‌تر */
-            border-right: 1px solid #3d3d3d; 
-            display: flex;
-            align-items: center;
-            padding: 12px 15px;
-            background: #222222; /* رنگ پس‌زمینه متفاوت برای آیکون */
-            color: var(--highlight-color); 
-            font-size: 1.1rem;
-            flex-shrink: 0; 
-        }
-
-        .input-with-icon input { 
-            flex-grow: 1; 
-            padding: 12px;
-            border: none;
-            background: #2a2a2a; 
-            color: var(--text-color); 
-            font-size: 1rem; 
-            outline: none; 
-            direction: ltr;
-            text-align: left;
-        }
-        
-        /* استایل دکمه اصلی (Primary Button) */
-        button:not(.back-button) { /* انتخاب دکمه‌های غیر از دکمه بازگشت */
-            width: 100%; 
-            padding: 14px; 
-            border: none; 
-            border-radius: 10px; 
-            background: var(--highlight-color); 
-            color: var(--bg-dark); 
-            font-size: 1.15rem; 
-            font-weight: 700; 
-            cursor: pointer; 
-            /* انیمیشن برای هاور */
-            transition: background-color 0.3s, opacity 0.3s, transform 0.2s, box-shadow 0.3s;
-            box-shadow: 0 4px 15px rgba(3, 169, 244, 0.4); /* سایه برای برجستگی */
-        }
-        button:not(.back-button):hover:not(:disabled) { 
-            background: var(--highlight-color-light); 
-            transform: translateY(-2px); /* کمی بالا آمدن در هاور */
-            box-shadow: 0 6px 20px rgba(3, 169, 244, 0.6);
-        }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        /* استایل خط جداکننده */
-        .divider {
-            display: flex;
-            align-items: center;
+        /* دکمه‌های لاگین اجتماعی */
+        .social-login {
+            margin-top: 25px;
             text-align: center;
-            margin: 30px 0; 
-            color: #555;
-            font-size: 1rem;
-            font-weight: 500;
         }
-
-        .divider::before,
-        .divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px solid #3d3d3d; 
+        .social-login p {
+            margin-bottom: 15px;
+            color: #aaa;
+            font-size: 0.9em;
         }
-
-        .divider:not(:empty)::before {
-            margin-left: .7em;
-        }
-
-        .divider:not(:empty)::after {
-            margin-right: .7em;
-        }
-
-        /* 💥 استایل لینک سوییچ (Secondary Button) */
-        .switch-link { 
+        .social-btns {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px; 
-            padding: 12px;
-            margin-bottom: 10px;
-            /* استایل دکمه با حاشیه آبی */
-            border: 2px solid var(--highlight-color); 
-            border-radius: 10px;
-            background: transparent; 
-            color: var(--highlight-color); 
-            text-decoration: none; 
-            font-size: 1.05rem; 
-            font-weight: 700;
-            transition: background-color 0.3s, color 0.3s, transform 0.2s;
+            flex-direction: column; /* تغییر به حالت ستونی برای دکمه‌های بزرگتر */
+            gap: 10px;
         }
-
-        .switch-link:hover {
-            background: var(--highlight-color); /* تغییر رنگ به آبی */
-            color: var(--bg-dark); /* تغییر رنگ متن به تیره */
-            transform: translateY(-1px);
-        }
-
-        /* 🟢 استایل دکمه بازار */
-        .bazaar-btn {
+        .social-btn {
             display: flex;
-            justify-content: center;
             align-items: center;
-            gap: 10px; 
+            justify-content: center;
             padding: 12px;
-            border-radius: 10px;
-            background: var(--bazaar-color);
-            color: white;
+            border-radius: 8px;
+            color: var(--text-color);
             text-decoration: none;
-            font-size: 1.05rem;
+            font-weight: 500;
+            transition: opacity 0.3s;
+            position: relative; /* برای قرار دادن تگ پیشنهادی */
+        }
+        .social-btn i {
+            margin-left: 10px;
+            font-size: 1.2em;
+        }
+        .social-btn:hover {
+            opacity: 0.85;
+        }
+        .btn-bazaar {
+            background-color: var(--bazaar-color);
+            border: 1px solid var(--bazaar-color);
+        }
+        .btn-google {
+            background-color: #4285F4; /* رنگ آبی گوگل */
+            border: 1px solid #4285F4;
+        }
+        .btn-phone {
+            background-color: #555;
+            border: 1px solid #777;
+        }
+        
+        /* استایل اختصاصی برای دکمه بازار و پیشنهادی */
+        .bazaar-btn-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        .recommended-badge {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: var(--success-color);
+            color: #1e1e1e;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7em;
             font-weight: 700;
-            transition: opacity 0.3s, transform 0.2s;
-            box-shadow: 0 4px 10px rgba(0, 122, 55, 0.3);
+            line-height: 1;
         }
 
-        .bazaar-btn:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-        }
-        
-        .status-message { margin-top: 20px; padding: 10px; border-radius: 8px; text-align: center; }
-        .status-message.error { background: rgba(255, 68, 68, 0.2); color: var(--error-color); }
-        .status-message.success { background: rgba(0, 204, 102, 0.2); color: var(--success-color); }
-        
-        /* --- استایل جدید برای متن پذیرش شرایط --- */
-        .terms-acceptance {
+        /* پیام وضعیت */
+        #status-message {
             text-align: center;
-            margin-top: 25px; /* فاصله از دکمه بالا */
-            font-size: 0.9rem;
-            color: #999;
-            line-height: 1.6;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            opacity: 0;
+            transition: opacity 0.4s, background-color 0.4s;
         }
-
-        .terms-acceptance .policy-link {
-            color: var(--highlight-color); /* استفاده از رنگ آبی */
-            text-decoration: none; /* حذف زیرخط پیش فرض مرورگر */
-            font-weight: 700;
-            transition: color 0.2s;
+        .status-error {
+            background-color: rgba(255, 68, 68, 0.2);
+            color: var(--error-color);
+            opacity: 1;
         }
-
-        .terms-acceptance .policy-link:hover {
-            color: var(--highlight-color-light); 
-            text-decoration: underline;
+        .status-success {
+            background-color: rgba(0, 204, 102, 0.2);
+            color: var(--success-color);
+            opacity: 1;
         }
-        
-        .terms-acceptance .fas {
-            margin-left: 5px;
-            color: var(--success-color); /* آیکون تیک سبز */
-        }
-        /* ------------------------------------------- */
     </style>
 </head>
 <body>
+    <div class="login-container">
+        <h2>ورود/ثبت نام</h2>
 
-<div class="login-card">
-    
-    <button class="back-button" onclick="history.back()">
-        <i class="fas fa-arrow-right"></i> </button>
-    
-    <h2><i class="fas fa-envelope-open-text"></i> ورود یا ثبت نام</h2>
-    <div class="input-group">
-        <label for="email">آدرس ایمیل</label>
-        
-        <div class="input-with-icon">
-            <span class="icon-wrapper">
-                <i class="fas fa-at"></i> </span>
-            <input type="email" id="email" placeholder="مثلاً: yourname@gmail.com" required>
+        <div class="social-login">
+            <p>با سرویس‌های زیر سریع‌تر وارد شوید:</p>
+            <div class="social-btns">
+                
+                <div class="bazaar-btn-wrapper">
+                    <a href="{{ url_for('bazaar_login') }}" class="social-btn btn-bazaar">
+                        <img src="https://static.cafebazaar.ir/web/icons/bazaar-login-icon-white.svg" alt="Bazaar Icon" style="width: 20px; height: 20px; margin-left: 10px;">
+                        ورود با کافه‌بازار
+                    </a>
+                    <span class="recommended-badge">پیشنهادی و سریع</span>
+                </div>
+                
+                <a href="{{ url_for('login_phone') }}" class="social-btn btn-phone">
+                    <i class="fas fa-mobile-alt"></i>
+                    ورود با شماره تلفن
+                </a>
+                
+                <a href="{{ url_for('login_google') }}" class="social-btn btn-google">
+                    <i class="fab fa-google"></i>
+                    ورود با گوگل (به زودی)
+                </a>
+            </div>
         </div>
 
-    </div>
-    
-    <button id="send-code-btn" onclick="sendCode()">
-        <i class="fas fa-paper-plane"></i> درخواست کد تأیید
-    </button>
-    
-    <div id="status-message" class="status-message" style="display:none;"></div>
+        <div style="text-align: center; margin: 20px 0; color: #666;">--- یا ---</div>
 
-    <div class="divider">یا</div>
-    
-    <a href="/login_phone" class="switch-link">
-        <i class="fas fa-mobile-alt"></i> 
-        ورود با شماره تلفن
-    </a>
-
-    <a href="/bazaar_login" class="bazaar-btn">
-        <i class="fas fa-shopping-bag"></i>
-        ورود با حساب بازار
-    </a>
-    
-    <p class="terms-acceptance">
-        <i class="fas fa-check-circle"></i>
-        من 
-        <a href="{{ url_for('terms_of_service') }}" class="policy-link">شرایط استفاده از خدمات</a> 
-        و 
-        <a href="{{ url_for('privacy_policy') }}" class="policy-link">حریم خصوصی</a> 
-        را می پذیرم.
-    </p>
-    
-</div>
-
-<script>
-    const emailInput = document.getElementById('email');
-    const sendCodeBtn = document.getElementById('send-code-btn');
-    const statusDiv = document.getElementById('status-message');
-
-    // نمایش پیام وضعیت (موفقیت، خطا، هشدار)
-    function showStatus(message, type) {
-        statusDiv.textContent = message;
-        statusDiv.className = 'status-message ' + type;
-        statusDiv.style.display = 'block';
-    }
-
-    // تابع اصلی ارسال کد
-    async function sendCode() {
-        const email = emailInput.value.trim();
-        if (!email) {
-            showStatus("لطفاً یک آدرس ایمیل معتبر وارد کنید.", 'error');
-            return;
-        }
-
-        sendCodeBtn.disabled = true;
-        sendCodeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال ارسال کد...';
-        showStatus("در حال ارسال کد به ایمیل شما...", 'success');
-
-        try {
-            // شبیه‌سازی فراخوانی Flask API
-            const response = await fetch("/send_code", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: email })
-            });
-
-            const data = await response.json();
+        <form id="email-form">
+            <div class="input-group">
+                <label for="email"><i class="fas fa-envelope"></i> ایمیل</label>
+                <input type="email" id="email" placeholder="example@gmail.com" required>
+            </div>
             
-            if (response.ok && data.status === "success") {
-                showStatus("✅ " + data.message + " در حال انتقال...", 'success');
-                // انتقال به صفحه تأیید کد
-                setTimeout(() => {
-                    window.location.href = `/verify_page?email=${encodeURIComponent(email)}`;
-                }, 1500);
+            <button type="submit" class="btn btn-primary" id="send-code-btn">
+                <i class="fas fa-paper-plane"></i> درخواست کد تأیید
+            </button>
+        </form>
 
-            } else {
-                showStatus("❌ " + data.message, 'error');
+        <div id="status-message"></div>
+
+    </div>
+
+    <script>
+        document.getElementById('email-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const sendCodeBtn = document.getElementById('send-code-btn');
+            const statusMessage = document.getElementById('status-message');
+
+            function showStatus(message, type) {
+                statusMessage.textContent = message;
+                statusMessage.className = (type === 'error' ? 'status-error' : 'status-success');
+            }
+
+            if (!email) {
+                showStatus("❌ لطفاً ایمیل خود را وارد کنید.", 'error');
+                return;
+            }
+
+            sendCodeBtn.disabled = true;
+            sendCodeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال ارسال کد...';
+            showStatus("در حال ارسال کد به ایمیل شما... (ممکن است چند لحظه طول بکشد)", 'success');
+
+            try {
+                // شبیه‌سازی فراخوانی Flask API
+                const response = await fetch("/send_code", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: email })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.status === "success") {
+                    showStatus("✅ " + data.message + " در حال انتقال...", 'success');
+                    // انتقال به صفحه تأیید کد
+                    setTimeout(() => {
+                        window.location.href = `/verify_page?email=${encodeURIComponent(email)}`;
+                    }, 1500);
+
+                } else {
+                    showStatus("❌ " + data.message, 'error');
+                    sendCodeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> درخواست کد تأیید';
+                    sendCodeBtn.disabled = false;
+                }
+
+            } catch (e) {
+                console.error("Fetch Error:", e);
+                showStatus("⚠️ خطای شبکه یا سرور رخ داد. اتصال به سرور را بررسی کنید.", 'error');
                 sendCodeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> درخواست کد تأیید';
                 sendCodeBtn.disabled = false;
             }
-
-        } catch (e) {
-            console.error("Fetch Error:", e);
-            showStatus("⚠️ خطای شبکه یا سرور رخ داد. اتصال به سرور را بررسی کنید.", 'error');
-            sendCodeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> درخواست کد تأیید';
-            sendCodeBtn.disabled = false;
-        }
-    }
-</script>
-
+        });
+    </script>
 </body>
 </html>
