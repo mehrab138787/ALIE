@@ -706,20 +706,20 @@ def send_code():
     }
 
     if not send_verification_email(user_email, code):
-        return jsonify({"status": "error", "message": "خطا در ارسال ایمیل. مطمئن شوید تنظیمات SMTP صحیح است."}), 500
+        return jsonify({"status": "error", "message": "خطا در ارسال ایمیل. لطفاً ایمیل خود را بررسی کنید."}), 500
 
-    return jsonify({"status": "success", "message": "کد تأیید به ایمیل شما ارسال شد. لطفاً صندوق ورودی را بررسی کنید."})
+    return jsonify({"status": "success", "message": "کد تأیید به ایمیل شما ارسال شد. لطفاً صندوق ورودی خود را بررسی کنید."})
 
 
 @app.route("/verify_code", methods=["POST"])
 def verify_code():
-    """تأیید کد ایمیل و لاگین کاربر."""
+    """تأیید کد ایمیلی و لاگین کاربر."""
     user_email = request.json.get("email", "").strip().lower()
     entered_code = request.json.get("code", "").strip()
-
+    
     if user_email not in verification_codes:
         return jsonify({"status": "error", "message": "ایمیل نامعتبر یا درخواستی برای آن ثبت نشده است."}), 400
-
+    
     stored_data = verification_codes[user_email]
 
     if time.time() > stored_data['expiry_time']:
@@ -727,23 +727,27 @@ def verify_code():
         return jsonify({"status": "error", "message": "کد تأیید منقضی شده است. لطفاً مجدداً درخواست کد دهید."}), 400
 
     if entered_code == stored_data['code']:
+        # حذف کد تأیید پس از استفاده
         del verification_codes[user_email]
-
+        
+        # ثبت یا بازیابی کاربر
         user = register_user_if_new(user_email, email=user_email)
-
+        
         if not user:
-            return jsonify({"status": "error", "message": "خطا در ثبت/بازیابی کاربر از دیتابیس."}), 500
+             return jsonify({"status": "error", "message": "خطا در ثبت/بازیابی کاربر از دیتابیس."}), 500
 
-        session.clear()
+        session.clear() # پاک کردن سشن قبلی
         session['user_id'] = user.id
-        session['user_email'] = user_email
-        session['needs_profile_info'] = True
+        session['user_identifier'] = user_email
         session['is_admin'] = user.is_admin
+
+        # انتقال به داشبورد یا صفحه اصلی
+        if user.is_admin:
+            return jsonify({"status": "success", "redirect": url_for('admin.admin_dashboard')})
 
         return jsonify({"status": "success", "redirect": url_for('account')})
     else:
         return jsonify({"status": "error", "message": "کد وارد شده صحیح نیست."}), 400
-
 
 @app.route("/send_sms_code", methods=["POST"])
 def send_sms_code():
@@ -754,7 +758,7 @@ def send_sms_code():
         return jsonify({"status": "error", "message": "لطفاً یک شماره تلفن معتبر (مانند 0912...) وارد کنید."}), 400
 
     code = generate_verification_code()
-
+    
     phone_verification_codes[phone_number] = {
         'code': code,
         'expiry_time': time.time() + 300
@@ -771,10 +775,10 @@ def verify_sms_code():
     """تأیید کد پیامکی و لاگین کاربر."""
     phone_number = request.json.get("phone", "").strip()
     entered_code = request.json.get("code", "").strip()
-
+    
     if phone_number not in phone_verification_codes:
         return jsonify({"status": "error", "message": "شماره نامعتبر یا درخواستی برای آن ثبت نشده است."}), 400
-
+    
     stored_data = phone_verification_codes[phone_number]
 
     if time.time() > stored_data['expiry_time']:
@@ -782,63 +786,350 @@ def verify_sms_code():
         return jsonify({"status": "error", "message": "کد تأیید منقضی شده است. لطفاً مجدداً درخواست کد دهید."}), 400
 
     if entered_code == stored_data['code']:
+        # حذف کد تأیید پس از استفاده
         del phone_verification_codes[phone_number]
-
+        
+        # ثبت یا بازیابی کاربر
         user = register_user_if_new(phone_number, phone=phone_number)
-
+        
         if not user:
-            return jsonify({"status": "error", "message": "خطا در ثبت/بازیابی کاربر از دیتابیس."}), 500
+             return jsonify({"status": "error", "message": "خطا در ثبت/بازیابی کاربر از دیتابیس."}), 500
 
-        is_admin = user.is_admin
-        redirect_url = url_for('admin.admin_dashboard') if is_admin else url_for('account')
-
-        session.clear()
+        session.clear() # پاک کردن سشن قبلی
         session['user_id'] = user.id
-        session['user_phone'] = phone_number
-        session['needs_profile_info'] = True
-        session['is_admin'] = is_admin
+        session['user_identifier'] = phone_number
+        session['is_admin'] = user.is_admin
 
-        return jsonify({"status": "success", "redirect": redirect_url})
+        # انتقال به داشبورد یا صفحه اصلی
+        if user.is_admin:
+            return redirect(url_for('admin.admin_dashboard'))
+
+        return jsonify({"status": "success", "redirect": url_for('account')})
     else:
         return jsonify({"status": "error", "message": "کد وارد شده صحیح نیست."}), 400
 
+# =========================================================
+# ⚙️ مسیرهای کاربری (Logout & Account)
+# =========================================================
+
+@app.route("/account")
+def account():
+    """صفحه پروفایل و اطلاعات کاربری."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('login'))
+
+    user = get_user_by_id(user_id)
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+    
+    today_date = datetime.utcnow().date()
+    is_premium = user.is_premium
+    level = 'premium' if is_premium else 'free'
+    daily_limits = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]
+
+    usage = user.usage
+    chat_budget_remaining = 0
+    image_budget_remaining = 0
+    long_response_budget_remaining = 0 # 💡 سهمیه پاسخ بلند
+
+    if not usage:
+        # اگر تا حالا استفاده نکرده، بودجه کامل روزانه را نمایش بده
+        chat_budget_remaining = daily_limits['chat']
+        image_budget_remaining = daily_limits['image']
+        long_response_budget_remaining = daily_limits.get('long_response', 0) # 💡 سهمیه پاسخ بلند
+    elif usage.date != today_date or usage.level_check != level:
+        chat_budget_remaining = daily_limits['chat']
+        image_budget_remaining = daily_limits['image']
+        long_response_budget_remaining = daily_limits.get('long_response', 0) # 💡 سهمیه پاسخ بلند
+    else:
+        chat_budget_remaining = usage.chat_budget
+        image_budget_remaining = usage.image_budget
+        long_response_budget_remaining = usage.long_response_budget # 💡 سهمیه پاسخ بلند
+
+    chat_cost = SCORE_QUOTA_CONFIG['COSTS']['chat']
+    image_cost = SCORE_QUOTA_CONFIG['COSTS']['image']
+    long_response_cost = SCORE_QUOTA_CONFIG['COSTS'].get('long_response', 1) # 💡 هزینه پاسخ بلند
+
+    user_data = {
+        'identifier': user.email or user.phone or user.id,
+        'is_admin': user.is_admin,
+        'score': user.score,
+        'is_premium': is_premium,
+        'is_banned': user.is_banned,
+        'chat_budget_remaining': chat_budget_remaining,
+        'image_budget_remaining': image_budget_remaining,
+        'long_response_budget_remaining': long_response_budget_remaining, # 💡 اضافه شده
+        'chat_cost': chat_cost,
+        'image_cost': image_cost,
+        'long_response_cost': long_response_cost, # 💡 اضافه شده
+        'chats_remaining': chat_budget_remaining // chat_cost,
+        'images_remaining': image_budget_remaining // image_cost,
+        'long_responses_remaining': long_response_budget_remaining // long_response_cost if long_response_cost > 0 else long_response_budget_remaining, # 💡 اضافه شده
+        'max_chats': daily_limits['chat'] // chat_cost,
+        'max_images': daily_limits['image'] // image_cost,
+        'max_long_responses': daily_limits.get('long_response', 0) // long_response_cost if long_response_cost > 0 else daily_limits.get('long_response', 0), # 💡 اضافه شده
+    }
+
+    return render_template("account_profile.html", user_data=user_data)
+
+
+@app.route("/complete_profile", methods=['GET', 'POST'])
+def complete_profile_mock():
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+
+    user_id = session.get('user_id')
+    user = get_user_by_id(user_id)
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+
+    user_data = {
+        'identifier': user.email or user.phone or user.id,
+    }
+
+    if request.method == 'POST':
+        user_name = request.form.get('user_name')
+        # این یک تابع موک (Mock) است و اطلاعات را ذخیره نمی‌کند
+        # باید منطق دیتابیس برای ذخیره نام و نام خانوادگی را اضافه کنید.
+        # return redirect(url_for('account'))
+        return render_template("account_profile.html", user_data=user_data, mock_success=True)
+
+    return render_template("account_complete_profile_mock.html", user_data=user_data)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for('index'))
+
+
+@app.route("/conversation/<chat_id>")
+def load_conversation(chat_id):
+    """بارگذاری گفتگوهای ذخیره شده کاربر."""
+    user_id = session.get('user_id')
+    if not user_id:
+        # اگر کاربر لاگین نیست، اجازه دسترسی نده
+        return jsonify({"status": "error", "message": "لطفاً برای دسترسی به تاریخچه وارد شوید."}), 401
+
+    chat_entry = Conversation.query.filter_by(id=chat_id, user_id=user_id).first()
+    
+    if chat_entry:
+        try:
+            messages = json.loads(chat_entry.messages_json)
+        except Exception:
+            messages = []
+
+        # به‌روزرسانی سشن با تاریخچه جدید
+        session["conversation"] = messages
+        session["current_chat_id"] = chat_id
+
+        return jsonify({
+            "status": "success",
+            "messages": [
+                {"role": msg["role"], "content": fix_rtl_ltr(msg["content"])} 
+                for msg in messages
+            ]
+        })
+    else:
+        return jsonify({"status": "error", "message": "گفتگوی مورد نظر یافت نشد."}), 404
+
+@app.route("/history")
+def get_chat_history_list():
+    """دریافت لیست گفتگوهای ذخیره شده کاربر."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({"status": "error", "message": "لطفاً وارد شوید."}), 401
+    
+    # دریافت لیست گفتگوها بر اساس آخرین به‌روزرسانی (جدیدترین اول)
+    conversations = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.last_update.desc()).limit(15).all()
+
+    chat_list = [
+        {
+            "id": c.id,
+            "title": c.title
+        }
+        for c in conversations
+    ]
+
+    return jsonify({"status": "success", "history": chat_list})
+
+@app.route("/delete_conversation/<chat_id>", methods=["POST"])
+def delete_conversation(chat_id):
+    """حذف یک گفتگوی خاص از تاریخچه."""
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({"status": "error", "message": "لطفاً وارد شوید."}), 401
+
+    chat_entry = Conversation.query.filter_by(id=chat_id, user_id=user_id).first()
+
+    if chat_entry:
+        try:
+            db.session.delete(chat_entry)
+            db.session.commit()
+            
+            # اگر چت فعلی حذف شد، current_chat_id را پاک کن
+            if session.get('current_chat_id') == chat_id:
+                session.pop('current_chat_id', None)
+                session["conversation"] = []
+
+            return jsonify({"status": "success", "message": "گفتگو با موفقیت حذف شد."})
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error deleting conversation: {e}")
+            return jsonify({"status": "error", "message": "خطا در دیتابیس هنگام حذف."}), 500
+    else:
+        return jsonify({"status": "error", "message": "گفتگوی مورد نظر یافت نشد."}), 404
 
 # =========================================================
-# 💬 مسیر چت و بقیه مسیرها (با اعمال محدودیت و چرخش کلید)
+# 🛍️ مسیرهای احراز هویت با کافه‌بازار (Bazaar Auth)
+# =========================================================
+@app.route("/bazaar_login")
+def bazaar_login():
+    """هدایت کاربر به صفحه لاگین بازار."""
+    # آدرس بازگشت دقیقاً طبق درخواست شما
+    redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
+    
+    # 1. انکود کردن آدرس بازگشت (طبق درخواست بازار: escape شده)
+    from urllib.parse import quote
+    encoded_redirect_uri = quote(redirect_uri, safe='') 
+
+    # 2. ایجاد پارامتر امنیتی 'state' برای جلوگیری از حملات CSRF
+    state = uuid.uuid4().hex
+    session['state'] = state # ذخیره state در سشن برای بررسی در مرحله بعد
+
+    # 3. URL جدید و صحیح برای ورود با بازار (بر اساس مستندات جدید بازار: /user/oauth)
+    bazaar_auth_url = (
+        f"https://cafebazaar.ir/user/oauth?"
+        f"redirect_url={encoded_redirect_uri}"
+        f"&client_id={BAZAAR_CLIENT_ID}" # استفاده از متغیر سراسری
+        f"&state={state}"
+        f"&scope=profile"
+    )
+
+    return redirect(bazaar_auth_url)
+
+# =========================================================
+# ✅ تابع اصلاح شده برای دریافت کد و تبادل توکن (Callback URL)
+# =========================================================
+@app.route("/bazaar_callback")
+def bazaar_callback():
+    """دریافت کد تایید بازار، تبادل با توکن و لاگین کاربر."""
+    code = request.args.get("code")
+    state = request.args.get("state")
+    error = request.args.get("error")
+
+    if error:
+        # اگر کاربر دسترسی را لغو کرد
+        return f"Authentication Failed: Bazaar denied access: {error}", 403
+
+    if state != session.get('state'):
+        # بررسی CSRF
+        return "Authentication Failed: Invalid State parameter", 400
+
+    if not code:
+        return "Authentication Failed: Missing code parameter", 400
+
+    redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
+
+    try:
+        # 1. تبادل کد با Access Token
+        token_response = requests.post(
+            "https://pardakht.cafebazaar.ir/auth/token/",
+            data={
+                "grant_type": "authorization_code",
+                "code": code,
+                "client_id": BAZAAR_CLIENT_ID,
+                "client_secret": BAZAAR_CLIENT_SECRET,
+                "redirect_uri": redirect_uri
+            },
+            timeout=10
+        )
+        token_response.raise_for_status()
+        token_data = token_response.json()
+        access_token = token_data.get("access_token")
+
+        if not access_token:
+            return "Authentication Failed: Could not get access token from Bazaar.", 500
+
+        # 2. دریافت اطلاعات کاربر (User Info)
+        user_info_response = requests.get(
+            "https://pardakht.cafebazaar.ir/auth/user/info/",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=10
+        )
+        user_info_response.raise_for_status()
+        user_info = user_info_response.json()
+
+        # 3. استخراج شناسه کاربری (account_id یا phone_number)
+        # در مستندات فعلی، `account_id` معمولاً شناسه اصلی است.
+        bazaar_identifier = user_info.get('account_id')
+        
+        if not bazaar_identifier:
+            return "Authentication Failed: Could not find any identifier (phone or account_id) in User Info response.", 500
+
+        # حذف state از سشن
+        if 'state' in session:
+            session.pop('state') 
+            
+        # 4. ثبت یا بازیابی کاربر بر اساس شماره تلفن/شناسه
+        # 🔴 استفاده از شناسه پیدا شده (شماره تلفن یا account_id)
+        bazaar_user_id = f"bazaar_{bazaar_identifier}" 
+        
+        user = register_user_if_new(bazaar_user_id)
+        
+        if not user:
+             return "Internal Error: Could not create user from Bazaar account", 500
+
+        session.clear()
+        session['user_id'] = user.id
+        session['user_identifier'] = bazaar_user_id
+        session['is_admin'] = user.is_admin
+
+        return redirect(url_for('account'))
+
+    except requests.exceptions.RequestException as e:
+        print(f"Bazaar Auth Error: {e}")
+        return f"Authentication Failed: Error connecting to Bazaar API: {e}", 500
+    except Exception as e:
+        print(f"General Bazaar Auth Error: {e}")
+        return f"Authentication Failed: An unexpected error occurred: {e}", 500
+
+# =========================================================
+# 💬 مسیرهای چت و تولید پاسخ
 # =========================================================
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    user_message = request.json.get("message", "")
-    lower_msg = user_message.lower()
-
-    if not user_message.strip():
-        return jsonify({"reply": "لطفاً پیامی ارسال کنید."})
-
+    """دریافت پیام کاربر، مدیریت سشن، کسر امتیاز و تولید پاسخ AI."""
+    user_message = request.json.get("message", "").strip()
     user_identifier = get_user_identifier(session)
-    user = get_user_by_identifier(user_identifier)
+    user = get_user_by_identifier(user_identifier) if user_identifier else None
     
-    # --- تعیین نوع استفاده و بررسی توکن ---
-    # توکن‌های پیام کاربر را محاسبه کن
+    is_premium = user.is_premium if user else False
+
+    # 1. بررسی پیام ورودی خالی
+    if not user_message:
+        return jsonify({"reply": "لطفاً پیام خود را وارد کنید."})
+
+    # 2. شمارش توکن پیام ورودی
     user_message_tokens = count_tokens([{"role": "user", "content": user_message}])
     
-    # === اعمال محدودیت‌های توکن پیام ورودی (درخواست کاربر) ===
-    # 1. محدودیت 750 توکن برای همه
+    # 3. اعمال محدودیت توکن پیام ورودی
     if user_message_tokens > MAX_PROMPT_TOKEN_ALL:
         return jsonify({
-            "reply": f"⛔ متأسفم، طول پیام ارسالی شما ({user_message_tokens} توکن) از حد مجاز {MAX_PROMPT_TOKEN_ALL} توکن فراتر رفته است. لطفاً پیام را خلاصه کنید."
+            "reply": f"⛔ متأسفم، پیام شما خیلی طولانی است و از سقف کلی {MAX_PROMPT_TOKEN_ALL} توکن تجاوز می‌کند."
         })
-        
-    # 2. محدودیت 400 توکن برای کاربران غیرپرمیوم (شامل مهمان‌ها)
-    # اگر کاربر لاگین نکرده باشد (user=None) یا پرمیوم نباشد (user.is_premium=False)، غیرپرمیوم است.
-    is_premium = user.is_premium if user else False 
     
+    # محدودیت برای کاربران غیرپرمیوم
     if not is_premium and user_message_tokens > MAX_PROMPT_TOKEN_NON_PREMIUM:
-        return jsonify({
+        return jsonify({ 
             "reply": f"⛔ متأسفم، ({user_message_tokens} توکن). {PREMIUM_ONLY_MESSAGE}"
         })
-    # =========================================================
 
+    # =========================================================
     # 💡 منطق جدید برای پاسخ بلند
     is_long_response = False
     usage_type = 'chat'
@@ -848,7 +1139,7 @@ def chat():
             # کاربر وارد شده، پیامش هم بلند است -> فعال‌سازی حالت پاسخ بلند
             usage_type = 'long_response'
             is_long_response = True
-        
+
         # 1. بررسی وضعیت بن
         if user.is_banned:
             return jsonify({"reply": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."})
@@ -857,7 +1148,6 @@ def chat():
         is_allowed, result = check_and_deduct_score(user_identifier, usage_type)
         if not is_allowed:
             return jsonify({"reply": result})
-            
     else:
         # 💡 مدیریت کاربران مهمان و اعمال محدودیت ۵ چت روزانه
         today_date_str = datetime.utcnow().date().isoformat()
@@ -866,53 +1156,41 @@ def chat():
         if session.get('guest_last_date') != today_date_str:
             session['guest_chat_count'] = 0
             session['guest_last_date'] = today_date_str
-            
+
         guest_count = session.get('guest_chat_count', 0)
-        
+
         if guest_count >= GUEST_CHAT_LIMIT:
-            return jsonify({
+            return jsonify({ 
                 "reply": "⛔ متأسفم، شما به سقف **۵ چت روزانه** برای کاربران مهمان رسیده‌اید. لطفاً وارد حساب کاربری خود شوید تا چت‌های نامحدود دریافت کنید."
             })
-            
+        
         if user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
-            # مهمان پیام بلند داده - رد کردن
-            return jsonify({
+             # مهمان پیام بلند داده - رد کردن
+             return jsonify({ 
                 "reply": "⛔ متأسفم، این پیام طولانی است و برای پاسخ به آن، نیاز به **حالت پاسخ بلند** است. این حالت برای کاربران مهمان در دسترس نیست. لطفاً وارد شوید یا پیام خود را خلاصه کنید."
             })
-            
+        
         # اگر مهمان و مجاز بود، کانتر را افزایش بده.
         session['guest_chat_count'] = guest_count + 1
         
         # برای مهمان، از سقف بالای توکن استفاده می‌کنیم (is_long_response = True)
-        is_long_response = True 
-        usage_type = 'chat'
+        is_long_response = True
+        usage_type = 'chat' # مهمان فقط چت عادی دارد
 
-
-    # --- پاسخ‌های اختصاصی (حذف نشده) ---
-    TRIGGER_KEYWORDS = [
-        "سازندت کیه", "تو کی هستی", "چه شرکتی",
-        "who made you", "who created you", "who built you",
-        "لیدر تیم noctovex", "رهبر تیم noctovex", "مهراب"
-    ]
-    TEAM_MEMBERS_KEYWORDS = [
-        "اعضای تیمت کیا هستن", "اعضای noctovex", "اعضای تیم noctovex",
-        "noctovex members"
-    ]
-
-    if "مامی سازندت کیه" in lower_msg:
-        return jsonify({"reply": "عسل خانوم 💖"})
-
-    if any(keyword in lower_msg for keyword in TEAM_MEMBERS_KEYWORDS):
-        new_reply = "تنها NOCTOVEX معتبر ما هستیم، و تیم ما متشکل از 5 تا 10 کدنویس حرفه‌ای است. در حال حاضر، هویت تنها دو نفر از ما مشخص است: مهراب، که رهبر تیم، لیدر و حرفه‌ای‌ترین کدنویس است، و آرشام. 🧑‍💻"
+    # --- پاسخ‌های داخلی (Built-in) ---
+    lower_msg = user_message.lower()
+    if 'امکانات' in lower_msg or 'چه کاری' in lower_msg or 'چیکار' in lower_msg:
+        new_reply = "من یک هوش مصنوعی هستم که توسط تیم NOCTOVEX توسعه داده شده‌ام. می‌توانم: پاسخ‌های دقیق و مفصل به سوالات شما بدهم 🧠، تصاویر خلاقانه با هوش مصنوعی تولید کنم 🖼️، برای شما بازی کنم 🎮 و موارد دیگر..."
         return jsonify({"reply": new_reply})
-
+    
+    TRIGGER_KEYWORDS = ['سازنده', 'توسعه دهنده', 'تیم']
     if any(keyword in lower_msg for keyword in TRIGGER_KEYWORDS):
         new_reply = "من توسط تیم NOCTOVEX توسعه داده شده‌ام. این تیم توسط **مهراب عزیزی** رهبری می‌شود که مدیریت پروژه، برنامه‌ریزی و هدایت توسعه‌دهندگان را بر عهده دارد. 👑"
         return jsonify({"reply": new_reply})
 
     # --- مدیریت تاریخچه و توکن‌ها ---
     current_chat_id = session.get('current_chat_id')
-    
+
     if user and session.get('user_id'):
         if not current_chat_id:
             current_chat_id = str(uuid.uuid4())
@@ -935,43 +1213,35 @@ def chat():
         if "conversation" not in session:
             session["conversation"] = []
 
-    
     # 💡 تنظیم سقف توکن بالا برای پاسخ‌های کامل (۴۰۹۶/۴۰۰۰)
     # -----------------------------------------------------------------------
-    # از بالاترین سقف توکن استفاده کن تا پاسخ‌ها کامل باشند.
-    current_total_token_limit = LONG_RESPONSE_TOTAL_TOKEN_LIMIT
-    current_max_completion_tokens = MAX_COMPLETION_TOKENS
+    if is_long_response:
+        current_total_token_limit = LONG_RESPONSE_TOTAL_TOKEN_LIMIT
+        max_tokens = LONG_RESPONSE_MAX_COMPLETION_TOKENS
+    else:
+        current_total_token_limit = TOTAL_TOKEN_LIMIT
+        max_tokens = MAX_COMPLETION_TOKENS
+    
     system_prompt_to_use = SYSTEM_PROMPT # استفاده از SYSTEM_PROMPT به‌روز شده
     # -----------------------------------------------------------------------
-
 
     messages_list = [{"role": "system", "content": system_prompt_to_use}]
     messages_list.extend(session.get("conversation", []))
     messages_list.append({"role": "user", "content": user_message})
 
     # --- فشرده‌سازی تاریخچه و محاسبه توکن ---
-    # ❌ حذف حلقه فشرده‌سازی تاریخچه، زیرا سقف توکن (4096) بسیار بالا است.
-    # while count_tokens(messages_list) >= current_total_token_limit and len(session["conversation"]) >= 2:
-    #     session["conversation"] = session["conversation"][2:]
-    #     # مجدداً لیست پیام‌ها را با تاریخچه کوتاه‌تر بازسازی کن
-    #     messages_list = [{"role": "system", "content": system_prompt_to_use}]
-    #     messages_list.extend(session.get("conversation", []))
-    #     messages_list.append({"role": "user", "content": user_message})
+    # اگر بعد از اضافه کردن پیام جدید، توکن بیش از حد شد، فقط دو پیام قدیمی را حذف کن
+    while count_tokens(messages_list) >= current_total_token_limit and len(session["conversation"]) >= 2:
+        # حذف دو پیام قدیمی (یک جفت سوال و جواب)
+        session["conversation"] = session["conversation"][2:] 
+        
+        # بازسازی لیست پیام‌ها
+        messages_list = [{"role": "system", "content": system_prompt_to_use}]
+        messages_list.extend(session.get("conversation", []))
+        messages_list.append({"role": "user", "content": user_message})
 
-    prompt_tokens = count_tokens(messages_list)
-    remaining_tokens = current_total_token_limit - prompt_tokens
-    max_tokens_calculated = max(20, remaining_tokens)
-    max_tokens = min(max_tokens_calculated, current_max_completion_tokens)
 
-    # ❌ حذف منطق هشدار توکن کم، چون سقف توکن به 4000 افزایش یافته.
-    # if remaining_tokens <= 120 and not is_long_response:
-    #     # اگر پاسخ بلند نیست و توکن کم است، هشدار بده
-    #     messages_list.append({
-    #         "role": "system",
-    #         "content": "⚠️ توکن کم باقی مانده است. لطفاً پاسخ را خلاصه، کامل و روان بده، اما هرگز نصفه نباشد."
-    #     })
-
-    # --- مکانیزم چرخش کلید و تلاش مجدد ---
+    # --- ارسال به OpenRouter (با مکانیزم Key Rotation) ---
     max_attempts = len(OPENROUTER_KEYS)
     ai_message = None
 
@@ -979,9 +1249,8 @@ def chat():
         key_name, current_api_key = get_openrouter_key(initial_attempt=(attempt==0))
         
         if not current_api_key:
-            # اگر هیچ کلید فعالی باقی نماند
-            ai_message = "❌ خطایی در سیستم رخ داد. سرور در حال به‌روزرسانی است، لطفاً کمی بعد دوباره امتحان کنید."
-            break # خروج از حلقه تلاش
+            ai_message = "❌ متأسفم، تمام کلیدهای API موقتاً مسدود شده‌اند. لطفاً کمی بعد دوباره امتحان کنید."
+            break # اگر کلید فعال نیست، تلاش را متوقف کن
 
         headers = {
             "Content-Type": "application/json",
@@ -996,7 +1265,7 @@ def chat():
 
         try:
             response = requests.post(OPENROUTER_URL, json=data, headers=headers, timeout=10)
-            response.raise_for_status() 
+            response.raise_for_status()
             res_json = response.json()
             ai_message = res_json["choices"][0]["message"]["content"]
             
@@ -1010,15 +1279,12 @@ def chat():
             # مدیریت خطاهای اتمام توکن یا نامعتبر (402, 401)
             if status_code in [402, 401]:
                 handle_key_failure(key_name, status_code) 
-                
                 if attempt == max_attempts - 1:
                     # آخرین تلاش هم شکست خورد
                     ai_message = "❌ خطایی در سیستم رخ داد. سرور در حال به‌روزرسانی است، لطفاً کمی بعد دوباره امتحان کنید."
                     break
-                    
                 continue # رفتن به کلید بعدی
-                
-            else:
+            else: 
                 # خطای دیگر (مانند 500)
                 ai_message = "⚠️ متأسفم، مشکلی در اتصال به سرور پیش آمد. لطفاً دوباره امتحان کنید."
                 break
@@ -1027,9 +1293,8 @@ def chat():
             print(f"General Error: {e}")
             ai_message = "⚠️ مشکلی پیش اومد!"
             break
-            
-    # --- ذخیره‌سازی و پاسخ نهایی ---
     
+    # --- ذخیره‌سازی و پاسخ نهایی ---
     if ai_message:
         ai_message = fix_rtl_ltr(ai_message)
     else:
@@ -1043,11 +1308,12 @@ def chat():
 
         if user and session.get('user_id'):
             save_conversation(user_identifier, session['current_chat_id'], session["conversation"], user_message)
-
+        
         if len(session["conversation"]) > 50:
             session["conversation"] = session["conversation"][-50:]
 
     return jsonify({"reply": ai_message})
+
 
 @app.route("/clear_history", methods=["POST"])
 def clear_history():
@@ -1056,45 +1322,44 @@ def clear_history():
     session.pop('current_chat_id', None)
     return jsonify({"status": "History cleared successfully"})
 
+# =========================================================
+# 🖼️ مسیرهای تولید تصویر
+# =========================================================
 
-# =========================================================
-# 🖼️ مسیر تولید تصویر (با اعمال محدودیت)
-# =========================================================
-# ... (بقیه کدها بدون تغییر تا انتها)
 @app.route("/image_generator", methods=["POST"])
 def image_generator():
+    """هندلر تولید تصویر از پرامپت فارسی."""
     persian_prompt = request.json.get("prompt", "").strip()
-
     user_identifier = get_user_identifier(session)
-    user = get_user_by_identifier(user_identifier)
+    user = get_user_by_identifier(user_identifier) if user_identifier else None
+    
+    # 1. اعمال محدودیت‌های کاربری
+    if user and user.is_banned:
+        return jsonify({"status": "error", "message": "⛔ حساب کاربری شما مسدود شده است."}), 403
 
-    # ۱. بررسی وجود کاربر
-    if not user:
-        return jsonify({"status": "error", "message": "لطفاً ابتدا وارد حساب کاربری خود شوید."}), 403
-
-    # ۲. بررسی بن بودن
-    if user.is_banned:
-        return jsonify({
-            "status": "error",
-            "message": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."
-        }), 403
-
-    # ۳. بررسی امتیاز و کسر آن
-    is_allowed, result = check_and_deduct_score(user_identifier, 'image')
-    if not is_allowed:
-        return jsonify({"status": "error", "message": result}), 429
-
-    # ۴. بررسی خالی نبودن متن ورودی
+    # 2. بررسی و کسر بودجه تصویر
+    if user and user_identifier:
+        is_allowed, result = check_and_deduct_score(user_identifier, 'image')
+        if not is_allowed:
+            return jsonify({"status": "error", "message": result}), 402
+    else:
+        # مهمان مجاز به تولید تصویر نیست
+        return jsonify({ 
+            "status": "error", 
+            "message": "⛔ متأسفم، تولید تصویر فقط برای کاربران وارد شده امکان‌پذیر است. لطفاً وارد حساب کاربری خود شوید."
+        }), 401
+    
+    # 3. بررسی پرامپت
     if not persian_prompt or len(persian_prompt.split()) < 1:
-        return jsonify({
-            "status": "error",
-            "message": "لطفاً موضوع دقیق‌تر تصویر مورد نظرتان را به فارسی بنویسید."
+        return jsonify({ 
+            "status": "error", 
+            "message": "لطفاً موضوع دقیق‌تر تصویر مورد نظرتان را به فارسی بنویسید." 
         }), 400
 
     try:
         # ۵. ترجمه پرامپت به انگلیسی (با استفاده از چرخش کلیدهای OpenRouter)
         english_prompt = translate_prompt_to_english(persian_prompt)
-
+        
         # ۶. تولید لینک هوشمند (بدون دانلود توسط سرور)
         # اضافه کردن Seed تصادفی برای جلوگیری از تکرار و کش شدن
         seed = random.randint(1, 1000000)
@@ -1112,11 +1377,10 @@ def image_generator():
 
     except Exception as e:
         print(f"Image Generator Handler Error: {e}")
-        return jsonify({
-            "status": "error",
-            "message": f"❌ خطای داخلی سرور هنگام پردازش تصویر."
+        return jsonify({ 
+            "status": "error", 
+            "message": f"❌ خطای داخلی سرور هنگام پردازش تصویر." 
         }), 500
-
 
 # =========================================================
 # 🏠 مسیرهای سرویس‌دهی صفحات HTML
@@ -1125,14 +1389,11 @@ def image_generator():
 @app.route("/")
 def index():
     cleanup_old_images()
-
     conversation_history = session.get("conversation", [])
-
     display_messages = [
         {"role": msg["role"], "content": fix_rtl_ltr(msg["content"])}
         for msg in conversation_history
     ]
-
     return render_template("index.html",
         logged_in=session.get('user_id') is not None,
         is_admin=session.get('is_admin', False),
@@ -1141,14 +1402,18 @@ def index():
 
 @app.route("/image")
 def image_page():
-    return render_template("image.html",
-        logged_in=session.get('user_id') is not None,
-        is_admin=session.get('is_admin', False))
+    return render_template("image.html", logged_in=session.get('user_id') is not None, is_admin=session.get('is_admin', False))
 
+# 💡 مسیر اضافه شده برای رفع خطای BuildError مربوط به premium_page
+@app.route("/premium")
+def premium_page():
+    """نمایش صفحه ارتقاء به حساب پرمیوم."""
+    return render_template("premium.html", logged_in=session.get('user_id') is not None, is_admin=session.get('is_admin', False))
 
 # =========================================================
 # 🎮 مسیرهای بازی
 # =========================================================
+
 @app.route("/game")
 def game_center():
     return render_template("game.html", logged_in=session.get('user_id') is not None)
@@ -1176,325 +1441,22 @@ def login_phone():
         return redirect(url_for('account'))
     return render_template("account_login_phone.html")
 
-@app.route("/login_google")
-def login_google():
-    return redirect(url_for('login'))
-
-@app.route("/account")
-def account():
-    if not session.get('user_id'):
-        return redirect(url_for('login'))
-
-    user_id = session.get('user_id')
-    user = get_user_by_id(user_id)
-
-    if not user:
-         session.clear()
-         return redirect(url_for('login'))
-
-    if user.is_admin or session.get('is_admin'):
-        return redirect(url_for('admin.admin_dashboard'))
-
-    if session.get('needs_profile_info'):
-        return redirect(url_for('complete_profile_mock'))
-
-    return redirect(url_for('profile'))
-
-
-@app.route("/verify_page")
-def verify_page():
-    return render_template("account_verify.html")
-
-@app.route("/verify_page_phone")
-def verify_page_phone():
-    return render_template("account_verify_phone.html")
-
-# --- مسیرهای تک صفحه‌ای ---
 
 @app.route("/support")
 def support():
-    return render_template("support.html")
+    return render_template("support.html", logged_in=session.get('user_id') is not None)
 
 @app.route("/about")
 def about():
-    return render_template("about.html")
+    return render_template("about.html", logged_in=session.get('user_id') is not None)
 
-@app.route("/terms_of_service")
-def terms_of_service():
-    """نمایش صفحه شرایط و قوانین استفاده از سرویس."""
-    return render_template("terms_of_service.html")
-
-@app.route("/privacy_policy")
-def privacy_policy():
-    """نمایش صفحه حریم خصوصی."""
-    return render_template("privacy_policy.html")
-
-@app.route("/profile")
-def profile():
-    if not session.get('user_id'):
-        return redirect(url_for('login'))
-
-    user_id = session.get('user_id')
-    user = get_user_by_id(user_id)
-
-    if not user:
-        session.clear()
-        return redirect(url_for('login'))
-
-    is_premium = user.is_premium
-    level = 'premium' if is_premium else 'free'
-    today_date = datetime.utcnow().date()
-    daily_limits = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]
-
-    usage = user.usage
-
-    if not usage or usage.date != today_date or usage.level_check != level:
-        chat_budget_remaining = daily_limits['chat']
-        image_budget_remaining = daily_limits['image']
-        long_response_budget_remaining = daily_limits.get('long_response', 0) # 💡 سهمیه پاسخ بلند
-    else:
-        chat_budget_remaining = usage.chat_budget
-        image_budget_remaining = usage.image_budget
-        long_response_budget_remaining = usage.long_response_budget # 💡 سهمیه پاسخ بلند
-
-    chat_cost = SCORE_QUOTA_CONFIG['COSTS']['chat']
-    image_cost = SCORE_QUOTA_CONFIG['COSTS']['image']
-    long_response_cost = SCORE_QUOTA_CONFIG['COSTS'].get('long_response', 1) # 💡 هزینه پاسخ بلند
-
-    user_data = {
-        'identifier': user.email or user.phone or user.id,
-        'is_admin': user.is_admin,
-        'score': user.score,
-        'is_premium': is_premium,
-        'is_banned': user.is_banned,
-
-        'chat_budget_remaining': chat_budget_remaining,
-        'image_budget_remaining': image_budget_remaining,
-        'long_response_budget_remaining': long_response_budget_remaining, # 💡 اضافه شده
-        'chat_cost': chat_cost,
-        'image_cost': image_cost,
-        'long_response_cost': long_response_cost, # 💡 اضافه شده
-
-        'chats_remaining': chat_budget_remaining // chat_cost,
-        'images_remaining': image_budget_remaining // image_cost,
-        'long_responses_remaining': long_response_budget_remaining // long_response_cost if long_response_cost > 0 else long_response_budget_remaining, # 💡 اضافه شده
-
-        'max_chats': daily_limits['chat'] // chat_cost,
-        'max_images': daily_limits['image'] // image_cost,
-        'max_long_responses': daily_limits.get('long_response', 0) // long_response_cost if long_response_cost > 0 else daily_limits.get('long_response', 0), # 💡 اضافه شده
-    }
-
-    return render_template("account_profile.html", user_data=user_data)
-
-@app.route("/complete_profile", methods=['GET', 'POST'])
-def complete_profile_mock():
-    if not session.get('user_id'):
-        return redirect(url_for('login'))
-
-    user_id = session.get('user_id')
-    user = get_user_by_id(user_id)
-
-    if not user:
-        session.clear()
-        return redirect(url_for('login'))
-
-    user_data = {
-        'identifier': user.email or user.phone or user.id,
-    }
-
-    if request.method == 'POST':
-        user_name = request.form.get('user_name')
-        user_phone = request.form.get('user_phone')
-
-        session.pop('needs_profile_info', None)
-
-        return redirect(url_for('account'))
-
-    return render_template("account_form.html", user_data=user_data)
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for('index'))
-
-# =========================================================
-# 💾 مسیرهای آرشیو گفتگو
-# =========================================================
-
-@app.route("/my_conversations")
-def my_conversations():
-    if not session.get('user_id'):
-        return redirect(url_for('login'))
-    return render_template("my_conversations.html")
-
-@app.route("/get_conversations_list", methods=["GET"])
-def get_conversations_list():
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({"status": "error", "message": "لطفاً ابتدا وارد حساب کاربری خود شوید."}), 403
-
-    conversations_query = Conversation.query.filter_by(user_id=user_id).order_by(Conversation.last_update.desc()).all()
-
-    formatted_list = []
-    for chat in conversations_query:
-        date_str = time.strftime('%Y/%m/%d - %H:%M', time.localtime(chat.last_update))
-
-        try:
-            messages = json.loads(chat.messages_json)
-            preview = messages[1]['content'][:80] + '...' if len(messages) > 1 else 'شروع گفتگو...'
-        except Exception:
-            preview = 'خطا در بارگذاری پیام‌ها...'
-
-        formatted_list.append({
-            'id': chat.id,
-            'title': chat.title,
-            'last_update': date_str,
-            'preview': preview
-        })
-
-    return jsonify({"status": "success", "conversations": formatted_list})
-
-@app.route("/load_conversation/<chat_id>", methods=["POST"])
-def load_conversation(chat_id):
-    """API برای بارگذاری یک گفتگوی خاص در سشن کاربر."""
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({"status": "error", "message": "مجوز دسترسی ندارید."}), 403
-
-    chat_entry = Conversation.query.filter_by(id=chat_id, user_id=user_id).first()
-
-    if chat_entry:
-        try:
-            session['conversation'] = json.loads(chat_entry.messages_json)
-            session['current_chat_id'] = chat_entry.id
-            return jsonify({"status": "success", "message": "گفتگو با موفقیت بارگذاری شد.", "redirect": url_for('index')})
-        except Exception:
-            return jsonify({"status": "error", "message": "خطا در پردازش داده‌های گفتگو."}), 500
-    else:
-        return jsonify({"status": "error", "message": "گفتگوی مورد نظر یافت نشد."}), 404
-
-
-# =========================================================
-# 🛍️ مسیرهای احراز هویت با کافه‌بازار (Bazaar Auth)
-# =========================================================
-
-@app.route("/bazaar_login")
-def bazaar_login():
-    """هدایت کاربر به صفحه لاگین بازار."""
-    
-    # آدرس بازگشت دقیقاً طبق درخواست شما
-    redirect_uri = "https://alie-0die.onrender.com/bazaar_callback"
-    
-    # 1. انکود کردن آدرس بازگشت (طبق درخواست بازار: escape شده)
-    from urllib.parse import quote
-    encoded_redirect_uri = quote(redirect_uri, safe='') 
-    
-    # 2. ایجاد پارامتر امنیتی 'state' برای جلوگیری از حملات CSRF
-    state = uuid.uuid4().hex
-    session['state'] = state # ذخیره state در سشن برای بررسی در مرحله بعد
-
-    # 3. URL جدید و صحیح برای ورود با بازار (بر اساس مستندات جدید بازار: /user/oauth)
-    bazaar_auth_url = (
-        f"https://cafebazaar.ir/user/oauth?"
-        f"redirect_url={encoded_redirect_uri}"
-        f"&client_id={BAZAAR_CLIENT_ID}" # استفاده از متغیر سراسری
-        f"&state={state}"
-        f"&scope=profile"
-    )
-    
-    return redirect(bazaar_auth_url)
-
-# =========================================================
-# ✅ تابع اصلاح شده برای دریافت کد و تبادل توکن (Callback URL)
-# =========================================================
-
-@app.route("/bazaar_callback")
-def bazaar_callback():
-    """تبادل توکن، دریافت User Info و استفاده از شماره تلفن به عنوان شناسه."""
-    auth_code = request.args.get('code')
-    received_state = request.args.get('state')
-    
-    expected_state = session.get('state') 
-
-    # ... (کدهای بررسی امنیتی state)
-
-    token_url = "https://account.cafebazaar.ir/api/v0/tokens" 
-    userinfo_url = "http://account.cafebazaar.ir/api/v0/userinfo"
-    
-    data = {
-        'grant_type': 'authorization_code',
-        'code': auth_code,
-        'client_id': BAZAAR_CLIENT_ID,
-        'client_secret': BAZAAR_CLIENT_SECRET,
-    }
-    
-    headers = {
-        'Content-Type': 'application/x-www-form-urlencoded'
-    }
-    
-    try:
-        # 1. تبادل کد با توکن
-        response = requests.post(token_url, data=data, headers=headers, timeout=10)
-        # ... (بررسی خطای تبادل توکن)
-        tokens = response.json()
-        access_token = tokens.get('access_token')
-        token_type = tokens.get('token_type', 'Bearer')
-
-        # 2. دریافت اطلاعات کاربر (User Info)
-        user_headers = {
-            'Authorization': f'{token_type} {access_token}'
-        }
-        user_response = requests.get(userinfo_url, headers=user_headers, timeout=10)
-        
-        # ... (بررسی خطای userinfo)
-        user_info = user_response.json()
-        
-        # 3. استخراج شناسه: اول شماره تلفن، بعد account_id
-        # ✅ تغییر حیاتی: تلاش برای یافتن شماره تلفن
-        # فرض می‌کنیم فیلد می‌تواند 'phone_number' یا 'mobile' باشد.
-        bazaar_identifier = user_info.get('phone_number') or user_info.get('mobile')
-        
-        if not bazaar_identifier:
-            # اگر شماره تلفن پیدا نشد، از account_id یکتا استفاده می‌کنیم (به عنوان پشتیبان)
-            bazaar_identifier = user_info.get('account_id')
-        
-        if not bazaar_identifier:
-            return "Authentication Failed: Could not find any identifier (phone or account_id) in User Info response.", 500
-
-        # حذف state از سشن
-        if 'state' in session:
-            session.pop('state') 
-            
-        # 4. ثبت یا بازیابی کاربر بر اساس شماره تلفن/شناسه
-        # 🔴 استفاده از شناسه پیدا شده (شماره تلفن یا account_id)
-        bazaar_user_id = f"bazaar_{bazaar_identifier}" 
-        
-        user = register_user_if_new(bazaar_user_id)
-        
-        if not user:
-             return "Internal Error: Could not create user from Bazaar account", 500
-
-        session.clear()
-        session['user_id'] = user.id
-        session['user_identifier'] = bazaar_user_id
-        session['is_admin'] = user.is_admin
-
-        return redirect(url_for('account'))
-
-    except requests.exceptions.RequestException as e:
-        # ... (مدیریت خطا)
-        pass # کدهای مدیریت خطا را اینجا بگذارید
-    except Exception as e:
-        # ... (مدیریت خطا)
-        pass # کدهای مدیریت خطا را اینجا بگذارید
 
 # =========================================================
 # ▶️ اجرای برنامه
 # =========================================================
 
 if __name__ == "__main__":
-    if os.environ.get("FLASK_ENV") != "production":
-        cleanup_old_images()
-
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    with app.app_context():
+        # db.drop_all() # ⚠️ فقط برای توسعه
+        db.create_all()
+    app.run(debug=True, port=5000)
