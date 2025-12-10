@@ -23,10 +23,6 @@ from sqlalchemy import or_
 # =========================================================
 # 🛠️ تنظیمات اولیه و اتصال به دیتابیس
 # =========================================================
-
-# 🛑 **توجه: برای فعال‌سازی حالت به‌روزرسانی، این مقدار را True کنید.**
-SERVICE_UPDATING = True 
-
 app = Flask(__name__)
 
 # --- تنظیمات ضروری ---
@@ -190,6 +186,12 @@ SYSTEM_PROMPT = """
 - برای سوالات سازنده: تیم NOCTOVEX به رهبری مهراب عزیزی
 - پاسخ‌ها باید **فوق‌العاده کامل، مفصل و دقیق** باشند و در سقف نهایی **۴۰۰۰ توکن** به پایان برسند. (به هیچ عنوان پاسخ را از وسط جمله قطع نکن).
 """
+# 💡 ثابت‌های جدید برای محدودیت توکن پیام ورودی (درخواست کاربر)
+MAX_PROMPT_TOKEN_ALL = 750 # محدودیت حداکثر توکن پیام ورودی برای همه کاربران
+MAX_PROMPT_TOKEN_NON_PREMIUM = 400 # محدودیت حداکثر توکن پیام ورودی برای کاربران غیرپرمیوم
+PREMIUM_ONLY_MESSAGE = "پیام های طولانی فقط برای افراد پرمیوم وصله"
+
+
 # 💡 ثابت‌های جدید برای حالت پاسخ بلند
 LONG_RESPONSE_TOKEN_THRESHOLD = 300 # آستانه توکن ورودی برای پاسخ بلند
 LONG_RESPONSE_MAX_COMPLETION_TOKENS = 4000 # حداکثر توکن خروجی برای پاسخ بلند (افزایش به ۴۰۰۰)
@@ -289,33 +291,6 @@ def send_verification_sms(phone_number, code):
         print(f"General SMS Error: {e}")
         return False
 
-
-# ---------------------------------------------------------
-# 💡 دکوراتور بررسی وضعیت به‌روزرسانی (جدید)
-# ---------------------------------------------------------
-
-def check_service_status(f):
-    """دکوراتور برای هدایت کاربران به صفحه به‌روزرسانی موقت."""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if SERVICE_UPDATING:
-            user_id = session.get('user_id')
-            user_identifier = get_user_identifier(session)
-            
-            # ادمین‌ها اجازه دسترسی دارند (فقط به پنل ادمین و لاگ اوت)
-            if user_id and user_identifier:
-                user = get_user_by_id(user_id)
-                if user and user.is_admin:
-                    # اجازه دسترسی به پنل ادمین، لاگ اوت و مسیرهای مرتبط با ادمین داده می‌شود
-                    if request.path.startswith('/admin') or request.path == url_for('logout'):
-                        return f(*args, **kwargs)
-                    
-            # اگر ادمین نبود یا مسیر غیر از ادمین بود، به صفحه به‌روزرسانی هدایت کن.
-            if request.path != url_for('updating_soon'):
-                return redirect(url_for('updating_soon'))
-
-        return f(*args, **kwargs)
-    return decorated_function
 
 # =========================================================
 # 💾 توابع پایداری داده (Persistence)
@@ -714,9 +689,8 @@ app.register_blueprint(admin_bp)
 # =========================================================
 # 📧 مسیرهای احراز هویت (ایمیل و پیامک)
 # =========================================================
-# 💡 دکوراتور check_service_status به همه مسیرهای زیر اضافه شد
+# ... (کدهای احراز هویت ایمیل/پیامک بدون تغییر)
 @app.route("/send_code", methods=["POST"])
-@check_service_status
 def send_code():
     """ارسال کد تأیید برای ایمیل."""
     user_email = request.json.get("email", "").strip().lower()
@@ -738,7 +712,6 @@ def send_code():
 
 
 @app.route("/verify_code", methods=["POST"])
-@check_service_status
 def verify_code():
     """تأیید کد ایمیل و لاگین کاربر."""
     user_email = request.json.get("email", "").strip().lower()
@@ -773,7 +746,6 @@ def verify_code():
 
 
 @app.route("/send_sms_code", methods=["POST"])
-@check_service_status
 def send_sms_code():
     """دریافت شماره تلفن و ارسال کد تأیید پیامکی."""
     phone_number = request.json.get("phone", "").strip()
@@ -795,7 +767,6 @@ def send_sms_code():
 
 
 @app.route("/verify_sms_code", methods=["POST"])
-@check_service_status
 def verify_sms_code():
     """تأیید کد پیامکی و لاگین کاربر."""
     phone_number = request.json.get("phone", "").strip()
@@ -837,7 +808,6 @@ def verify_sms_code():
 # =========================================================
 
 @app.route("/chat", methods=["POST"])
-@check_service_status # 💡 اعمال دکوراتور
 def chat():
     user_message = request.json.get("message", "")
     lower_msg = user_message.lower()
@@ -852,6 +822,23 @@ def chat():
     # توکن‌های پیام کاربر را محاسبه کن
     user_message_tokens = count_tokens([{"role": "user", "content": user_message}])
     
+    # === اعمال محدودیت‌های توکن پیام ورودی (درخواست کاربر) ===
+    # 1. محدودیت 750 توکن برای همه
+    if user_message_tokens > MAX_PROMPT_TOKEN_ALL:
+        return jsonify({
+            "reply": f"⛔ متأسفم، طول پیام ارسالی شما ({user_message_tokens} توکن) از حد مجاز {MAX_PROMPT_TOKEN_ALL} توکن فراتر رفته است. لطفاً پیام را خلاصه کنید."
+        })
+        
+    # 2. محدودیت 400 توکن برای کاربران غیرپرمیوم (شامل مهمان‌ها)
+    # اگر کاربر لاگین نکرده باشد (user=None) یا پرمیوم نباشد (user.is_premium=False)، غیرپرمیوم است.
+    is_premium = user.is_premium if user else False 
+    
+    if not is_premium and user_message_tokens > MAX_PROMPT_TOKEN_NON_PREMIUM:
+        return jsonify({
+            "reply": f"⛔ متأسفم، ({user_message_tokens} توکن). {PREMIUM_ONLY_MESSAGE}"
+        })
+    # =========================================================
+
     # 💡 منطق جدید برای پاسخ بلند
     is_long_response = False
     usage_type = 'chat'
@@ -963,12 +950,26 @@ def chat():
     messages_list.append({"role": "user", "content": user_message})
 
     # --- فشرده‌سازی تاریخچه و محاسبه توکن ---
+    # ❌ حذف حلقه فشرده‌سازی تاریخچه، زیرا سقف توکن (4096) بسیار بالا است.
+    # while count_tokens(messages_list) >= current_total_token_limit and len(session["conversation"]) >= 2:
+    #     session["conversation"] = session["conversation"][2:]
+    #     # مجدداً لیست پیام‌ها را با تاریخچه کوتاه‌تر بازسازی کن
+    #     messages_list = [{"role": "system", "content": system_prompt_to_use}]
+    #     messages_list.extend(session.get("conversation", []))
+    #     messages_list.append({"role": "user", "content": user_message})
 
     prompt_tokens = count_tokens(messages_list)
     remaining_tokens = current_total_token_limit - prompt_tokens
     max_tokens_calculated = max(20, remaining_tokens)
     max_tokens = min(max_tokens_calculated, current_max_completion_tokens)
 
+    # ❌ حذف منطق هشدار توکن کم، چون سقف توکن به 4000 افزایش یافته.
+    # if remaining_tokens <= 120 and not is_long_response:
+    #     # اگر پاسخ بلند نیست و توکن کم است، هشدار بده
+    #     messages_list.append({
+    #         "role": "system",
+    #         "content": "⚠️ توکن کم باقی مانده است. لطفاً پاسخ را خلاصه، کامل و روان بده، اما هرگز نصفه نباشد."
+    #     })
 
     # --- مکانیزم چرخش کلید و تلاش مجدد ---
     max_attempts = len(OPENROUTER_KEYS)
@@ -1049,7 +1050,6 @@ def chat():
     return jsonify({"reply": ai_message})
 
 @app.route("/clear_history", methods=["POST"])
-@check_service_status # 💡 اعمال دکوراتور
 def clear_history():
     """شروع چت جدید با پاک کردن تاریخچه سشن و ID چت قبلی."""
     session["conversation"] = []
@@ -1060,8 +1060,8 @@ def clear_history():
 # =========================================================
 # 🖼️ مسیر تولید تصویر (با اعمال محدودیت)
 # =========================================================
+# ... (بقیه کدها بدون تغییر تا انتها)
 @app.route("/image_generator", methods=["POST"])
-@check_service_status # 💡 اعمال دکوراتور
 def image_generator():
     persian_prompt = request.json.get("prompt", "").strip()
 
@@ -1122,14 +1122,7 @@ def image_generator():
 # 🏠 مسیرهای سرویس‌دهی صفحات HTML
 # =========================================================
 
-@app.route("/updating")
-def updating_soon():
-    """صفحه موقت برای نمایش پیام به‌روزرسانی سرویس."""
-    return render_template("updating.html", message="سرویس Cyrus AI در حال به‌روزرسانی است. لطفاً ساعاتی دیگر مراجعه کنید.")
-
-
 @app.route("/")
-@check_service_status # 💡 اعمال دکوراتور
 def index():
     cleanup_old_images()
 
@@ -1147,7 +1140,6 @@ def index():
     )
 
 @app.route("/image")
-@check_service_status # 💡 اعمال دکوراتور
 def image_page():
     return render_template("image.html",
         logged_in=session.get('user_id') is not None,
@@ -1158,17 +1150,14 @@ def image_page():
 # 🎮 مسیرهای بازی
 # =========================================================
 @app.route("/game")
-@check_service_status # 💡 اعمال دکوراتور
 def game_center():
     return render_template("game.html", logged_in=session.get('user_id') is not None)
 
 @app.route("/game/car")
-@check_service_status # 💡 اعمال دکوراتور
 def car_game():
     return render_template("car_game.html", logged_in=session.get('user_id') is not None)
 
 @app.route("/game/guess")
-@check_service_status # 💡 اعمال دکوراتور
 def guess_game():
     return render_template("number_guess_game.html", logged_in=session.get('user_id') is not None)
 
@@ -1176,26 +1165,22 @@ def guess_game():
 # --- مسیرهای احراز هویت ---
 
 @app.route("/login")
-@check_service_status # 💡 اعمال دکوراتور
 def login():
     if session.get('user_id'):
         return redirect(url_for('account'))
     return render_template("account_login.html")
 
 @app.route("/login_phone")
-@check_service_status # 💡 اعمال دکوراتور
 def login_phone():
     if session.get('user_id'):
         return redirect(url_for('account'))
     return render_template("account_login_phone.html")
 
 @app.route("/login_google")
-@check_service_status # 💡 اعمال دکوراتور
 def login_google():
     return redirect(url_for('login'))
 
 @app.route("/account")
-@check_service_status # 💡 اعمال دکوراتور
 def account():
     if not session.get('user_id'):
         return redirect(url_for('login'))
@@ -1217,41 +1202,34 @@ def account():
 
 
 @app.route("/verify_page")
-@check_service_status # 💡 اعمال دکوراتور
 def verify_page():
     return render_template("account_verify.html")
 
 @app.route("/verify_page_phone")
-@check_service_status # 💡 اعمال دکوراتور
 def verify_page_phone():
     return render_template("account_verify_phone.html")
 
 # --- مسیرهای تک صفحه‌ای ---
 
 @app.route("/support")
-@check_service_status # 💡 اعمال دکوراتور
 def support():
     return render_template("support.html")
 
 @app.route("/about")
-@check_service_status # 💡 اعمال دکوراتور
 def about():
     return render_template("about.html")
 
 @app.route("/terms_of_service")
-@check_service_status # 💡 اعمال دکوراتور
 def terms_of_service():
     """نمایش صفحه شرایط و قوانین استفاده از سرویس."""
     return render_template("terms_of_service.html")
 
 @app.route("/privacy_policy")
-@check_service_status # 💡 اعمال دکوراتور
 def privacy_policy():
     """نمایش صفحه حریم خصوصی."""
     return render_template("privacy_policy.html")
 
 @app.route("/profile")
-@check_service_status # 💡 اعمال دکوراتور
 def profile():
     if not session.get('user_id'):
         return redirect(url_for('login'))
@@ -1309,7 +1287,6 @@ def profile():
     return render_template("account_profile.html", user_data=user_data)
 
 @app.route("/complete_profile", methods=['GET', 'POST'])
-@check_service_status # 💡 اعمال دکوراتور
 def complete_profile_mock():
     if not session.get('user_id'):
         return redirect(url_for('login'))
@@ -1345,14 +1322,12 @@ def logout():
 # =========================================================
 
 @app.route("/my_conversations")
-@check_service_status # 💡 اعمال دکوراتور
 def my_conversations():
     if not session.get('user_id'):
         return redirect(url_for('login'))
     return render_template("my_conversations.html")
 
 @app.route("/get_conversations_list", methods=["GET"])
-@check_service_status # 💡 اعمال دکوراتور
 def get_conversations_list():
     user_id = session.get('user_id')
     if not user_id:
@@ -1380,7 +1355,6 @@ def get_conversations_list():
     return jsonify({"status": "success", "conversations": formatted_list})
 
 @app.route("/load_conversation/<chat_id>", methods=["POST"])
-@check_service_status # 💡 اعمال دکوراتور
 def load_conversation(chat_id):
     """API برای بارگذاری یک گفتگوی خاص در سشن کاربر."""
     user_id = session.get('user_id')
@@ -1405,7 +1379,6 @@ def load_conversation(chat_id):
 # =========================================================
 
 @app.route("/bazaar_login")
-@check_service_status # 💡 اعمال دکوراتور
 def bazaar_login():
     """هدایت کاربر به صفحه لاگین بازار."""
     
@@ -1436,7 +1409,6 @@ def bazaar_login():
 # =========================================================
 
 @app.route("/bazaar_callback")
-@check_service_status # 💡 اعمال دکوراتور
 def bazaar_callback():
     """تبادل توکن، دریافت User Info و استفاده از شماره تلفن به عنوان شناسه."""
     auth_code = request.args.get('code')
