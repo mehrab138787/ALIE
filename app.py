@@ -1,4 +1,4 @@
-=رimport os
+import os
 from urllib.parse import quote # کتابخانه مورد نیاز برای انکود کردن آدرس بازار
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, Blueprint
 import requests
