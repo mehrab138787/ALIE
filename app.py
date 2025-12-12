@@ -1319,7 +1319,7 @@
             'is_premium': is_premium
         }
         
-        return render_template("image_generator.html", logged_in=True, quota_info=quota_info)
+        return render_template("image.html", logged_in=True, quota_info=quota_info)
     
     
     @app.route("/games")
