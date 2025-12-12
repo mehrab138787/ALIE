@@ -71,8 +71,6 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USE_SSL'] = False
 mail = Mail(app)
 
-# ⚠️ حذف دیکشنری های ناپایدار: verification_codes حذف شد
-
 # ----------------- 📱 تنظیمات Kavenegar -----------------
 # ⚠️ رفع ایراد امنیتی ۳: حذف کلید API هاردکد شده
 KAVENEGAR_API_KEY = os.getenv('KAVENEGAR_API_KEY')
@@ -81,7 +79,6 @@ if not KAVENEGAR_API_KEY:
     
 KAVENEGAR_SENDER = '2000300261'
 SMS_API = KavenegarAPI(KAVENEGAR_API_KEY)
-# ⚠️ حذف دیکشنری های ناپایدار: phone_verification_codes حذف شد
 # ---------------------------------------------------------
 
 # =========================================================
@@ -165,18 +162,18 @@ SCORE_QUOTA_CONFIG = {
     'COSTS': {
         'chat': 1, # هر چت 1 امتیاز
         'image': 20, # هر عکس 20 امتیاز
-        'long_response': 1 # 💡 هزینه هر پاسخ بلند
+        # 'long_response': 1 # 💡 حذف: هزینه پاسخ بلند
     },
     'DAILY_BUDGET': {
         'free': {
             'chat': 30,  # 30 امتیاز برای چت (30 چت)
             'image': 80,  # 80 امتیاز برای تصویر (4 عکس)
-            'long_response': 5 # 💡 5 پاسخ بلند روزانه
+            # 'long_response': 5 # 💡 حذف: 5 پاسخ بلند روزانه
         },
         'premium': {
             'chat': 80, # 80 امتیاز برای چت (80 چت)
             'image': 200, # 200 امتیاز برای تصویر (10 عکس)
-            'long_response': 15 # 💡 15 پاسخ بلند روزانه
+            # 'long_response': 15 # 💡 حذف: 15 پاسخ بلند روزانه
         }
     }
 }
@@ -207,23 +204,20 @@ SYSTEM_PROMPT = """
 """
 
 # 💡 ثابت‌های جدید برای محدودیت توکن پیام ورودی (درخواست کاربر)
-MAX_PROMPT_TOKEN_ALL = 750 # محدودیت حداکثر توکن پیام ورودی برای همه کاربران
-MAX_PROMPT_TOKEN_NON_PREMIUM = 700 # 💡 تغییر: محدودیت حداکثر توکن پیام ورودی برای کاربران غیرپرمیوم (700)
-PREMIUM_ONLY_MESSAGE = "پیام های طولانی فقط برای افراد پرمیوم وصله. برای پرمیوم کردن به این آیدی در تلگرام پیام بدهید: Im_Mehrab_1" # 💡 تغییر: اضافه شدن آیدی تلگرام
+# 💡 تغییر: سقف کلی پیام ورودی (برای حفظ فضای پاسخ)
+MAX_PROMPT_TOKEN_ALL = 700 
+MAX_PROMPT_TOKEN_NON_PREMIUM = 700 # 💡 تغییر: محدودیت حداکثر توکن پیام ورودی برای همه (700)
+PREMIUM_ONLY_MESSAGE = "پیام های طولانی فقط برای افراد پرمیوم وصله. برای پرمیوم کردن به این آیدی در تلگرام پیام بدهید: Im_Mehrab_1" 
 
-
-# 💡 ثابت‌های جدید برای حالت پاسخ بلند
-LONG_RESPONSE_TOKEN_THRESHOLD = 701 # 💡 تغییر: آستانه برای ورود به حالت بلند یا بلاک (بالاتر از سقف غیرپرمیوم)
-LONG_RESPONSE_MAX_COMPLETION_TOKENS = 4000 
-LONG_RESPONSE_TOTAL_TOKEN_LIMIT = 4096 
-
-
-TOTAL_TOKEN_LIMIT = 1000 # 💡 تغییر: کاهش سقف کل توکن به ۱۰۰۰
-INPUT_TOKEN_LIMIT = 700 # 💡 تغییر: کاهش سقف توکن ورودی برای فشرده‌سازی زودتر
-MAX_COMPLETION_TOKENS = 300 # 💡 تغییر: کاهش سقف توکن خروجی به ۳۰۰ برای پاسخ‌های کوتاه
+# 💡 ثابت‌های مربوط به سقف 4096 حذف شدند
 
 # 💡 ثابت جدید برای محدودیت چت مهمان
 GUEST_CHAT_LIMIT = 5 
+
+# 💡 تغییر: سقف های نهایی برای کل سیستم (همان 1000 توکن درخواستی شما)
+TOTAL_TOKEN_LIMIT = 1000 
+INPUT_TOKEN_LIMIT = 700 
+MAX_COMPLETION_TOKENS = 300 
 
 encoder = tiktoken.get_encoding("cl100k_base")
 
@@ -254,7 +248,7 @@ class UserUsage(db.Model):
 
     chat_budget = db.Column(db.Integer, default=50)
     image_budget = db.Column(db.Integer, default=60)
-    long_response_budget = db.Column(db.Integer, default=5) # 💡 فیلد جدید
+    # long_response_budget حذف شد.
     level_check = db.Column(db.String(10), nullable=True)
 
 
@@ -386,28 +380,39 @@ def check_and_deduct_score(user_identifier, usage_type):
 
     is_premium = user.is_premium
     level = 'premium' if is_premium else 'free'
-    cost = SCORE_QUOTA_CONFIG['COSTS'][usage_type]
-    daily_limits = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]
-    budget_key = f'{usage_type}_budget'
+    
+    # 💡 تغییر: long_response حذف شد.
+    if usage_type == 'chat':
+        cost = SCORE_QUOTA_CONFIG['COSTS']['chat']
+        daily_limits = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]
+        budget_key = 'chat_budget'
+    elif usage_type == 'image':
+        cost = SCORE_QUOTA_CONFIG['COSTS']['image']
+        daily_limits = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]
+        budget_key = 'image_budget'
+    else:
+        # برای حالت‌های استفاده‌ای که وجود ندارند
+        return False, f"نوع استفاده '{usage_type}' نامعتبر است."
+
 
     usage = user.usage
 
     if not usage:
+        # 💡 تغییر: long_response حذف شد
         usage = UserUsage(
             user_id=user.id,
             date=today_date,
             chat_budget=daily_limits['chat'],
             image_budget=daily_limits['image'],
-            long_response_budget=daily_limits.get('long_response', 0), # 💡 به‌روزرسانی سهمیه اولیه
             level_check=level
         )
         db.session.add(usage)
     # ⚠️ در اینجا باید دقت کنید که usage.date یک آبجکت date است
     elif usage.date != today_date or usage.level_check != level: 
+        # 💡 تغییر: long_response حذف شد
         usage.date = today_date
         usage.chat_budget = daily_limits['chat']
         usage.image_budget = daily_limits['image']
-        usage.long_response_budget = daily_limits.get('long_response', 0) # 💡 به‌روزرسانی سهمیه ریست روزانه
         usage.level_check = level
 
     current_budget = getattr(usage, budget_key, 0)
@@ -415,8 +420,7 @@ def check_and_deduct_score(user_identifier, usage_type):
     if current_budget < cost:
         action_fa = (
             'چت' if usage_type == 'chat' else 
-            'تولید تصویر' if usage_type == 'image' else 
-            'پاسخ بلند' # 💡 اضافه شدن نوع استفاده
+            'تولید تصویر' # 💡 long_response حذف شد
         )
         level_fa = 'پرمیوم' if is_premium else 'عادی'
         remaining_uses = current_budget // cost
@@ -914,28 +918,26 @@ def account():
 
     chat_budget_remaining = 0
     image_budget_remaining = 0
-    long_response_budget_remaining = 0 # 💡 سهمیه پاسخ بلند
+    # long_response_budget_remaining حذف شد
 
     if not usage:
         # اگر تا حالا استفاده نکرده، بودجه کامل روزانه را نمایش بده
         chat_budget_remaining = daily_limits['chat']
         image_budget_remaining = daily_limits['image']
-        long_response_budget_remaining = daily_limits.get('long_response', 0) # 💡 سهمیه پاسخ بلند
 
     elif usage.date != today_date or usage.level_check != level:
         chat_budget_remaining = daily_limits['chat']
         image_budget_remaining = daily_limits['image']
-        long_response_budget_remaining = daily_limits.get('long_response', 0) # 💡 سهمیه پاسخ بلند
 
     else:
         chat_budget_remaining = usage.chat_budget
         image_budget_remaining = usage.image_budget
-        long_response_budget_remaining = usage.long_response_budget # 💡 سهمیه پاسخ بلند
 
     
     chat_cost = SCORE_QUOTA_CONFIG['COSTS']['chat']
     image_cost = SCORE_QUOTA_CONFIG['COSTS']['image']
-    long_response_cost = SCORE_QUOTA_CONFIG['COSTS'].get('long_response', 1) # 💡 هزینه پاسخ بلند
+    
+    # long_response_cost حذف شد
 
     user_data = {
         'identifier': user.email or user.phone or user.id,
@@ -945,19 +947,19 @@ def account():
         'is_banned': user.is_banned,
         'chat_budget_remaining': chat_budget_remaining,
         'image_budget_remaining': image_budget_remaining,
-        'long_response_budget_remaining': long_response_budget_remaining, # 💡 اضافه شده
+        # 'long_response_budget_remaining' حذف شد
 
         'chat_cost': chat_cost,
         'image_cost': image_cost,
-        'long_response_cost': long_response_cost, # 💡 اضافه شده
+        # 'long_response_cost' حذف شد
         
         'chats_remaining': chat_budget_remaining // chat_cost,
         'images_remaining': image_budget_remaining // image_cost,
-        'long_responses_remaining': long_response_budget_remaining // long_response_cost if long_response_cost > 0 else long_response_budget_remaining, # 💡 اضافه شده
+        # 'long_responses_remaining' حذف شد
 
         'max_chats': daily_limits['chat'] // chat_cost,
         'max_images': daily_limits['image'] // image_cost,
-        'max_long_responses': daily_limits.get('long_response', 0) // long_response_cost if long_response_cost > 0 else daily_limits.get('long_response', 0) # 💡 اضافه شده
+        # 'max_long_responses' حذف شد
     }
 
     conversations = []
@@ -993,15 +995,15 @@ def chat():
     # 2. شمارش توکن پیام ورودی
     user_message_tokens = count_tokens([{"role": "user", "content": user_message}])
     
-    # 3. اعمال محدودیت توکن پیام ورودی (برای پرمیوم و غیرپرمیوم)
+    # 3. اعمال محدودیت توکن پیام ورودی (برای همه)
     
-    # محدودیت کلی برای همه (حتی پرمیوم)
-    if user_message_tokens > MAX_PROMPT_TOKEN_ALL: # 750
+    # محدودیت کلی برای همه (700 توکن)
+    if user_message_tokens > MAX_PROMPT_TOKEN_ALL: # 700
         return jsonify({
             "reply": f"⛔ متأسفم، پیام شما خیلی طولانی است و از سقف کلی {MAX_PROMPT_TOKEN_ALL} توکن تجاوز می‌کند."
         })
     
-    # محدودیت برای کاربران غیرپرمیوم و مهمان (حالا دقیقاً 700 توکن)
+    # محدودیت برای کاربران غیرپرمیوم و مهمان (حالا با سقف کلی یکی است)
     if not is_premium and user_message_tokens > MAX_PROMPT_TOKEN_NON_PREMIUM: # 700
         return jsonify({ 
             "reply": f"⛔ متأسفم، ({user_message_tokens} توکن). {PREMIUM_ONLY_MESSAGE}"
@@ -1009,20 +1011,14 @@ def chat():
 
     # =========================================================
     # 💡 مدیریت بودجه و محدودیت مهمان
-    is_long_response = False
-    usage_type = 'chat'
+    usage_type = 'chat' # نوع استفاده همیشه چت است
     
     if user and user_identifier:
-        # اگر پرمیوم است و پیام طولانی داده (برای ارتقا به حالت پاسخ بلند اگر سقفش کم بود)
-        if is_premium and user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD: # 701
-            usage_type = 'long_response'
-            is_long_response = True
-        
         # 1. بررسی وضعیت بن
         if user.is_banned:
             return jsonify({"reply": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."})
 
-        # 2. بررسی و کسر بودجه چت/پاسخ بلند
+        # 2. بررسی و کسر بودجه چت
         is_allowed, result = check_and_deduct_score(user_identifier, usage_type)
         if not is_allowed:
             return jsonify({"reply": result})
@@ -1042,17 +1038,9 @@ def chat():
                 "reply": "⛔ متأسفم، شما به سقف **۵ چت روزانه** برای کاربران مهمان رسیده‌اید. لطفاً وارد حساب کاربری خود شوید تا چت‌های نامحدود دریافت کنید."
             })
         
-        # اگر مهمان و پیامش بالای ۷۰۰ بود، اینجا هم بلاک می‌شود (تکراری ولی برای اطمینان)
-        if user_message_tokens > MAX_PROMPT_TOKEN_NON_PREMIUM:
-             return jsonify({ 
-                "reply": f"⛔ متأسفم، این پیام طولانی است. {PREMIUM_ONLY_MESSAGE}"
-            })
-        
         # اگر مهمان و مجاز بود، کانتر را افزایش بده.
         session['guest_chat_count'] = guest_count + 1
         
-        # برای مهمان، از سقف بالای توکن استفاده نمی‌کنیم (is_long_response = False)
-        is_long_response = False
         usage_type = 'chat' # مهمان فقط چت عادی دارد
 
     # --- پاسخ‌های داخلی (Built-in) ---
@@ -1091,16 +1079,10 @@ def chat():
         if "conversation" not in session:
             session["conversation"] = []
 
-    # 💡 تنظیم سقف توکن بر اساس حالت چت (اولویت با سقف پایین شماست)
+    # 💡 تنظیم سقف توکن (همیشه حالت ۱۰۰۰ توکن است)
     # -----------------------------------------------------------------------
-    if is_long_response:
-        # اگر پرمیوم بود و پیام طولانی داد (این مسیر را باز می‌گذاریم)
-        current_total_token_limit = LONG_RESPONSE_TOTAL_TOKEN_LIMIT
-        max_tokens = LONG_RESPONSE_MAX_COMPLETION_TOKENS
-    else:
-        # حالت پیش فرض (شامل کاربران عادی، مهمان و پرمیوم‌هایی که پیام کوتاه دادند)
-        current_total_token_limit = TOTAL_TOKEN_LIMIT # 1000
-        max_tokens = MAX_COMPLETION_TOKENS # 300
+    current_total_token_limit = TOTAL_TOKEN_LIMIT # 1000
+    max_tokens = MAX_COMPLETION_TOKENS # 300
     
     system_prompt_to_use = SYSTEM_PROMPT 
     # -----------------------------------------------------------------------
