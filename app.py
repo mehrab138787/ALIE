@@ -167,7 +167,7 @@ SCORE_QUOTA_CONFIG = {
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 CHAT_MODEL_NAME = "deepseek/deepseek-chat"
-TRANSLATION_MODEL_NAME = "google/gemini-2.0-flash-exp:free"
+TRANSLATION_MODEL_NAME = "openai/gpt-4o-mini"
 
 POLLINATIONS_URL = "https://image.pollinations.ai/prompt/"
 STATIC_DIR = os.path.join(app.root_path, 'static', 'temp_images')
@@ -495,7 +495,7 @@ def translate_prompt_to_english(persian_prompt):
         data = {
             "model": TRANSLATION_MODEL_NAME,
             "messages": messages,
-            "max_tokens": 150
+            "max_tokens": 75
         }
 
         try:
