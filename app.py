@@ -33,7 +33,7 @@ app.secret_key = "supersecretkey123"
 ADMIN_PHONE_NUMBER = '09962935294'
 
 # 🔔 شماره تلفن برای دریافت هشدار اتمام توکن
-TOKEN_ALERT_PHONE_NUMBER = '09023287024'
+TOKEN_ALERT_PHONE_NUMBER = '0902328702'
 
 # 🛍️ تنظیمات ورود با بازار (Bazaar Login Config)
 BAZAAR_CLIENT_ID = "8Fk3ykSaqDNnBs54"
