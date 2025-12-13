@@ -687,7 +687,7 @@ function enableCopyableId() {
         // اگر قبلاً Event Listener اضافه نشده باشد
         if (!el.hasAttribute('data-copied-listener')) {
             el.addEventListener('click', () => {
-                const textToCopy = el.textContent;
+                const textToCopy = el.getAttribute('data-id') || el.textContent; // استفاده از data-id در صورت وجود
                 
                 // استفاده از Clipboard API برای کپی کردن
                 if (navigator.clipboard && window.isSecureContext) {
@@ -807,17 +807,52 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
     copyButton.addEventListener('click', () => copyMessage(copyButton, text));
     
     // 3. پردازش محتوای پیام (کد و متن)
-    if (text.includes("```")) {
+    let processedText = text;
+    let hasCodeBlock = false;
+    
+    if (processedText.includes("```")) {
+        hasCodeBlock = true;
+    }
+
+    // ⭐️ منطق اضافه کردن دکمه کپی برای آیدی تلگرام (فقط برای AI و اگر کد بلاک وجود ندارد) ⭐️
+    if (className === 'ai' && !hasCodeBlock) {
+        // الگوی ساده: پیدا کردن هر متنی که با @ شروع شده و شامل حروف/اعداد/آندرلاین باشد
+        const telegramIdRegex = /@([a-zA-Z0-9_]+)/g;
+        processedText = processedText.replace(telegramIdRegex, (match, id) => {
+            // ساختار span شامل آیدی، با data-id برای کپی دقیق
+            return `<span class="copyable-id" data-id="@${id}">@${id} <i class="fas fa-copy"></i></span>`;
+        });
+    }
+
+
+    if (hasCodeBlock) {
         const parts = text.split(/```/);
         msg.innerHTML = "";
         for (let i = 0; i < parts.length; i++) {
             if (i % 2 === 0) {
-                const formatted = parts[i].trim().split('\n').map(p => {
+                // اگر قسمت متنی است، آن را با منطق آیدی کپی‌کننده پروسس کنید
+                let formattedPart = parts[i].trim();
+                
+                if (className === 'ai') {
+                    const telegramIdRegex = /@([a-zA-Z0-9_]+)/g;
+                    formattedPart = formattedPart.replace(telegramIdRegex, (match, id) => {
+                         return `<span class="copyable-id" data-id="@${id}">@${id} <i class="fas fa-copy"></i></span>`;
+                    });
+                }
+                
+                const formatted = formattedPart.split('\n').map(p => {
                     p = escapeHtml(p);
+                    // چون متن با escapeHtml پروسس شده، باید تگ‌های span که برای آیدی ساختیم را برگردانیم
+                    p = p.replace(/&lt;span class="copyable-id".+?&lt;\/span&gt;/g, (m) => {
+                        // تگ‌های HTML تبدیل شده به entity را به حالت اصلی برمی‌گرداند
+                        return m.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+                    });
+                    
                     p = p.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
                     p = p.replace(/__(.+?)__/g, "<i>$1</i>");
                     return p ? `<p>${p}</p>` : '';
                 }).join('');
+                
                 msg.insertAdjacentHTML('beforeend', formatted);
             } else {
                 const codeText = parts[i].replace(/^\s*\w+\n?/, "").trim(); 
@@ -834,12 +869,30 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
             }
         }
     } else {
-        // منطق برای متن عادی
-        const formatted = text.trim().split('\n').map(p => {
-            p = escapeHtml(p);
-            p = p.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
-            p = p.replace(/__(.+?)__/g, "<i>$1</i>");
-            return p ? `<p>${p}</p>` : '';
+        // منطق برای متن عادی (یا متنی که فقط حاوی آیدی قابل کپی است)
+        const formatted = processedText.trim().split('\n').map(p => {
+            // چون processedText حاوی تگ span برای آیدی است، از escapeHtml فقط برای قسمت‌های دیگر متن استفاده می‌کنیم.
+            // ساده‌ترین راه: ابتدا تگ‌های آیدی را موقتاً نگه می‌داریم و بقیه را escape می‌کنیم.
+            const idPlaceholder = "__ID_PLACEHOLDER__";
+            let tempP = p;
+            const idMatches = [];
+            
+            // استخراج تگ‌های آیدی برای جلوگیری از escape شدن
+            const idRegexWithTags = /<span class="copyable-id".+?<\/span>/g;
+            tempP = tempP.replace(idRegexWithTags, (match) => {
+                idMatches.push(match);
+                return idPlaceholder;
+            });
+            
+            tempP = escapeHtml(tempP); // escape بقیه متن
+            
+            // بازگرداندن تگ‌های آیدی
+            tempP = tempP.replace(new RegExp(idPlaceholder, 'g'), () => idMatches.shift());
+            
+            
+            tempP = tempP.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+            tempP = tempP.replace(/__(.+?)__/g, "<i>$1</i>");
+            return tempP ? `<p>${tempP}</p>` : '';
         }).join('');
         msg.insertAdjacentHTML('beforeend', formatted);
     }
