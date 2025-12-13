@@ -281,6 +281,19 @@
             padding-bottom: 28px; /* Adjusted padding-bottom for copy button */
         }
         
+        /* ⭐️ استایل جدید برای آیدی تلگرام قابل کپی ⭐️ */
+        .message .copyable-id {
+            cursor: pointer;
+            color: var(--highlight-color);
+            font-weight: 700;
+            text-decoration: underline;
+            transition: color 0.2s;
+        }
+
+        .message .copyable-id:hover {
+            color: #FFF;
+        }
+
         /* Control spacing between paragraphs (Enter presses) */
         .message p {
             margin: 0; 
@@ -591,6 +604,8 @@ let chatHistory = JSON.parse(localStorage.getItem("chatHistory") || "[]");
 if (chatHistory.length > 0) {
     chatHistory.forEach(m => appendMessage(m.text, m.className, false, m.image_url)); 
     initialPrompt.style.display = 'none'; 
+    // ⭐️ فعال سازی کپی آیدی تلگرام برای تاریخچه بارگذاری شده
+    enableCopyableId();
 } else {
     initialPrompt.style.display = 'block'; 
 }
@@ -663,6 +678,59 @@ function copyMessage(button, textToCopy) {
         fallbackCopy(textToCopy);
         feedback(button);
     }
+}
+
+/** ⭐️ تابع جدید: فعال‌سازی کپی آیدی تلگرام با کلیک ⭐️ */
+function enableCopyableId() {
+    const copyableElements = document.querySelectorAll('.copyable-id');
+    copyableElements.forEach(el => {
+        // اگر قبلاً Event Listener اضافه نشده باشد
+        if (!el.hasAttribute('data-copied-listener')) {
+            el.addEventListener('click', () => {
+                const textToCopy = el.textContent;
+                
+                // استفاده از Clipboard API برای کپی کردن
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        const originalText = el.textContent;
+                        el.textContent = '✅ کپی شد!';
+                        el.style.color = '#00FF00'; // رنگ سبز موقت
+                        
+                        setTimeout(() => {
+                            el.textContent = originalText;
+                            el.style.color = ''; // بازگرداندن به استایل CSS
+                        }, 1500);
+                        
+                    }).catch(err => {
+                        console.error('Could not copy text using API: ', err);
+                        fallbackCopy(textToCopy);
+                        
+                        const originalText = el.textContent;
+                        el.textContent = '✅ کپی شد!';
+                         el.style.color = '#00FF00'; 
+                        
+                        setTimeout(() => {
+                            el.textContent = originalText;
+                            el.style.color = ''; 
+                        }, 1500);
+                    });
+                } else {
+                    // راهکار جایگزین (Fallback)
+                    fallbackCopy(textToCopy);
+                    
+                    const originalText = el.textContent;
+                    el.textContent = '✅ کپی شد!';
+                    el.style.color = '#00FF00'; 
+                    
+                    setTimeout(() => {
+                        el.textContent = originalText;
+                        el.style.color = ''; 
+                    }, 1500);
+                }
+            });
+            el.setAttribute('data-copied-listener', 'true'); // علامت‌گذاری المنت
+        }
+    });
 }
 
 
@@ -808,6 +876,11 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
 
     messages.appendChild(container);
 
+    // ⭐️ فراخوانی تابع کپی آیدی تلگرام برای پیام‌های AI جدید
+    if (className === 'ai' && !className.includes('loading')) {
+        enableCopyableId();
+    }
+    
     if (className !== 'loading') { 
         messages.scrollTop = messages.scrollHeight;
 
