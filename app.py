@@ -1118,6 +1118,13 @@ def image_page():
         logged_in=session.get('user_id') is not None,
         is_admin=session.get('is_admin', False))
 
+@app.route("/premium") # ✅ مسیر جدید برای رفع خطای BuildError اضافه شد
+def premium_page():
+    """نمایش صفحه خرید یا اطلاعات پرمیوم."""
+    return render_template("premium.html",
+        logged_in=session.get('user_id') is not None,
+        is_admin=session.get('is_admin', False))
+
 
 # =========================================================
 # 🎮 مسیرهای بازی
