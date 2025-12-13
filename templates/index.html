@@ -841,7 +841,7 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
         hasCodeBlock = true;
     }
 
-    // ⭐️ منطق جداسازی آیدی تلگرام و ساخت دکمه کپی (جدید) ⭐️
+    // ⭐️ منطق جداسازی آیدی تلگرام و ساخت دکمه کپی (جدید: حفظ متن فارسی) ⭐️
     if (className === 'ai' && !hasCodeBlock) {
         // الگوی کاربر: پیدا کردن تگ span با کلاس 'copyable-id'
         const customIdRegex = /<span class='copyable-id'>(.*?)<\/span>/g;
@@ -927,15 +927,15 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
             }
         }
     } else {
-        // منطق برای متن عادی (یا متنی که فقط حاوی آیدی قابل کپی است)
+        // منطق برای متن عادی (یا متنی که حاوی آیدی قابل کپی است)
         const formatted = processedText.trim().split('\n').map(p => {
             
-            // 🆕 الگوی جدید: پیدا کردن span آیدی + دکمه کپی
-            const idAndButtonRegex = /<span class="copyable-id".+?<\/span>\s*<button class="id-copy-btn".+?<\/button>/g;
             let tempP = p;
-            const idMatches = [];
             
             // استخراج تگ‌های آیدی و دکمه کپی کنار آن برای جلوگیری از escape شدن
+            const idAndButtonRegex = /<span class="copyable-id".+?<\/span>\s*<button class="id-copy-btn".+?<\/button>/g;
+            const idMatches = [];
+            
             tempP = tempP.replace(idAndButtonRegex, (match) => {
                 idMatches.push(match);
                 return "__ID_PLACEHOLDER__";
