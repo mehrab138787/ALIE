@@ -184,17 +184,17 @@ if not os.path.exists(STATIC_DIR):
 SYSTEM_PROMPT = """
 تو یک چت‌بات مفید هستی. پاسخ‌ها را به زبان فارسی و روان بده.
 - برای سوالات سازنده: تیم NOCTOVEX به رهبری مهراب عزیزی
-- پاسخ‌ها باید **فوق‌العاده کامل، مفصل و دقیق** باشند و در سقف نهایی **۴۰۰۰ توکن** به پایان برسند. (به هیچ عنوان پاسخ را از وسط جمله قطع نکن).
+- پاسخ‌ها باید **فوق‌العاده مختصر، مفید و خیلی کوتاه** باشند و در سقف نهایی **۴۰۰ توکن** به پایان برسند.
 """
 # 💡 ثابت‌های جدید برای حالت پاسخ بلند
-LONG_RESPONSE_TOKEN_THRESHOLD = 300 # آستانه توکن ورودی برای پاسخ بلند
-LONG_RESPONSE_MAX_COMPLETION_TOKENS = 4000 # حداکثر توکن خروجی برای پاسخ بلند (افزایش به ۴۰۰۰)
-LONG_RESPONSE_TOTAL_TOKEN_LIMIT = 4096 # سقف کل توکن (ورودی + خروجی) برای پاسخ بلند (افزایش به ۴۰۹۶)
+LONG_RESPONSE_TOKEN_THRESHOLD = 350 # آستانه توکن ورودی برای پاسخ بلند (تغییر یافته به ۳۵۰)
+LONG_RESPONSE_MAX_COMPLETION_TOKENS = 400 # حداکثر توکن خروجی برای پاسخ بلند (تغییر یافته به ۴۰۰)
+LONG_RESPONSE_TOTAL_TOKEN_LIMIT = 500 # سقف کل توکن (ورودی + خروجی) برای پاسخ بلند (تغییر یافته به ۵۰۰)
 
 
-TOTAL_TOKEN_LIMIT = 4096 # افزایش سقف کل توکن به حداکثر ممکن
-INPUT_TOKEN_LIMIT = 4096 # افزایش سقف توکن ورودی
-MAX_COMPLETION_TOKENS = 4000 # افزایش سقف توکن خروجی به حداکثر ممکن
+TOTAL_TOKEN_LIMIT = 500 # سقف کل توکن (تغییر یافته به ۵۰۰)
+INPUT_TOKEN_LIMIT = 500 # سقف توکن ورودی (تغییر یافته به ۵۰۰)
+MAX_COMPLETION_TOKENS = 400 # سقف توکن خروجی (تغییر یافته به ۴۰۰)
 
 # 💡 ثابت جدید برای محدودیت چت مهمان
 GUEST_CHAT_LIMIT = 5 
@@ -816,21 +816,29 @@ def chat():
     # توکن‌های پیام کاربر را محاسبه کن
     user_message_tokens = count_tokens([{"role": "user", "content": user_message}])
     
-    # 💡 منطق جدید برای پاسخ بلند
+    # 💡 منطق جدید برای پاسخ بلند و پیام بلند (اعمال محدودیت ۳۵۰-۴۰۰ توکن)
     is_long_response = False
     usage_type = 'chat'
     
-    if user and user_identifier:
-        if user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
-            # کاربر وارد شده، پیامش هم بلند است -> فعال‌سازی حالت پاسخ بلند
-            usage_type = 'long_response'
-            is_long_response = True
+    # 1. بررسی پیام بلند برای همه کاربران (مهمان/عادی) و اعمال محدودیت پرمیوم
+    if user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
+        # پیام کاربر بلندتر از آستانه است (350 توکن)
         
+        # ⚠️ نمایش پیام خطا در صورت عبور از محدودیت 
+        error_reply = (
+            "⛔ عذر می‌خواهم، محدودیت توکن شما برای حساب عادی رد شده است. "
+            "می‌توانید پرمیوم بخرید که جواب‌ها با دقت کافی و بهتر اراِه داده میشه. "
+            "برای خرید پرمیوم هم می‌توانید به این آیدی در تلگرام پیام دهید: **Im_Mehrab_1**"
+        )
+        return jsonify({"reply": error_reply})
+
+    # 2. ادامه منطق برای کاربران مجاز (زیر ۳۵۰ توکن)
+    if user and user_identifier:
         # 1. بررسی وضعیت بن
         if user.is_banned:
             return jsonify({"reply": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."})
 
-        # 2. بررسی و کسر بودجه چت/پاسخ بلند
+        # 2. بررسی و کسر بودجه چت/پاسخ بلند (usage_type is 'chat')
         is_allowed, result = check_and_deduct_score(user_identifier, usage_type)
         if not is_allowed:
             return jsonify({"reply": result})
@@ -851,19 +859,11 @@ def chat():
                 "reply": "⛔ متأسفم، شما به سقف **۵ چت روزانه** برای کاربران مهمان رسیده‌اید. لطفاً وارد حساب کاربری خود شوید تا چت‌های نامحدود دریافت کنید."
             })
             
-        if user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
-            # مهمان پیام بلند داده - رد کردن
-            return jsonify({
-                "reply": "⛔ متأسفم، این پیام طولانی است و برای پاسخ به آن، نیاز به **حالت پاسخ بلند** است. این حالت برای کاربران مهمان در دسترس نیست. لطفاً وارد شوید یا پیام خود را خلاصه کنید."
-            })
-            
         # اگر مهمان و مجاز بود، کانتر را افزایش بده.
         session['guest_chat_count'] = guest_count + 1
         
-        # برای مهمان، از سقف بالای توکن استفاده می‌کنیم (is_long_response = True)
-        is_long_response = True 
-        usage_type = 'chat'
-
+        # is_long_response is false, usage_type is 'chat'
+    # ------------------------------------------------------------------------
 
     # --- پاسخ‌های اختصاصی (حذف نشده) ---
     TRIGGER_KEYWORDS = [
@@ -890,63 +890,41 @@ def chat():
     # --- مدیریت تاریخچه و توکن‌ها ---
     current_chat_id = session.get('current_chat_id')
     
+    # 💡 مرحله ۱: مدیریت chat_id برای ذخیره‌سازی در دیتابیس (بدون بارگذاری تاریخچه)
     if user and session.get('user_id'):
         if not current_chat_id:
             current_chat_id = str(uuid.uuid4())
             session['current_chat_id'] = current_chat_id
-            session["conversation"] = []
-        else:
-            chat_entry = Conversation.query.filter_by(id=current_chat_id, user_id=user.id).first()
-            if chat_entry:
-                try:
-                    session["conversation"] = json.loads(chat_entry.messages_json)
-                except Exception:
-                    session["conversation"] = []
-            else:
-                session.pop('current_chat_id', None)
-                session["conversation"] = []
-                current_chat_id = str(uuid.uuid4())
-                session['current_chat_id'] = current_chat_id
+        # در غیر این صورت، current_chat_id قبلی را نگه می‌داریم تا گفتگو به‌روزرسانی شود.
     else:
         session.pop('current_chat_id', None)
-        if "conversation" not in session:
-            session["conversation"] = []
+
+
+    # 💡 مرحله ۲: پاک کردن تاریخچه گفتگو برای حفظ سقف توکن پایین (مهم‌ترین تغییر)
+    session["conversation"] = [] 
 
     
-    # 💡 تنظیم سقف توکن بالا برای پاسخ‌های کامل (۴۰۹۶/۴۰۰۰)
+    # 💡 تنظیم سقف توکن پایین برای پاسخ‌های مختصر (۵۰۰/۴۰۰)
     # -----------------------------------------------------------------------
-    # از بالاترین سقف توکن استفاده کن تا پاسخ‌ها کامل باشند.
-    current_total_token_limit = LONG_RESPONSE_TOTAL_TOKEN_LIMIT
-    current_max_completion_tokens = MAX_COMPLETION_TOKENS
-    system_prompt_to_use = SYSTEM_PROMPT # استفاده از SYSTEM_PROMPT به‌روز شده
+    current_total_token_limit = TOTAL_TOKEN_LIMIT # استفاده از سقف ۵۰۰
+    current_max_completion_tokens = MAX_COMPLETION_TOKENS # استفاده از سقف ۴۰۰
+    system_prompt_to_use = SYSTEM_PROMPT 
     # -----------------------------------------------------------------------
 
 
     messages_list = [{"role": "system", "content": system_prompt_to_use}]
-    messages_list.extend(session.get("conversation", []))
+    messages_list.extend(session.get("conversation", [])) # این خط حالا لیست خالی را اضافه می‌کند
     messages_list.append({"role": "user", "content": user_message})
 
     # --- فشرده‌سازی تاریخچه و محاسبه توکن ---
-    # ❌ حذف حلقه فشرده‌سازی تاریخچه، زیرا سقف توکن (4096) بسیار بالا است.
-    # while count_tokens(messages_list) >= current_total_token_limit and len(session["conversation"]) >= 2:
-    #     session["conversation"] = session["conversation"][2:]
-    #     # مجدداً لیست پیام‌ها را با تاریخچه کوتاه‌تر بازسازی کن
-    #     messages_list = [{"role": "system", "content": system_prompt_to_use}]
-    #     messages_list.extend(session.get("conversation", []))
-    #     messages_list.append({"role": "user", "content": user_message})
+    # ❌ حذف حلقه فشرده‌سازی تاریخچه، زیرا سقف توکن (500) بسیار پایین است و تاریخچه پاک شده است.
 
     prompt_tokens = count_tokens(messages_list)
     remaining_tokens = current_total_token_limit - prompt_tokens
     max_tokens_calculated = max(20, remaining_tokens)
     max_tokens = min(max_tokens_calculated, current_max_completion_tokens)
 
-    # ❌ حذف منطق هشدار توکن کم، چون سقف توکن به 4000 افزایش یافته.
-    # if remaining_tokens <= 120 and not is_long_response:
-    #     # اگر پاسخ بلند نیست و توکن کم است، هشدار بده
-    #     messages_list.append({
-    #         "role": "system",
-    #         "content": "⚠️ توکن کم باقی مانده است. لطفاً پاسخ را خلاصه، کامل و روان بده، اما هرگز نصفه نباشد."
-    #     })
+    # ❌ حذف منطق هشدار توکن کم، چون سقف توکن به ۴۰۰ کاهش یافته.
 
     # --- مکانیزم چرخش کلید و تلاش مجدد ---
     max_attempts = len(OPENROUTER_KEYS)
@@ -1015,14 +993,32 @@ def chat():
 
     # اگر پیام موفقیت آمیز باشد، آن را به تاریخچه اضافه کن
     if not ai_message.startswith(("❌", "⚠️", "⛔")):
-        session["conversation"].append({"role": "user", "content": user_message})
-        session["conversation"].append({"role": "assistant", "content": ai_message})
-
+        
+        # 💡 تاریخچه گفتگو را به session اضافه نکنید (حفظ سقف توکن)
+        current_chat_to_save = [
+            {"role": "user", "content": user_message},
+            {"role": "assistant", "content": ai_message}
+        ]
+        
+        # 💡 مطمئن شوید که سشن برای درخواست بعدی خالی بماند.
+        session["conversation"] = []
+        
         if user and session.get('user_id'):
-            save_conversation(user_identifier, session['current_chat_id'], session["conversation"], user_message)
+            # 💡 بارگذاری تاریخچه قبلی از دیتابیس برای افزودن پیام جدید
+            chat_entry = Conversation.query.filter_by(id=session['current_chat_id'], user_id=user.id).first()
+            if chat_entry:
+                try:
+                    prev_messages = json.loads(chat_entry.messages_json)
+                    prev_messages.extend(current_chat_to_save)
+                    save_conversation(user_identifier, session['current_chat_id'], prev_messages, user_message)
+                except Exception:
+                    # اگر بارگذاری ناموفق بود، فقط پیام جدید را ذخیره کن
+                    save_conversation(user_identifier, session['current_chat_id'], current_chat_to_save, user_message)
+            else:
+                 save_conversation(user_identifier, session['current_chat_id'], current_chat_to_save, user_message)
 
-        if len(session["conversation"]) > 50:
-            session["conversation"] = session["conversation"][-50:]
+    # 💡 این خط تضمین می‌کند که سشن برای درخواست بعدی خالی است.
+    session["conversation"] = []
 
     return jsonify({"reply": ai_message})
 
