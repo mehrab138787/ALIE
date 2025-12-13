@@ -281,18 +281,41 @@
             padding-bottom: 28px; /* Adjusted padding-bottom for copy button */
         }
         
-        /* ⭐️ استایل جدید برای آیدی تلگرام قابل کپی ⭐️ */
+        /* ⭐️ استایل به‌روز شده برای آیدی تلگرام قابل کپی ⭐️ */
         .message .copyable-id {
             cursor: pointer;
             color: var(--highlight-color);
             font-weight: 700;
-            text-decoration: underline;
-            transition: color 0.2s;
+            text-decoration: none; /* حذف زیر خط طبق درخواست کاربر */
+            direction: ltr !important; /* آیدی انگلیسی باید از چپ به راست باشد */
+            display: inline-block; /* برای اینکه دکمه کپی کنار آن قرار گیرد */
         }
 
         .message .copyable-id:hover {
             color: #FFF;
         }
+
+        /* 🆕 استایل دکمه کپی کنار آیدی تلگرام */
+        .id-copy-btn {
+            background: none;
+            border: none;
+            color: var(--muted-text);
+            font-size: 1em; /* کمی بزرگتر از متن عادی */
+            cursor: pointer;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            line-height: 1;
+            margin-right: -5px; /* کمی به سمت چپ بکشیم */
+            margin-left: 5px; /* فاصله از آیدی */
+            display: inline-block;
+        }
+
+        .id-copy-btn:hover {
+            color: var(--highlight-color);
+            background: rgba(3, 169, 244, 0.1);
+        }
+
 
         /* Control spacing between paragraphs (Enter presses) */
         .message p {
@@ -682,53 +705,57 @@ function copyMessage(button, textToCopy) {
 
 /** ⭐️ تابع جدید: فعال‌سازی کپی آیدی تلگرام با کلیک ⭐️ */
 function enableCopyableId() {
-    const copyableElements = document.querySelectorAll('.copyable-id');
-    copyableElements.forEach(el => {
+    // 💡 تغییر داده شد: هدف‌گیری دکمه جدید id-copy-btn
+    const copyButtons = document.querySelectorAll('.id-copy-btn');
+    
+    copyButtons.forEach(button => {
         // اگر قبلاً Event Listener اضافه نشده باشد
-        if (!el.hasAttribute('data-copied-listener')) {
-            el.addEventListener('click', () => {
-                const textToCopy = el.getAttribute('data-id') || el.textContent; // استفاده از data-id در صورت وجود
+        if (!button.hasAttribute('data-copied-listener')) {
+            button.addEventListener('click', () => {
+                // آیدی را از data-id در المنت button می‌خوانیم (شامل @)
+                const textToCopy = button.getAttribute('data-id');
+                const originalInnerHTML = button.innerHTML; 
                 
                 // استفاده از Clipboard API برای کپی کردن
                 if (navigator.clipboard && window.isSecureContext) {
                     navigator.clipboard.writeText(textToCopy).then(() => {
-                        const originalText = el.textContent;
-                        el.textContent = '✅ کپی شد!';
-                        el.style.color = '#00FF00'; // رنگ سبز موقت
+                        // 💡 فارسی سازی فیدبک
+                        button.innerHTML = '<i class="fas fa-check"></i> کپی شد!';
+                        button.style.color = '#00FF00'; // رنگ سبز موقت
                         
                         setTimeout(() => {
-                            el.textContent = originalText;
-                            el.style.color = ''; // بازگرداندن به استایل CSS
+                            button.innerHTML = originalInnerHTML;
+                            button.style.color = ''; // بازگرداندن به استایل CSS
                         }, 1500);
                         
                     }).catch(err => {
                         console.error('Could not copy text using API: ', err);
                         fallbackCopy(textToCopy);
                         
-                        const originalText = el.textContent;
-                        el.textContent = '✅ کپی شد!';
-                         el.style.color = '#00FF00'; 
+                        // 💡 فارسی سازی فیدبک در Fallback
+                        button.innerHTML = '<i class="fas fa-check"></i> کپی شد!';
+                        button.style.color = '#00FF00'; 
                         
                         setTimeout(() => {
-                            el.textContent = originalText;
-                            el.style.color = ''; 
+                            button.innerHTML = originalInnerHTML;
+                            button.style.color = ''; 
                         }, 1500);
                     });
                 } else {
                     // راهکار جایگزین (Fallback)
                     fallbackCopy(textToCopy);
                     
-                    const originalText = el.textContent;
-                    el.textContent = '✅ کپی شد!';
-                    el.style.color = '#00FF00'; 
+                    // 💡 فارسی سازی فیدبک
+                    button.innerHTML = '<i class="fas fa-check"></i> کپی شد!';
+                    button.style.color = '#00FF00'; 
                     
                     setTimeout(() => {
-                        el.textContent = originalText;
-                        el.style.color = ''; 
+                        button.innerHTML = originalInnerHTML;
+                        button.style.color = ''; 
                     }, 1500);
                 }
             });
-            el.setAttribute('data-copied-listener', 'true'); // علامت‌گذاری المنت
+            button.setAttribute('data-copied-listener', 'true'); // علامت‌گذاری المنت
         }
     });
 }
@@ -814,13 +841,23 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
         hasCodeBlock = true;
     }
 
-    // ⭐️ منطق اضافه کردن دکمه کپی برای آیدی تلگرام (فقط برای AI و اگر کد بلاک وجود ندارد) ⭐️
+    // ⭐️ منطق جداسازی آیدی تلگرام و ساخت دکمه کپی (جدید) ⭐️
     if (className === 'ai' && !hasCodeBlock) {
-        // الگوی ساده: پیدا کردن هر متنی که با @ شروع شده و شامل حروف/اعداد/آندرلاین باشد
-        const telegramIdRegex = /@([a-zA-Z0-9_]+)/g;
-        processedText = processedText.replace(telegramIdRegex, (match, id) => {
-            // ساختار span شامل آیدی، با data-id برای کپی دقیق
-            return `<span class="copyable-id" data-id="@${id}">@${id} <i class="fas fa-copy"></i></span>`;
+        // الگوی کاربر: پیدا کردن تگ span با کلاس 'copyable-id'
+        const customIdRegex = /<span class='copyable-id'>(.*?)<\/span>/g;
+
+        processedText = processedText.replace(customIdRegex, (match, id) => {
+            const finalId = id.trim();
+            // ساخت دکمه کپی آیدی به صورت مجزا 🆕
+            const idCopyButtonHtml = 
+                `<button class="id-copy-btn" data-id="@${finalId}" title="کپی آیدی">
+                    <i class="fas fa-copy"></i>
+                </button>`;
+            
+            // بازگرداندن تگ span برای نمایش خود آیدی (بدون هیچ محتوای اضافی یا کلاس انگلیسی)
+            // و قرار دادن دکمه کپی بلافاصله پس از آن.
+            // data-id شامل @ است تا هنگام کپی، آیدی کامل کپی شود.
+            return `<span class="copyable-id" data-id="@${finalId}">${finalId}</span>${idCopyButtonHtml}`;
         });
     }
 
@@ -834,26 +871,47 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
                 let formattedPart = parts[i].trim();
                 
                 if (className === 'ai') {
+                    // الگوی ساده: پیدا کردن هر متنی که با @ شروع شده و شامل حروف/اعداد/آندرلاین باشد
                     const telegramIdRegex = /@([a-zA-Z0-9_]+)/g;
                     formattedPart = formattedPart.replace(telegramIdRegex, (match, id) => {
-                         return `<span class="copyable-id" data-id="@${id}">@${id} <i class="fas fa-copy"></i></span>`;
+                         // 💡 حذف آیکون کپی انگلیسی از داخل span و فقط نمایش آیدی
+                         return `<span class="copyable-id" data-id="@${id}">@${id}</span>`;
                     });
+                    
+                    // همچنین باید تگ‌های span با کلاس 'copyable-id' را هم در نظر بگیریم
+                    const customIdRegex = /<span class='copyable-id'>(.*?)<\/span>/g;
+                    formattedPart = formattedPart.replace(customIdRegex, (match, id) => {
+                         const finalId = id.trim();
+                         // دکمه کپی را تزریق نمی‌کنیم چون منطق آن فقط برای پیام‌های عادی است.
+                         return `<span class="copyable-id" data-id="@${finalId}">${finalId}</span>`;
+                    });
+
                 }
                 
                 const formatted = formattedPart.split('\n').map(p => {
-                    p = escapeHtml(p);
-                    // چون متن با escapeHtml پروسس شده، باید تگ‌های span که برای آیدی ساختیم را برگردانیم
-                    p = p.replace(/&lt;span class="copyable-id".+?&lt;\/span&gt;/g, (m) => {
-                        // تگ‌های HTML تبدیل شده به entity را به حالت اصلی برمی‌گرداند
-                        return m.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+                    // 🆕 الگوی جدید: پیدا کردن span آیدی یا span آیدی + دکمه کپی
+                    const idAndButtonRegex = /<span class="copyable-id".+?<\/span>\s*(<button class="id-copy-btn".+?<\/button>)?/g;
+                    let tempP = p;
+                    const idMatches = [];
+
+                    // استخراج تگ‌های آیدی و دکمه کپی کنار آن برای جلوگیری از escape شدن
+                    tempP = tempP.replace(idAndButtonRegex, (match) => {
+                        idMatches.push(match);
+                        return "__ID_PLACEHOLDER__";
                     });
+
+                    tempP = escapeHtml(tempP); // escape بقیه متن
                     
-                    p = p.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
-                    p = p.replace(/__(.+?)__/g, "<i>$1</i>");
-                    return p ? `<p>${p}</p>` : '';
+                    // بازگرداندن تگ‌های آیدی و دکمه کپی
+                    tempP = tempP.replace(new RegExp("__ID_PLACEHOLDER__", 'g'), () => idMatches.shift());
+                    
+                    tempP = tempP.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+                    tempP = tempP.replace(/__(.+?)__/g, "<i>$1</i>");
+                    return tempP ? `<p>${tempP}</p>` : '';
                 }).join('');
                 
                 msg.insertAdjacentHTML('beforeend', formatted);
+
             } else {
                 const codeText = parts[i].replace(/^\s*\w+\n?/, "").trim(); 
                 const codeBlock = document.createElement("code");
@@ -871,23 +929,22 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
     } else {
         // منطق برای متن عادی (یا متنی که فقط حاوی آیدی قابل کپی است)
         const formatted = processedText.trim().split('\n').map(p => {
-            // چون processedText حاوی تگ span برای آیدی است، از escapeHtml فقط برای قسمت‌های دیگر متن استفاده می‌کنیم.
-            // ساده‌ترین راه: ابتدا تگ‌های آیدی را موقتاً نگه می‌داریم و بقیه را escape می‌کنیم.
-            const idPlaceholder = "__ID_PLACEHOLDER__";
+            
+            // 🆕 الگوی جدید: پیدا کردن span آیدی + دکمه کپی
+            const idAndButtonRegex = /<span class="copyable-id".+?<\/span>\s*<button class="id-copy-btn".+?<\/button>/g;
             let tempP = p;
             const idMatches = [];
             
-            // استخراج تگ‌های آیدی برای جلوگیری از escape شدن
-            const idRegexWithTags = /<span class="copyable-id".+?<\/span>/g;
-            tempP = tempP.replace(idRegexWithTags, (match) => {
+            // استخراج تگ‌های آیدی و دکمه کپی کنار آن برای جلوگیری از escape شدن
+            tempP = tempP.replace(idAndButtonRegex, (match) => {
                 idMatches.push(match);
-                return idPlaceholder;
+                return "__ID_PLACEHOLDER__";
             });
             
             tempP = escapeHtml(tempP); // escape بقیه متن
             
             // بازگرداندن تگ‌های آیدی
-            tempP = tempP.replace(new RegExp(idPlaceholder, 'g'), () => idMatches.shift());
+            tempP = tempP.replace(new RegExp("__ID_PLACEHOLDER__", 'g'), () => idMatches.shift());
             
             
             tempP = tempP.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
@@ -931,7 +988,7 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
 
     // ⭐️ فراخوانی تابع کپی آیدی تلگرام برای پیام‌های AI جدید
     if (className === 'ai' && !className.includes('loading')) {
-        enableCopyableId();
+        enableCopyableId(); // 💡 این تابع حالا دکمه id-copy-btn را فعال می‌کند
     }
     
     if (className !== 'loading') { 
