@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cyrus AI Chat</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght=300;400;500;700;900&display=swap" rel="stylesheet">
 
     <style>
         /* ======================================================= */
@@ -364,6 +364,24 @@
         .user .copy-btn:hover { color: #FFF; }
         
         .copy-success { color: #00FF00 !important; } 
+        
+        /* ------------------ دکمه خواندن پیام (جدید) ------------------ */
+        .tts-btn {
+            position: absolute; bottom: 6px; 
+            width: 20px; height: 20px; 
+            background: transparent; border: none; cursor: pointer;
+            font-size: 0.85em; 
+            transition: color 0.2s, opacity 0.2s; opacity: 0.5;
+        }
+
+        /* دکمه TTS برای پیام‌های AI سمت چپ دکمه کپی قرار می‌گیرد */
+        .ai .tts-btn { 
+            left: 10px; 
+            color: var(--muted-text);
+        } 
+        .tts-btn:hover { opacity: 1; color: var(--highlight-color); }
+        .tts-btn.speaking { color: #FFC107; opacity: 1; } /* رنگ زرد هنگام خواندن */
+
 
         /* ------------------ کد بلاک (به روز رسانی شده) ------------------ */
         code {
@@ -762,6 +780,137 @@ function enableCopyableId() {
 
 
 /* ======================================================= */
+/* 🗣️ Text-to-Speech (TTS) Logic (با جستجوی قوی‌تر صدای فارسی) */
+/* ======================================================= */
+
+const synth = window.speechSynthesis;
+let persianVoice = null;
+let currentUtterance = null;
+let isSpeaking = false;
+
+
+// 💡 پیدا کردن صدای فارسی و ذخیره آن (نسخه بهبود یافته برای تشخیص بهتر صدا)
+function getPersianVoice() {
+    if (persianVoice) return;
+    
+    const voices = synth.getVoices();
+    
+    // 1. لیست کلمات کلیدی برای جستجوی صدای فارسی/خاورمیانه‌ای
+    const voiceKeywords = [
+        'fa', 'ar', // کدهای زبان
+        'persian', 'farah', 'sara', 'zira', 'khalid', 'shah', // نام‌های رایج خاورمیانه
+        'qatar', 'uae', 'iran', 'farsi' // کشورهای مرتبط و کلمه فارسی
+    ];
+
+    // 2. جستجوی قوی‌تر: اول fa-IR، بعد fa، بعد ar، بعد نام‌های کلیدی
+    persianVoice = voices.find(voice => 
+        voice.lang.toLowerCase() === 'fa-ir'
+    ) || voices.find(voice => 
+        voice.lang.toLowerCase().startsWith('fa')
+    ) || voices.find(voice => 
+        voice.lang.toLowerCase().startsWith('ar')
+    ) || voices.find(voice => 
+        voiceKeywords.some(keyword => voice.name.toLowerCase().includes(keyword))
+    );
+
+    // 3. اگر صدای خاورمیانه‌ای پیدا نشد، یک صدای انگلیسی (en) یا پیش‌فرض را انتخاب می‌کنیم 
+    // تا حداقل خواندن متوقف نشود.
+    if (!persianVoice) {
+         // انتخاب اولین صدای انگلیسی (en-US) به عنوان آخرین چاره
+         persianVoice = voices.find(voice => voice.lang.toLowerCase().startsWith('en')) || voices[0]; 
+    }
+}
+// تلاش اولیه برای گرفتن صداها
+getPersianVoice(); 
+// اگر هنوز صداها بارگذاری نشده‌اند، به رویداد گوش می‌دهیم
+if (synth.onvoiceschanged !== undefined) {
+    synth.onvoiceschanged = getPersianVoice;
+}
+
+
+function toggleTTS(button, text) {
+    // توقف خواندن اگر از قبل در حال اجراست
+    if (isSpeaking) {
+        if (currentUtterance) {
+            synth.cancel();
+        }
+        isSpeaking = false;
+        button.classList.remove('speaking');
+        button.innerHTML = '<i class="fas fa-volume-up"></i>';
+        return;
+    }
+    
+    // اطمینان از وجود API
+    if (!synth) {
+        alert("متأسفانه مرورگر شما از قابلیت تبدیل متن به گفتار پشتیبانی نمی‌کند.");
+        return;
+    }
+
+    // اگر صدایی پیدا نشد (با وجود تلاش در getPersianVoice، شاید هنوز بارگذاری نشده)
+    if (!persianVoice) {
+        getPersianVoice(); 
+        if (!persianVoice) {
+             alert("صدای فارسی در مرورگر شما پیدا نشد. لطفاً تنظیمات مرورگر/سیستم عامل خود را برای نصب صدای 'Persian' بررسی کنید.");
+             return;
+        }
+        // اگر صدای غیرفارسی پیدا شد، هشدار می‌دهیم اما ادامه می‌دهیم
+        if (!persianVoice.lang.toLowerCase().startsWith('fa')) {
+            alert("صدای فارسی در مرورگر شما پیدا نشد. تلاش می‌کنیم با صدای جایگزین بخوانیم.");
+        }
+    }
+    
+    // 1. ساخت شیء گفتار (Utterance)
+    currentUtterance = new SpeechSynthesisUtterance(text);
+    currentUtterance.voice = persianVoice;
+    
+    // تنظیم زبان برای کمک به موتور TTS
+    if (persianVoice.lang.toLowerCase().startsWith('fa')) {
+        currentUtterance.lang = 'fa-IR'; 
+    } else if (persianVoice.lang.toLowerCase().startsWith('ar')) {
+        currentUtterance.lang = 'ar';
+    } else {
+        currentUtterance.lang = persianVoice.lang; // برای صدای جایگزین انگلیسی یا ...
+    }
+
+
+    // 2. تنظیم سرعت و زیر و بم صدا
+    currentUtterance.rate = 0.9; // کمی کندتر برای وضوح بیشتر فارسی
+    currentUtterance.pitch = 1.0; 
+
+    // 3. تنظیم رویدادها
+    currentUtterance.onstart = () => {
+        // ابتدا تمام دکمه‌های TTS را به حالت پخش برمی‌گردانیم، سپس دکمه فعلی را فعال می‌کنیم.
+        document.querySelectorAll('.tts-btn').forEach(btn => {
+            btn.classList.remove('speaking');
+            btn.innerHTML = '<i class="fas fa-volume-up"></i>';
+        });
+        
+        isSpeaking = true;
+        button.classList.add('speaking');
+        button.innerHTML = '<i class="fas fa-stop"></i>'; // آیکون توقف
+    };
+    
+    currentUtterance.onend = () => {
+        isSpeaking = false;
+        currentUtterance = null;
+        button.classList.remove('speaking');
+        button.innerHTML = '<i class="fas fa-volume-up"></i>'; // آیکون پخش
+    };
+    
+    currentUtterance.onerror = (event) => {
+        console.error('SpeechSynthesisUtterance.onerror', event);
+        isSpeaking = false;
+        currentUtterance = null;
+        button.classList.remove('speaking');
+        button.innerHTML = '<i class="fas fa-volume-up"></i>';
+    };
+    
+    // 4. شروع خواندن
+    synth.speak(currentUtterance);
+}
+
+
+/* ======================================================= */
 /* 🧭 DRAWER / SWIPE LOGIC (منطق کشویی) */
 /* ======================================================= */
 
@@ -833,6 +982,23 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
     copyButton.innerHTML = '<i class="fas fa-copy"></i>';
     copyButton.addEventListener('click', () => copyMessage(copyButton, text));
     
+    // 2.5. ساخت دکمه خواندن (فقط برای پیام‌های AI)
+    let ttsButton = null;
+    if (className === 'ai') {
+        // برای خواندن متن پیام، ما به متن خالص پیام (متغیر 'text') نیاز داریم.
+        // تگ‌های HTML (مانند <b>) و بلوک‌های کد باید حذف شوند.
+        let cleanText = text.replace(/<span class="copyable-id".+?<\/span>\s*<button class="id-copy-btn".+?<\/button>/g, '');
+        cleanText = cleanText.replace(/<[^>]*>/g, '').replace(/```/g, ''); 
+        
+        ttsButton = document.createElement("button");
+        ttsButton.classList.add("tts-btn");
+        ttsButton.innerHTML = '<i class="fas fa-volume-up"></i>';
+        
+        // 🚨 افزودن Listener
+        ttsButton.addEventListener('click', () => toggleTTS(ttsButton, cleanText));
+    }
+
+
     // 3. پردازش محتوای پیام (کد و متن)
     let processedText = text;
     let hasCodeBlock = false;
@@ -974,6 +1140,11 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
     
     // 5. اضافه کردن دکمه کپی کل پیام
     msg.appendChild(copyButton);
+
+    // 5.5. اضافه کردن دکمه TTS (جدید)
+    if (ttsButton) {
+        msg.appendChild(ttsButton);
+    }
 
     // 6. قرار دادن آواتار و پیام در کانتینر
     if (className === 'user') {
