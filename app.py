@@ -70,23 +70,23 @@ phone_verification_codes = {}
 # ---------------------------------------------------------
 
 # =========================================================
-# 🔑 سیستم مدیریت کلیدهای OpenRouter (Key Rotation & Fallback)
+# 🔑 سیستم مدیریت کلیدهای GapGPT (Key Rotation & Fallback)
 # =========================================================
 
 # 1. بارگذاری تمام کلیدهای تعریف شده در متغیرهای محیطی
-OPENROUTER_KEYS = {}
+GAPGPT_KEYS = {}
 for i in range(1, 6): # از 1 تا 5
-    key_name = f"OPENROUTER_API_KEY_{i}"
+    key_name = f"GAPGPT_API_KEY_{i}"
     key_value = os.getenv(key_name)
     if key_value:
-        OPENROUTER_KEYS[key_name] = key_value
+        GAPGPT_KEYS[key_name] = key_value
 
-if not OPENROUTER_KEYS:
-    raise ValueError("❌ حداقل یک متغیر محیطی OPENROUTER_API_KEY_i پیدا نشد! لطفاً آن را تنظیم کنید.")
+if not GAPGPT_KEYS:
+    raise ValueError("❌ حداقل یک متغیر محیطی GAPGPT_API_KEY_i پیدا نشد! لطفاً آن را تنظیم کنید.")
 
 # 2. متغیرهای سراسری برای مدیریت حالت کلیدها
 # لیست نام کلیدها برای حفظ ترتیب چرخش
-KEY_NAMES_ORDER = list(OPENROUTER_KEYS.keys()) 
+KEY_NAMES_ORDER = list(GAPGPT_KEYS.keys()) 
 # کلیدهایی که به دلیل خطا (402, 401) مسدود شده‌اند
 BLOCKED_KEYS = set()
 # شاخص برای شروع جستجوی کلید فعال
@@ -102,7 +102,7 @@ def send_token_alert(key_name, reason):
         params = {
             'sender': KAVENEGAR_SENDER,
             'receptor': TOKEN_ALERT_PHONE_NUMBER,
-            'message': f'⚠️ اخطار! کلید OpenRouter ({key_name}) با خطا مواجه شد ({reason}). موقتا مسدود شد.',
+            'message': f'⚠️ اخطار! کلید GapGPT ({key_name}) با خطا مواجه شد ({reason}). موقتا مسدود شد.',
         }
         SMS_API.sms_send(params)
         print(f"🔔 هشدار پیامکی برای {key_name} ارسال شد.")
@@ -118,7 +118,8 @@ def handle_key_failure(key_name, status_code):
         print(f"❌ کلید {key_name} به دلیل خطای {status_code} مسدود شد.")
 
 def get_openrouter_key(initial_attempt=True):
-    """برگرداندن کلید فعال بعدی به صورت چرخشی (Round-Robin)."""
+    """برگرداندن کلید فعال بعدی به صورت چرخشی (Round-Robin).
+       توجه: نام این تابع برای جلوگیری از تغییر همه توابع فراخوانی کننده، همان get_openrouter_key باقی مانده است."""
     global KEY_INDEX
     
     total_keys = len(KEY_NAMES_ORDER)
@@ -138,7 +139,7 @@ def get_openrouter_key(initial_attempt=True):
         KEY_INDEX = (KEY_INDEX + 1) % total_keys
 
         if key_name not in BLOCKED_KEYS:
-            return key_name, OPENROUTER_KEYS[key_name]
+            return key_name, GAPGPT_KEYS[key_name]
     
     # اگر بعد از چرخش کامل، هیچ کلید فعالی پیدا نشد
     return None, None
@@ -165,9 +166,9 @@ SCORE_QUOTA_CONFIG = {
     }
 }
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-CHAT_MODEL_NAME = "deepseek/deepseek-chat"
-TRANSLATION_MODEL_NAME = "openai/gpt-4o-mini"
+GAPGPT_BASE_URL = "https://api.gapgpt.app/v1/chat/completions"
+CHAT_MODEL_NAME = "gpt-3.5-turbo" # کم‌هزینه‌ترین مدل برای چت
+TRANSLATION_MODEL_NAME = "gpt-3.5-turbo" # کم‌هزینه‌ترین مدل برای ترجمه
 
 POLLINATIONS_URL = "https://image.pollinations.ai/prompt/"
 STATIC_DIR = os.path.join(app.root_path, 'static', 'temp_images')
@@ -477,7 +478,7 @@ def translate_prompt_to_english(persian_prompt):
         {"role": "user", "content": persian_prompt}
     ]
     
-    max_attempts = len(OPENROUTER_KEYS)
+    max_attempts = len(GAPGPT_KEYS)
 
     # حلقه تلاش مجدد
     for attempt in range(max_attempts):
@@ -499,7 +500,7 @@ def translate_prompt_to_english(persian_prompt):
         }
 
         try:
-            response = requests.post(OPENROUTER_URL, json=data, headers=headers, timeout=15)
+            response = requests.post(GAPGPT_BASE_URL, json=data, headers=headers, timeout=15)
             response.raise_for_status()
             res_json = response.json()
             english_prompt = res_json["choices"][0]["message"]["content"].strip()
@@ -929,7 +930,7 @@ def chat():
     # ❌ حذف منطق هشدار توکن کم، چون سقف توکن به ۴۰۰ کاهش یافته.
 
     # --- مکانیزم چرخش کلید و تلاش مجدد ---
-    max_attempts = len(OPENROUTER_KEYS)
+    max_attempts = len(GAPGPT_KEYS)
     ai_message = None
 
     for attempt in range(max_attempts):
@@ -952,7 +953,7 @@ def chat():
         }
 
         try:
-            response = requests.post(OPENROUTER_URL, json=data, headers=headers, timeout=10)
+            response = requests.post(GAPGPT_BASE_URL, json=data, headers=headers, timeout=10)
             response.raise_for_status() 
             res_json = response.json()
             ai_message = res_json["choices"][0]["message"]["content"]
@@ -1067,7 +1068,7 @@ def image_generator():
         }), 400
 
     try:
-        # ۵. ترجمه پرامپت به انگلیسی (با استفاده از چرخش کلیدهای OpenRouter)
+        # ۵. ترجمه پرامپت به انگلیسی (با استفاده از چرخش کلیدهای GapGPT)
         english_prompt = translate_prompt_to_english(persian_prompt)
 
         # ۶. تولید لینک هوشمند (بدون دانلود توسط سرور)
