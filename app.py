@@ -163,11 +163,8 @@ SCORE_QUOTA_CONFIG = {
             'image': 200, # 200 امتیاز برای تصویر (10 عکس)
             'long_response': 15 # 💡 15 پاسخ بلند روزانه
         }
-    }
-}
-
 GAPGPT_BASE_URL = "https://api.gapapi.com/v1/chat/completions"
-CHAT_MODEL_NAME = "gpt-3.5-turbo" # کم‌هزینه‌ترین مدل برای چت
+CHAT_MODEL_NAME = "gemma-3-27b-it" # کم‌هزینه‌ترین مدل برای چت
 TRANSLATION_MODEL_NAME = "gpt-3.5-turbo" # کم‌هزینه‌ترین مدل برای ترجمه
 
 POLLINATIONS_URL = "https://image.pollinations.ai/prompt/"
