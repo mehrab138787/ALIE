@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cyrus AI Chat</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght300;400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 
     <style>
         /* ======================================================= */
@@ -241,34 +241,6 @@
             padding: 20px;
             pointer-events: none; 
             transition: opacity 0.3s ease;
-        }
-        
-        /* 🆕 استایل دکمه شناور تلگرام (FAB) */
-        #telegram-fab {
-            position: absolute;
-            bottom: 80px; /* بالای Input Container */
-            left: 20px; /* سمت چپ صفحه */
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: #0088CC; /* رنگ تلگرام */
-            color: #FFF;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.8rem;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 0 0 10px rgba(0, 136, 204, 0.7);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            z-index: 30;
-            text-decoration: none; /* حذف خط زیر لینک */
-        }
-
-        #telegram-fab:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7), 0 0 15px #0088CC;
-        }
-        #telegram-fab:active {
-            transform: scale(0.95);
         }
 
         .message-container {
@@ -575,8 +547,8 @@
         </a>
     {% endif %}
 
-    <a href="https://t.me/Im_Mehrab_1" class="drawer-link">
-        <i class="fas fa-hands-helping"></i> پشتیبانی (تلگرام)
+    <a href="{{ url_for('support') }}" class="drawer-link">
+        <i class="fas fa-hands-helping"></i> پشتیبانی
     </a>
     <a href="{{ url_for('about') }}" class="drawer-link">
         <i class="fas fa-info-circle"></i> درباره ما
@@ -608,10 +580,6 @@
             چطور میتونم به شما کمک کنم؟ 🤔
         </div>
     </div>
-    
-    <a id="telegram-fab" href="https://t.me/Im_Mehrab_1" title="پشتیبانی تلگرام">
-        <i class="fab fa-telegram-plane"></i>
-    </a>
     
     <div id="input-container">
         <button id="image-btn" class="input-btn" title="تولید تصویر" onclick="window.location.href='{{ url_for('image_page') }}';">
