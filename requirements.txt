@@ -7,3 +7,4 @@ gunicorn
 kavenegar
 Flask-SQLAlchemy
 psycopg2-binary
+openai

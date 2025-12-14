@@ -168,7 +168,7 @@ SCORE_QUOTA_CONFIG = {
 
 # ---------------------------------------------------------
 GAPGPT_BASE_URL = "https://api.gapapi.com/v1/chat/completions"
-CHAT_MODEL_NAME = "gpt-4o-mini" # کم‌هزینه‌ترین مدل برای چت
+CHAT_MODEL_NAME = "gemma-3-27b-it" # کم‌هزینه‌ترین مدل برای چت
 TRANSLATION_MODEL_NAME = "gpt-4o-mini" # کم‌هزینه‌ترین مدل برای ترجمه
 
 POLLINATIONS_URL = "https://image.pollinations.ai/prompt/"
