@@ -166,7 +166,7 @@ SCORE_QUOTA_CONFIG = {
     }
 }
 
-GAPGPT_BASE_URL = "https://api.gapgpt.app/v1/chat/completions"
+GAPGPT_BASE_URL = "https://api.gapapi.com/v1/chat/completions"
 CHAT_MODEL_NAME = "gpt-3.5-turbo" # کم‌هزینه‌ترین مدل برای چت
 TRANSLATION_MODEL_NAME = "gpt-3.5-turbo" # کم‌هزینه‌ترین مدل برای ترجمه
 
