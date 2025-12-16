@@ -177,7 +177,7 @@
             margin-right: .7em;
         }
 
-        /* 💥 استایل لینک سوییچ (Secondary Button) */
+        /* 💥 استایل لینک سوییچ (Secondary Button) - اکنون به دکمه بازار تبدیل شده */
         .switch-link { 
             display: flex;
             justify-content: center;
@@ -223,8 +223,17 @@
             transition: opacity 0.3s, transform 0.2s;
             box-shadow: 0 4px 15px rgba(0, 122, 55, 0.5); /* سایه عمیق‌تر */
         }
+        
+        /* 💡 استایل برای غیرفعال کردن دکمه بازار */
+        .bazaar-btn.disabled-btn {
+            opacity: 0.5; /* کم کردن شفافیت */
+            cursor: not-allowed;
+            pointer-events: none; /* جلوگیری از کلیک */
+            transform: none;
+            box-shadow: none;
+        }
 
-        .bazaar-btn:hover {
+        .bazaar-btn:hover:not(.disabled-btn) {
             opacity: 0.95;
             transform: translateY(-2px); /* کمی بالا آمدن در هاور */
             box-shadow: 0 6px 20px rgba(0, 122, 55, 0.7);
@@ -245,6 +254,32 @@
             transform: rotate(3deg); /* کمی چرخش برای جلب توجه */
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
             z-index: 10;
+        }
+        
+        /* 💡 استایل برای بنر ورود با تلفن */
+        .phone-container {
+            position: relative;
+            margin-bottom: 25px; 
+        }
+        .phone-btn {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px; 
+            padding: 14px; 
+            border-radius: 10px;
+            background: var(--highlight-color);
+            color: var(--bg-dark);
+            text-decoration: none;
+            font-size: 1.1rem; 
+            font-weight: 700;
+            transition: opacity 0.3s, transform 0.2s;
+            box-shadow: 0 4px 15px rgba(3, 169, 244, 0.4);
+        }
+        .phone-btn:hover {
+            background: var(--highlight-color-light); 
+            transform: translateY(-2px); 
+            box-shadow: 0 6px 20px rgba(3, 169, 244, 0.6);
         }
         /* -------------------------------------- */
 
@@ -291,11 +326,11 @@
     
     <h2><i class="fas fa-envelope-open-text"></i> ورود یا ثبت نام</h2>
 
-    <div class="bazaar-container">
+    <div class="phone-container">
         <div class="bazaar-badge">پیشنهادی و سریع</div>
-        <a href="/bazaar_login" class="bazaar-btn">
-            <i class="fas fa-shopping-bag"></i>
-            ورود با حساب بازار
+        <a href="/login_phone" class="phone-btn">
+            <i class="fas fa-mobile-alt"></i>
+            ورود با شماره تلفن
         </a>
     </div>
 
@@ -321,10 +356,12 @@
 
     <div class="divider">یا</div>
     
-    <a href="/login_phone" class="switch-link">
-        <i class="fas fa-mobile-alt"></i> 
-        ورود با شماره تلفن
-    </a>
+    <div class="bazaar-container">
+        <a href="#" class="bazaar-btn disabled-btn">
+            <i class="fas fa-shopping-bag"></i>
+            ورود با حساب بازار
+        </a>
+    </div>
     
     <p class="terms-acceptance">
         <i class="fas fa-check-circle"></i>
