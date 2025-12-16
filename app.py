@@ -12,7 +12,7 @@ import glob
 import time
 import random
 from flask_mail import Mail, Message
-from kavenegar import KavenegarAPI, APIException, HTTPException
+# از KavenegarAPI, APIException, HTTPException صرف نظر شد
 from functools import wraps
 import json
 from flask_sqlalchemy import SQLAlchemy
@@ -67,10 +67,12 @@ mail = Mail(app)
 
 verification_codes = {}
 
-# ----------------- 📱 تنظیمات Kavenegar -----------------
-KAVENEGAR_API_KEY = '632F6241547775577935707969347368757844683162427665702F59376D6D39544F3773576C44567046343D'
-KAVENEGAR_SENDER = '2000300261'
-SMS_API = KavenegarAPI(KAVENEGAR_API_KEY)
+# ----------------- 📱 تنظیمات SMS.ir (جایگزین Kavenegar) -----------------
+# ⚠️ شما باید کلید API و Template ID واقعی خود را از پنل SMS.ir وارد کنید.
+SMSIR_API_KEY = 'rTAR33leVoNpAjnUUzzu2rygt72VrlXa7OrOqTHA5K1VgeSs' # ⬅️ کلید نمونه، تغییر دهید
+SMSIR_TEMPLATE_ID = 660708 # ⬅️ شناسه قالب کد تأیید، تغییر دهید
+SMSIR_VERIFY_URL = "https://api.sms.ir/v1/send/verify"
+
 phone_verification_codes = {}
 # ---------------------------------------------------------
 
@@ -98,19 +100,23 @@ BLOCKED_KEYS = set()
 KEY_INDEX = 0
 
 def send_token_alert(key_name, reason):
-    """ارسال پیامک هشدار برای اتمام/خطای کلید API."""
+    """ارسال پیامک هشدار برای اتمام/خطای کلید API. (تغییر یافته به SMS.ir یا حذف شده)"""
+    # 💡 توجه: از آنجا که API SMS.ir برای ارسال سریع نیاز به قالب دارد، 
+    # برای پیام هشدار ساده‌تر است که به جای SMS.ir از یک سرویس ساده‌تر استفاده کنیم 
+    # یا این تابع را موقتاً غیرفعال کنیم. اینجا فقط با print انجام می‌شود.
     if not TOKEN_ALERT_PHONE_NUMBER:
-        print("Warning: TOKEN_ALERT_PHONE_NUMBER not set.")
+        print(f"Warning: TOKEN_ALERT_PHONE_NUMBER not set. Alert for {key_name} skipped.")
         return
 
     try:
-        params = {
-            'sender': KAVENEGAR_SENDER,
-            'receptor': TOKEN_ALERT_PHONE_NUMBER,
-            'message': f'⚠️ اخطار! کلید GapGPT ({key_name}) با خطا مواجه شد ({reason}). موقتا مسدود شد.',
-        }
-        SMS_API.sms_send(params)
-        print(f"🔔 هشدار پیامکی برای {key_name} ارسال شد.")
+        # ⚠️ جایگزینی با منطق SMS.ir برای ALERT
+        # چون قالب SMS.ir برای کد تأیید است، از قالب برای هشدار نمی‌توان استفاده کرد.
+        # می‌توانید یک Template ID جداگانه برای هشدار تعریف کنید و منطق زیر را جایگزین کنید:
+        
+        # ❌ منطق قبلی Kavenegar حذف شد.
+        
+        print(f"🔔 هشدار (بدون ارسال پیامک): اخطار! کلید GapGPT ({key_name}) با خطا مواجه شد ({reason}). موقتا مسدود شد.")
+        
     except Exception as e:
         print(f"Error sending SMS alert: {e}")
 
@@ -274,21 +280,45 @@ def send_verification_email(email, code):
         return False
 
 def send_verification_sms(phone_number, code):
-    """ارسال کد تأیید از طریق پیامک با Kavenegar."""
+    """ارسال کد تأیید از طریق پیامک با SMS.ir (ارسال سریع)."""
+    # ⚠️ شماره تلفن باید بدون 0 اول باشد (912...) اگر تنظیمات SMS.ir اینطور است.
+    # برای امنیت بیشتر، شماره را بدون 0 ارسال می‌کنیم.
+    if phone_number.startswith('0'):
+        mobile = phone_number[1:]
+    else:
+        mobile = phone_number
+
+    payload = {
+        "mobile": mobile,
+        "templateId": SMSIR_TEMPLATE_ID,
+        "parameters": [
+          {
+            "name": "Code", # ⚠️ اطمینان حاصل کنید که این نام با کلید تعریف شده در قالب SMS.ir مطابقت دارد
+            "value": code
+          }
+        ]
+    }
+    
+    headers = {
+        'x-api-key': SMSIR_API_KEY,
+        'Content-Type': 'application/json'
+    }
+
     try:
-        params = {
-            'sender': KAVENEGAR_SENDER,
-            'receptor': phone_number,
-            'message': f'کد تأیید حساب Cyrus AI: {code}\nاین کد تا 5 دقیقه اعتبار دارد.',
-        }
-        response = SMS_API.sms_send(params)
-        print(f"SMS Response: {response}")
-        return True
-    except APIException as e:
-        print(f"Kavenegar API Error: {e}")
-        return False
-    except HTTPException as e:
-        print(f"Kavenegar HTTP Error: {e}")
+        response = requests.post(SMSIR_VERIFY_URL, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+        res_json = response.json()
+        
+        # بررسی پاسخ موفقیت آمیز SMS.ir
+        if res_json.get('status') == 1:
+            print(f"SMS.ir Response: Success - MessageId: {res_json['data']['messageId']}")
+            return True
+        else:
+            print(f"SMS.ir Error Response: {res_json.get('message', 'Unknown Error')}")
+            return False
+            
+    except requests.exceptions.RequestException as e:
+        print(f"SMS.ir API Error (RequestException): {e}")
         return False
     except Exception as e:
         print(f"General SMS Error: {e}")
@@ -692,7 +722,7 @@ app.register_blueprint(admin_bp)
 # =========================================================
 # 📧 مسیرهای احراز هویت (ایمیل و پیامک)
 # =========================================================
-# ... (کدهای احراز هویت ایمیل/پیامک بدون تغییر)
+# ... (مسیرهای احراز هویت ایمیل بدون تغییر)
 @app.route("/send_code", methods=["POST"])
 def send_code():
     """ارسال کد تأیید برای ایمیل."""
@@ -762,9 +792,10 @@ def send_sms_code():
         'code': code,
         'expiry_time': time.time() + 300
     }
-
+    
+    # 💡 استفاده از تابع بازنویسی شده send_verification_sms (SMS.ir)
     if not send_verification_sms(phone_number, code):
-        return jsonify({"status": "error", "message": "خطا در ارسال پیامک. لطفاً شماره را بررسی کنید."}), 500
+        return jsonify({"status": "error", "message": "خطا در ارسال پیامک. لطفاً شماره و تنظیمات SMS.ir را بررسی کنید."}), 500
 
     return jsonify({"status": "success", "message": "کد تأیید به شماره شما ارسال شد. لطفاً پیامک‌ها را بررسی کنید."})
 
