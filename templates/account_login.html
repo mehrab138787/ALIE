@@ -3,395 +3,488 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ورود/ثبت نام با ایمیل</title>
+    <title>ورود | اپلیکیشن شما</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
+    
     <style>
         /* متغیرهای اصلی رنگ */
         :root {
-            --bg-dark: #070707; 
-            --card-dark: #1e1e1e; 
-            --highlight-color: #03A9F4; /* رنگ آبی جذاب */
-            --highlight-color-light: #4cbbff;
-            --bazaar-color: #007a37; /* رنگ سبز کافه‌بازار */
-            --text-color: #FAFAFA; 
-            --error-color: #FF4444; 
-            --success-color: #00CC66;
-            --border-radius: 12px;
+            --bg-dark: #070707; /* پس‌زمینه اصلی */
+            --card-dark: #1e1e1e; /* پس‌زمینه کارت/فرم */
+            /* از رنگ بنفش برای تأکید بر کیوت و شیک بودن استفاده شد */
+            --highlight-color: #5E35B1; 
+            --highlight-color-light: #7E57C2;
+            --text-color: #FAFAFA; /* رنگ متن اصلی */
+            --text-secondary: #B0B0B0; /* رنگ متن ثانویه */
+            --error-color: #E53935; /* رنگ خطا */
+            --success-color: #4CAF50; /* رنگ موفقیت */
+            --border-radius: 16px;
+            --input-bg: #2b2b2b;
         }
-        * { margin:0; padding:0; box-sizing:border-box; font-family:'Vazirmatn', sans-serif;}
+
+        /* ریست و فونت */
+        * { 
+            margin:0; 
+            padding:0; 
+            box-sizing:border-box; 
+            font-family:'Vazirmatn', sans-serif;
+            direction: rtl; 
+        }
+        
         body { 
             background: var(--bg-dark); 
-            color: var(--text-color); 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
             padding: 20px;
         }
-        
-        /* 💥 استایل کارت با سایه‌های عمیق */
-        .login-card { 
-            position: relative; 
-            background: var(--card-dark); 
-            padding: 35px; 
-            border-radius: var(--border-radius); 
-            width: 90%; 
-            max-width: 400px; 
-            /* سایه‌های چندگانه برای عمق */
-            box-shadow: 
-                0 10px 30px rgba(0, 0, 0, 0.6), 
-                0 0 0 1px rgba(255, 255, 255, 0.05); 
-            direction: rtl;
-            transform: scale(1);
-            transition: transform 0.3s ease-in-out;
+
+        /* ساختار کارت اصلی */
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            background: var(--card-dark);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease-in-out;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .login-card:hover {
-            transform: scale(1.01); 
+        /* هدر شیک */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
         }
 
-        /* --- استایل جدید برای دکمه بازگشت --- */
-        .back-button {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: #333;
-            color: var(--text-color);
-            border: none;
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.1rem;
-            transition: background-color 0.2s, color 0.2s, transform 0.2s;
-        }
-
-        .back-button:hover {
-            background-color: var(--highlight-color);
-            color: var(--card-dark);
-            transform: scale(1.05);
-        }
-        /* -------------------------------------- */
-
-
-        .login-card h2 { 
-            text-align: center; 
-            color: var(--highlight-color); 
-            margin-bottom: 30px; 
+        .header h2 {
+            font-weight: 700;
+            color: var(--highlight-color);
+            margin-bottom: 5px;
             font-size: 1.8rem;
         }
-        .input-group { margin-bottom: 25px; }
-        .input-group label { display: block; margin-bottom: 8px; font-size: 0.95rem; color: #aaa; }
-        
-        /* استایل فیلد ایمیل با آیکون و جداکننده */
-        .input-with-icon {
-            display: flex;
-            /* استایل مرز کمی روشن‌تر */
-            border: 1px solid #3d3d3d; 
-            border-radius: 10px;
-            background: #2a2a2a;
-            overflow: hidden;
-            transition: border-color 0.3s;
-            direction: ltr;
-        }
-        
-        .input-with-icon:focus-within {
-            border-color: var(--highlight-color); 
-            box-shadow: 0 0 8px rgba(3, 169, 244, 0.5); /* سایه نئونی در فوکوس */
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
         }
 
-        .icon-wrapper {
-            /* جداکننده عمودی قوی‌تر */
-            border-right: 1px solid #3d3d3d; 
-            display: flex;
-            align-items: center;
-            padding: 12px 15px;
-            background: #222222; /* رنگ پس‌زمینه متفاوت برای آیکون */
-            color: var(--highlight-color); 
-            font-size: 1.1rem;
-            flex-shrink: 0; 
-        }
-
-        .input-with-icon input { 
-            flex-grow: 1; 
+        /* وضعیت‌ها (Status Messages) */
+        #status-message {
+            margin-bottom: 20px;
             padding: 12px;
-            border: none;
-            background: #2a2a2a; 
-            color: var(--text-color); 
-            font-size: 1rem; 
-            outline: none; 
-            direction: ltr;
-            text-align: left;
-        }
-        
-        /* استایل دکمه اصلی (Primary Button) */
-        button:not(.back-button) { 
-            width: 100%; 
-            padding: 14px; 
-            border: none; 
-            border-radius: 10px; 
-            background: var(--highlight-color); 
-            color: var(--bg-dark); 
-            font-size: 1.15rem; 
-            font-weight: 700; 
-            cursor: pointer; 
-            /* انیمیشن برای هاور */
-            transition: background-color 0.3s, opacity 0.3s, transform 0.2s, box-shadow 0.3s;
-            box-shadow: 0 4px 15px rgba(3, 169, 244, 0.4); 
-            margin-top: 20px; /* اضافه شده برای فاصله از دکمه بازار */
-        }
-        button:not(.back-button):hover:not(:disabled) { 
-            background: var(--highlight-color-light); 
-            transform: translateY(-2px); 
-            box-shadow: 0 6px 20px rgba(3, 169, 244, 0.6);
-        }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        /* استایل خط جداکننده */
-        .divider {
-            display: flex;
-            align-items: center;
+            border-radius: 8px;
+            font-size: 0.9rem;
             text-align: center;
-            margin: 30px 0; 
-            color: #555;
+            min-height: 40px;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+        }
+        .status-show { opacity: 1 !important; }
+
+        .status-error { background-color: rgba(229, 57, 53, 0.2); color: var(--error-color); border: 1px solid var(--error-color); }
+        .status-success { background-color: rgba(76, 175, 80, 0.2); color: var(--success-color); border: 1px solid var(--success-color); }
+        .status-info { background-color: rgba(94, 53, 177, 0.2); color: var(--highlight-color-light); border: 1px solid var(--highlight-color-light); }
+
+
+        /* فیلد ورودی شیک */
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            background: var(--input-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-color);
             font-size: 1rem;
-            font-weight: 500;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            text-align: right;
+            direction: ltr; /* برای شماره تلفن، جهت چپ به راست */
         }
 
-        .divider::before,
-        .divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px solid #3d3d3d; 
+        .input-group input:focus {
+            border-color: var(--highlight-color);
+            box-shadow: 0 0 0 3px rgba(94, 53, 177, 0.3);
+            outline: none;
         }
 
-        .divider:not(:empty)::before {
-            margin-left: .7em;
-        }
-
-        .divider:not(:empty)::after {
-            margin-right: .7em;
-        }
-
-        /* 💥 استایل لینک سوییچ (Secondary Button) */
-        .switch-link { 
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px; 
-            padding: 12px;
-            margin-bottom: 10px;
-            /* استایل دکمه با حاشیه آبی */
-            border: 2px solid var(--highlight-color); 
-            border-radius: 10px;
-            background: transparent; 
-            color: var(--highlight-color); 
-            text-decoration: none; 
-            font-size: 1.05rem; 
-            font-weight: 700;
-            transition: background-color 0.3s, color 0.3s, transform 0.2s;
-        }
-
-        .switch-link:hover {
-            background: var(--highlight-color); 
-            color: var(--bg-dark); 
-            transform: translateY(-1px);
-        }
-
-        /* 🟢 استایل دکمه بازار (اصلاح شده برای بنر) */
-        .bazaar-container {
-            position: relative; /* برای موقعیت دهی بنر */
-            margin-bottom: 25px; /* فاصله از divider */
-        }
-
-        .bazaar-btn {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px; 
-            padding: 14px; /* کمی بزرگتر برای تأکید */
-            border-radius: 10px;
-            background: var(--bazaar-color);
-            color: white;
-            text-decoration: none;
-            font-size: 1.1rem; /* کمی بزرگتر برای تأکید */
-            font-weight: 700;
-            transition: opacity 0.3s, transform 0.2s;
-            box-shadow: 0 4px 15px rgba(0, 122, 55, 0.5); /* سایه عمیق‌تر */
-        }
-
-        .bazaar-btn:hover {
-            opacity: 0.95;
-            transform: translateY(-2px); /* کمی بالا آمدن در هاور */
-            box-shadow: 0 6px 20px rgba(0, 122, 55, 0.7);
-        }
-        
-        /* ⭐️ استایل بنر پیشنهادی و سریع */
-        .bazaar-badge {
+        .input-group label {
             position: absolute;
-            top: -10px; 
-            right: -10px; 
-            background: var(--highlight-color); /* رنگ آبی برای تأکید */
-            color: var(--bg-dark);
-            padding: 5px 12px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            transform: rotate(3deg); /* کمی چرخش برای جلب توجه */
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            top: -10px;
+            right: 15px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            background: var(--card-dark);
+            padding: 0 5px;
+            transition: color 0.3s;
             z-index: 10;
         }
-        /* -------------------------------------- */
-
-
-        .status-message { margin-top: 20px; padding: 10px; border-radius: 8px; text-align: center; }
-        .status-message.error { background: rgba(255, 68, 68, 0.2); color: var(--error-color); }
-        .status-message.success { background: rgba(0, 204, 102, 0.2); color: var(--success-color); }
         
-        /* --- استایل جدید برای متن پذیرش شرایط --- */
-        .terms-acceptance {
-            text-align: center;
-            margin-top: 25px; 
-            font-size: 0.9rem;
-            color: #999;
-            line-height: 1.6;
-        }
-
-        .terms-acceptance .policy-link {
-            color: var(--highlight-color); 
-            text-decoration: none; 
+        /* دکمه اصلی (بنفش) */
+        .primary-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--highlight-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
             font-weight: 700;
-            transition: color 0.2s;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+            box-shadow: 0 4px 15px rgba(94, 53, 177, 0.4);
+            margin-top: 10px;
         }
 
-        .terms-acceptance .policy-link:hover {
-            color: var(--highlight-color-light); 
-            text-decoration: underline;
+        .primary-btn:hover {
+            background: var(--highlight-color-light);
+            box-shadow: 0 6px 20px rgba(94, 53, 177, 0.6);
+        }
+
+        .primary-btn:disabled {
+            background: #3a3a3a;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* استایل برای مرحله تأیید کد */
+        #verify-form {
+            display: none; /* پنهان کردن فرم تأیید در ابتدا */
         }
         
-        .terms-acceptance .fas {
-            margin-left: 5px;
-            color: var(--success-color); 
+        .code-input-wrapper {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
         }
-        /* ------------------------------------------- */
+
+        .code-input-wrapper input {
+            width: 60px;
+            height: 60px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            background: var(--input-bg);
+            color: var(--text-color);
+            /* برای تایپ کد تأیید، جهت چپ به راست */
+            direction: ltr; 
+        }
+        
+        .resend-link {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+        
+        .resend-link:hover {
+            color: var(--highlight-color);
+        }
+        
+        #resend-timer {
+            font-weight: 700;
+            color: var(--highlight-color);
+        }
+
+        /* انیمیشن برای دکمه‌ها */
+        .fa-spin {
+            animation: fa-spin 1s infinite linear;
+        }
+        @keyframes fa-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
     </style>
 </head>
 <body>
 
-<div class="login-card">
-    
-    <button class="back-button" onclick="history.back()">
-        <i class="fas fa-arrow-right"></i> 
-    </button>
-    
-    <h2><i class="fas fa-envelope-open-text"></i> ورود یا ثبت نام</h2>
-
-    <div class="bazaar-container">
-        <div class="bazaar-badge">پیشنهادی و سریع</div>
-        <a href="/bazaar_login" class="bazaar-btn">
-            <i class="fas fa-shopping-bag"></i>
-            ورود با حساب بازار
-        </a>
-    </div>
-
-    <div class="divider">یا ورود با ایمیل</div>
-    
-    <div class="input-group">
-        <label for="email">آدرس ایمیل</label>
+    <div class="login-container">
         
-        <div class="input-with-icon">
-            <span class="icon-wrapper">
-                <i class="fas fa-at"></i> 
-            </span>
-            <input type="email" id="email" placeholder="مثلاً: yourname@gmail.com" required>
+        <div class="header">
+            <i class="fas fa-mobile-alt" style="font-size: 2.5rem; color: var(--highlight-color); margin-bottom: 10px;"></i>
+            <h2>ورود با شماره تلفن</h2>
+            <p>ساده‌ترین راه برای ورود یا ثبت نام سریع.</p>
         </div>
 
-    </div>
-    
-    <button id="send-code-btn" onclick="sendCode()">
-        <i class="fas fa-paper-plane"></i> درخواست کد تأیید
-    </button>
-    
-    <div id="status-message" class="status-message" style="display:none;"></div>
+        <div id="status-message" class="status-info"></div>
 
-    <div class="divider">یا</div>
-    
-    <a href="/login_phone" class="switch-link">
-        <i class="fas fa-mobile-alt"></i> 
-        ورود با شماره تلفن
-    </a>
-    
-    <p class="terms-acceptance">
-        <i class="fas fa-check-circle"></i>
-        من 
-        <a href="{{ url_for('terms_of_service') }}" class="policy-link">شرایط استفاده از خدمات</a> 
-        و 
-        <a href="{{ url_for('privacy_policy') }}" class="policy-link">حریم خصوصی</a> 
-        را می پذیرم.
-    </p>
-    
-</div>
+        <form id="phone-form" onsubmit="event.preventDefault(); sendVerificationCode();">
+            <div class="input-group">
+                <label for="phone">شماره تلفن</label>
+                <input type="text" id="phone" name="phone" placeholder="مثال: 09123456789" required maxlength="11" pattern="^09\d{9}$" inputmode="numeric">
+            </div>
+            
+            <button type="submit" id="send-code-btn" class="primary-btn">
+                <i class="fas fa-paper-plane"></i> درخواست کد تأیید
+            </button>
+        </form>
 
-<script>
-    const emailInput = document.getElementById('email');
-    const sendCodeBtn = document.getElementById('send-code-btn');
-    const statusDiv = document.getElementById('status-message');
+        <form id="verify-form" onsubmit="event.preventDefault(); verifyCode();">
+            <div class="input-group">
+                <p style="text-align: center; margin-bottom: 15px; color: var(--text-secondary);">
+                    کد <span id="code-length">۶</span> رقمی ارسال شده به
+                    <strong id="sent-to-phone" style="color: var(--highlight-color-light);"></strong> را وارد کنید.
+                </p>
+                <div class="code-input-wrapper">
+                    <input type="text" maxlength="1" id="code1" class="code-input" inputmode="numeric" pattern="[0-9]" required>
+                    <input type="text" maxlength="1" id="code2" class="code-input" inputmode="numeric" pattern="[0-9]" required>
+                    <input type="text" maxlength="1" id="code3" class="code-input" inputmode="numeric" pattern="[0-9]" required>
+                    <span style="color: var(--text-secondary); font-size: 1.5rem; line-height: 0.8;">-</span>
+                    <input type="text" maxlength="1" id="code4" class="code-input" inputmode="numeric" pattern="[0-9]" required>
+                    <input type="text" maxlength="1" id="code5" class="code-input" inputmode="numeric" pattern="[0-9]" required>
+                    <input type="text" maxlength="1" id="code6" class="code-input" inputmode="numeric" pattern="[0-9]" required>
+                </div>
+            </div>
 
-    // نمایش پیام وضعیت (موفقیت، خطا، هشدار)
-    function showStatus(message, type) {
-        statusDiv.textContent = message;
-        statusDiv.className = 'status-message ' + type;
-        statusDiv.style.display = 'block';
-    }
+            <button type="submit" id="verify-btn" class="primary-btn">
+                <i class="fas fa-check-circle"></i> تأیید و ورود
+            </button>
+            
+            <a href="#" class="resend-link" id="resend-link" onclick="resendCode(event);">
+                <i class="fas fa-redo"></i> ارسال مجدد کد (<span id="resend-timer">60</span> ثانیه)
+            </a>
+            <a href="#" class="resend-link" onclick="goBackToPhoneInput(event);" style="margin-top: 10px;">
+                <i class="fas fa-chevron-right"></i> تغییر شماره تلفن
+            </a>
+        </form>
 
-    // تابع اصلی ارسال کد
-    async function sendCode() {
-        const email = emailInput.value.trim();
-        if (!email) {
-            showStatus("لطفاً یک آدرس ایمیل معتبر وارد کنید.", 'error');
-            return;
+    </div> <script>
+        // متغیرهای سراسری
+        let currentPhone = '';
+        let timerInterval;
+        const RESEND_TIME_SECONDS = 60; 
+
+        // ------------------------------------
+        // توابع کمکی
+        // ------------------------------------
+
+        /** نمایش پیام‌های وضعیت */
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.className = `status-${type} status-show`;
+            statusDiv.innerHTML = message;
+        }
+        
+        /** شروع تایمر برای ارسال مجدد */
+        function startTimer() {
+            let timeLeft = RESEND_TIME_SECONDS;
+            const timerElement = document.getElementById('resend-timer');
+            const resendLink = document.getElementById('resend-link');
+            
+            resendLink.style.cursor = 'not-allowed';
+            resendLink.onclick = (e) => e.preventDefault();
+            
+            // نمایش لینک ارسال مجدد با تایمر
+            resendLink.innerHTML = `<i class="fas fa-redo"></i> ارسال مجدد کد (<span id="resend-timer">${timeLeft}</span> ثانیه)`;
+            
+            clearInterval(timerInterval); 
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerElement.innerText = timeLeft; // به‌روزرسانی مقدار داخل span
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    resendLink.innerHTML = '<i class="fas fa-redo"></i> ارسال مجدد کد';
+                    resendLink.style.cursor = 'pointer';
+                    resendLink.onclick = (e) => resendCode(e);
+                }
+            }, 1000);
         }
 
-        sendCodeBtn.disabled = true;
-        sendCodeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال ارسال کد...';
-        showStatus("در حال ارسال کد به ایمیل شما...", 'success');
-
-        try {
-            // شبیه‌سازی فراخوانی Flask API
-            const response = await fetch("/send_code", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: email })
+        /** تمرکز خودکار روی فیلدهای کد */
+        function setupCodeInputs() {
+            const inputs = document.querySelectorAll('.code-input');
+            inputs.forEach((input, index) => {
+                // حرکت به فیلد بعدی هنگام تایپ
+                input.addEventListener('input', (e) => {
+                    // فقط اعداد مجاز است
+                    if (e.data && !/^\d$/.test(e.data)) {
+                        input.value = '';
+                        return;
+                    }
+                    if (input.value.length === input.maxLength && index < inputs.length - 1) {
+                        inputs[index + 1].focus();
+                    }
+                });
+                
+                // حرکت به فیلد قبلی هنگام پاک کردن
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace' && input.value.length === 0 && index > 0) {
+                        inputs[index - 1].focus();
+                        inputs[index - 1].value = ''; 
+                    }
+                });
             });
+        }
+        
+        // ------------------------------------
+        // توابع اصلی لاگین
+        // ------------------------------------
 
-            const data = await response.json();
+        /** ارسال درخواست کد تأیید (مرحله ۱) */
+        async function sendVerificationCode(resend = false) {
+            const phoneInput = document.getElementById('phone');
+            const sendCodeBtn = document.getElementById('send-code-btn');
+            const resendLink = document.getElementById('resend-link');
             
-            if (response.ok && data.status === "success") {
-                showStatus("✅ " + data.message + " در حال انتقال...", 'success');
-                // انتقال به صفحه تأیید کد
-                setTimeout(() => {
-                    window.location.href = `/verify_page?email=${encodeURIComponent(email)}`;
-                }, 1500);
+            const phone = phoneInput.value.trim();
+            currentPhone = phone; 
 
-            } else {
-                showStatus("❌ " + data.message, 'error');
-                sendCodeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> درخواست کد تأیید';
-                sendCodeBtn.disabled = false;
+            // اعتبارسنجی
+            if (!/^09\d{9}$/.test(phone)) {
+                showStatus("❌ لطفاً یک شماره تلفن معتبر (مانند 09123456789) وارد کنید.", 'error');
+                return;
             }
 
-        } catch (e) {
-            console.error("Fetch Error:", e);
-            showStatus("⚠️ خطای شبکه یا سرور رخ داد. اتصال به سرور را بررسی کنید.", 'error');
-            sendCodeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> درخواست کد تأیید';
-            sendCodeBtn.disabled = false;
+            // نمایش وضعیت
+            sendCodeBtn.disabled = true;
+            if (resend) {
+                showStatus("🔁 در حال ارسال مجدد کد...", 'info');
+                resendLink.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال ارسال مجدد...';
+            } else {
+                sendCodeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال ارسال کد...';
+                showStatus("📞 در حال ارسال کد تأیید به شماره " + phone + "...", 'info');
+            }
+            
+            try {
+                const response = await fetch("/send_code", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ phone: phone })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.status === "success") {
+                    showStatus("✅ کد تأیید ارسال شد. لطفاً آن را وارد کنید.", 'success');
+                    
+                    // انتقال به مرحله تأیید
+                    document.getElementById('phone-form').style.display = 'none';
+                    document.getElementById('verify-form').style.display = 'block';
+                    document.getElementById('sent-to-phone').innerText = phone;
+                    
+                    startTimer(); // شروع تایمر
+                    document.getElementById('code1').focus(); // تمرکز روی اولین فیلد
+                    
+                } else {
+                    showStatus("❌ " + data.message, 'error');
+                    // برگشتن دکمه در صورت خطا
+                    sendCodeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> درخواست کد تأیید';
+                    sendCodeBtn.disabled = false;
+                }
+
+            } catch (e) {
+                console.error("Fetch Error:", e);
+                showStatus("⚠️ خطای شبکه یا سرور رخ داد. اتصال به سرور را بررسی کنید.", 'error');
+                sendCodeBtn.innerHTML = '<i class="fas fa-paper-plane"></i> درخواست کد تأیید';
+                sendCodeBtn.disabled = false;
+            } finally {
+                // اگر فرم تأیید نشان داده نشد، دکمه فعال بماند
+                if (document.getElementById('verify-form').style.display === 'none') {
+                    sendCodeBtn.disabled = false;
+                }
+            }
         }
-    }
-</script>
+
+        /** ارسال مجدد کد */
+        function resendCode(e) {
+            e.preventDefault();
+            // بازنشانی فیلدهای کد قبل از ارسال مجدد
+            document.querySelectorAll('.code-input').forEach(input => input.value = '');
+            sendVerificationCode(true);
+        }
+
+        /** بازگشت به صفحه ورود شماره */
+        function goBackToPhoneInput(e) {
+            e.preventDefault();
+            clearInterval(timerInterval); 
+            showStatus('شماره تلفن جدید را وارد کنید و مجدداً درخواست کد دهید.', 'info');
+            document.getElementById('phone-form').style.display = 'block';
+            document.getElementById('verify-form').style.display = 'none';
+            document.getElementById('send-code-btn').innerHTML = '<i class="fas fa-paper-plane"></i> درخواست کد تأیید';
+            document.getElementById('send-code-btn').disabled = false;
+            document.getElementById('phone').focus();
+        }
+
+        /** تأیید کد پیامکی (مرحله ۲) */
+        async function verifyCode() {
+            const verifyBtn = document.getElementById('verify-btn');
+            const codeInputs = document.querySelectorAll('.code-input');
+            const code = Array.from(codeInputs).map(input => input.value).join('');
+
+            // اعتبارسنجی
+            if (code.length !== 6) {
+                showStatus("❌ لطفاً کد تأیید ۶ رقمی را کامل وارد کنید.", 'error');
+                return;
+            }
+
+            // نمایش وضعیت
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> در حال تأیید...';
+            showStatus("🔐 در حال بررسی کد تأیید...", 'info');
+
+            try {
+                const response = await fetch("/verify_code", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ phone: currentPhone, code: code })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.status === "success") {
+                    showStatus("🎉 تبریک! ورود موفقیت آمیز. در حال انتقال به پنل کاربری...", 'success');
+                    clearInterval(timerInterval);
+                    // انتقال به صفحه اصلی
+                    setTimeout(() => {
+                        // فرض بر این است که API مسیر انتقال را برمی‌گرداند
+                        window.location.href = data.redirect_url || "/account"; 
+                    }, 1500);
+
+                } else {
+                    showStatus("❌ " + data.message, 'error');
+                    verifyBtn.innerHTML = '<i class="fas fa-check-circle"></i> تأیید و ورود';
+                    // فعال ماندن دکمه برای تلاش مجدد
+                    verifyBtn.disabled = false;
+                }
+
+            } catch (e) {
+                console.error("Fetch Error:", e);
+                showStatus("⚠️ خطای شبکه یا سرور رخ داد. اتصال به سرور را بررسی کنید.", 'error');
+                verifyBtn.innerHTML = '<i class="fas fa-check-circle"></i> تأیید و ورود';
+            } finally {
+                verifyBtn.disabled = false;
+            }
+        }
+        
+        // ------------------------------------
+        // اجرای اولیه
+        // ------------------------------------
+        document.addEventListener('DOMContentLoaded', () => {
+            setupCodeInputs();
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirectParam = urlParams.get('next');
+            if (redirectParam) {
+                showStatus(`⚠️ برای ادامه به ${decodeURIComponent(redirectParam)}، ابتدا وارد شوید.`, 'info');
+            } else {
+                showStatus('برای شروع، شماره تلفن خود را وارد کنید.', 'info');
+            }
+        });
+    </script>
 
 </body>
 </html>
