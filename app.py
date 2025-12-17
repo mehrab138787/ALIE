@@ -646,6 +646,15 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_identifier' not in session:
+            # اگر کاربر لاگین نبود، بفرستش به صفحه ورود
+            return redirect(url_for('login_page'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @admin_bp.route("/")
 @admin_required
 def admin_dashboard():
@@ -1605,7 +1614,7 @@ def bazaarpay_callback(plan_type, user_id):
             # ۲. تایید نهایی و قطعی کردن واریز (Commit) - بسیار حیاتی
             commit_headers = {
                 "Content-Type": "application/json",
-                "Authorization": f"Token {AUTH_TOKEN}" 
+                "Authorization": f"Token {BAZAAR_PAY_AUTH_TOKEN}" 
             }
             commit_res = requests.post(f"{BASE_URL}/commit/", 
                                      headers=commit_headers, 
