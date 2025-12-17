@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نتیجه پرداخت | Noctovex</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        body {
+            background-color: #050507;
+            color: white;
+            font-family: 'Tahoma', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .result-card {
+            background: rgba(13, 14, 18, 0.95);
+            padding: 40px;
+            border-radius: 25px;
+            border: 1px solid #1e222d;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            max-width: 400px;
+            width: 90%;
+        }
+        .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+        .success-icon { color: #28a745; }
+        .error-icon { color: #dc3545; }
+        h1 { font-size: 1.5rem; margin-bottom: 10px; }
+        p { color: #aaa; margin-bottom: 30px; line-height: 1.6; }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #d4af37, #aa8928);
+            color: black;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .btn:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+
+    <div class="result-card">
+        {% if success %}
+            <div class="icon success-icon"><i class="fas fa-check-circle"></i></div>
+            <h1 style="color: #28a745;">پرداخت موفقیت‌آمیز بود</h1>
+            <p>تبریک! حساب شما با موفقیت ارتقا یافت. هم‌اکنون می‌توانید از تمامی امکانات نسخه پرمیوم Noctovex استفاده کنید.</p>
+        {% else %}
+            <div class="icon error-icon"><i class="fas fa-times-circle"></i></div>
+            <h1 style="color: #dc3545;">خطا در پرداخت</h1>
+            <p>متأسفانه پرداخت شما انجام نشد یا توسط کاربر لغو شد. اگر مبلغی از حساب شما کسر شده، تا ۷۲ ساعت آینده بازگشت داده می‌شود.</p>
+            <p style="font-size: 0.8rem; color: #666;">علت خطا: {{ error }}</p>
+        {% endif %}
+
+        <a href="/" class="btn">بازگشت به چت</a>
+    </div>
+
+</body>
+</html>

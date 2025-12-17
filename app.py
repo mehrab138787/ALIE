@@ -16,7 +16,7 @@ from flask_mail import Mail, Message
 from functools import wraps
 import json
 from flask_sqlalchemy import SQLAlchemy
-from datetime import date, datetime
+from datetime import date, datetime, timedelta # timedelta برای تاریخ انقضا اضافه شد
 import sqlalchemy.exc
 from sqlalchemy import or_
 
@@ -26,7 +26,6 @@ from sqlalchemy import or_
 app = Flask(__name__)
 
 # 💡 اضافه شدن مسیردهی صریح برای فایل‌های استاتیک و قالب‌ها
-# این خطوط مسیرهای پیش‌فرض را به صورت صریح تأیید می‌کنند.
 app.static_folder = 'static'
 app.template_folder = 'templates'
 
@@ -44,11 +43,23 @@ TOKEN_ALERT_PHONE_NUMBER = '0902328702'
 BAZAAR_CLIENT_ID = "8Fk3ykSaqDNnBs54"
 BAZAAR_CLIENT_SECRET = "GQfRhVPuPyvOJ0L86BTpq2lgH6wnPojq"
 
+# 🆕 تنظیمات جدید درگاه پرداخت بازارپی و تعرفه‌های Noctovex
+BAZAAR_PAY_AUTH_TOKEN = "01f16b92299ad730cb405e22ebf9a9f14b11b970"
+DESTINATION_NAME = "kodular_bazaar"
+YOUR_DOMAIN = "https://alie-1.onrender.com"
+
+PRICES = {
+    'weekly': 459000,    # ۴۵,۹۰۰ تومان (به ریال)
+    'monthly': 1690000,  # ۱۶۹,۰۰۰ تومان (به ریال)
+    'package': 30000     # ۳,۰۰۰ تومان (به ریال)
+}
+FREE_CHAT_LIMIT = 15
+
 # ----------------- 💾 تنظیمات PostgreSQL (Render Internal) -----------------
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise ValueError("❌ متغیر محیطی DATABASE_URL (اتصال به دیتابیس) پیدا نشد! لطفاً آن را تنظیم کنید.")
+    raise ValueError("❌ متغیر محیطی DATABASE_URL (اتصال به دیتابیس) پیدا نشد!")
 
 # تنظیمات Flask-SQLAlchemy
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
@@ -229,6 +240,11 @@ class User(db.Model):
     is_premium = db.Column(db.Boolean, default=False)
     is_banned = db.Column(db.Boolean, default=False)
     is_admin = db.Column(db.Boolean, default=False)
+    
+    # 🆕 فیلدهای جدید برای سیستم پرداخت و محدودیت Noctovex
+    chat_count = db.Column(db.Integer, default=0) # کل چت‌های انجام شده
+    premium_expiry = db.Column(db.DateTime, nullable=True) # تاریخ انقضای هفتگی/ماهانه
+    extra_chat_packages = db.Column(db.Integer, default=0) # تعداد بسته‌های ۵ تایی خریداری شده
 
     usage = db.relationship('UserUsage', backref='user', lazy=True, uselist=False)
     conversations = db.relationship('Conversation', backref='user', lazy='dynamic')
@@ -853,18 +869,17 @@ def chat():
     user = get_user_by_identifier(user_identifier)
     
     # --- تعیین نوع استفاده و بررسی توکن ---
-    # توکن‌های پیام کاربر را محاسبه کن
     user_message_tokens = count_tokens([{"role": "user", "content": user_message}])
     
-    # 💡 منطق جدید برای پاسخ بلند و پیام بلند (اعمال محدودیت ۳۵۰-۴۰۰ توکن)
     is_long_response = False
     usage_type = 'chat'
     
-    # 1. بررسی پیام بلند برای همه کاربران (مهمان/عادی) و اعمال محدودیت پرمیوم
-    if user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
-        # پیام کاربر بلندتر از آستانه است (350 توکن)
-        
-        # ⚠️ نمایش پیام خطا در صورت عبور از محدودیت - اصلاح شده برای کپی آسان
+    # 🛑 منطق جدید Noctovex برای بررسی پرمیوم
+    now = datetime.utcnow()
+    is_active_premium = user and user.is_premium and user.premium_expiry and user.premium_expiry > now
+
+    # 1. بررسی پیام بلند (اعمال محدودیت ۳۵۰ توکن فقط برای غیرپرمیوم‌ها)
+    if not is_active_premium and user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
         error_reply = (
             "⛔ عذر می‌خواهم، محدودیت توکن شما برای حساب عادی رد شده است. "
             "می‌توانید پرمیوم بخرید که جواب‌ها با دقت کافی و بهتر ارائه داده میشه. "
@@ -872,34 +887,44 @@ def chat():
         )
         return jsonify({"reply": error_reply})
 
-    # 2. ادامه منطق برای کاربران مجاز (زیر ۳۵۰ توکن)
+    # 2. ادامه منطق برای کاربران مجاز
     if user and user_identifier:
         # 1. بررسی وضعیت بن
         if user.is_banned:
             return jsonify({"reply": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."})
 
-        # 2. بررسی و کسر بودجه چت/پاسخ بلند (usage_type is 'chat')
-        is_allowed, result = check_and_deduct_score(user_identifier, usage_type)
-        if not is_allowed:
-            return jsonify({"reply": result})
+        # 2. 🆕 بررسی سقف ۱۵ چت و بسته‌های خریداری شده
+        if not is_active_premium:
+            allowed_total = FREE_CHAT_LIMIT + (user.extra_chat_packages * 5)
+            if user.chat_count >= allowed_total:
+                payment_html = (
+                    "<div style='text-align: center; padding: 20px; background: rgba(13, 14, 18, 0.95); border-radius: 20px; border: 1px solid #d4af37; margin: 10px 0; font-family: Tahoma;'>"
+                    "<i class='fas fa-lock' style='color: #d4af37; font-size: 2rem; margin-bottom: 10px;'></i>"
+                    "<h3 style='color: #fff; margin: 0 0 10px 0;'>سقف چت رایگان تمام شد</h3>"
+                    "<p style='color: #aaa; font-size: 0.85rem; margin-bottom: 20px;'>برای ادامه گفتگو با هوش مصنوعی یکی از گزینه‌های زیر را انتخاب کنید:</p>"
+                    
+                    # دکمه خرید مستقیم بسته ۵ تایی
+                    "<a href='/pay/package' style='display: block; padding: 12px; background: #1a2a44; color: #fff; text-decoration: none; border-radius: 12px; font-weight: bold; margin-bottom: 10px; border: 1px solid #2a3d5f;'>خرید بسته ۵ تایی (۳,۰۰۰ تومان)</a>"
+                    
+                    # دکمه طلایی برای مشاهده همه پلن‌ها
+                    "<a href='/premium' style='display: block; padding: 12px; background: linear-gradient(135deg, #d4af37, #aa8928); color: #000; text-decoration: none; border-radius: 12px; font-weight: bold; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);'>مشاهده پلن‌های VIP 👑</a>"
+                    
+                    "</div>"
+                )
+                return jsonify({"reply": payment_html})
             
     else:
         # 💡 مدیریت کاربران مهمان و اعمال محدودیت ۵ چت روزانه
         today_date_str = datetime.utcnow().date().isoformat()
-        
-        # ریست کانتر مهمان اگر روز جدید است
         if session.get('guest_last_date') != today_date_str:
             session['guest_chat_count'] = 0
             session['guest_last_date'] = today_date_str
             
         guest_count = session.get('guest_chat_count', 0)
-        
         if guest_count >= GUEST_CHAT_LIMIT:
             return jsonify({
-                "reply": "⛔ متأسفم، شما به سقف **۵ چت روزانه** برای کاربران مهمان رسیده‌اید. لطفاً وارد حساب کاربری خود شوید تا چت‌های نامحدود دریافت کنید."
+                "reply": "⛔ متأسفم، شما به سقف **۵ چت روزانه** برای کاربران مهمان رسیده‌اید. لطفاً وارد حساب کاربری خود شوید تا از چت رایگان بهره‌مند شوید."
             })
-            
-        # اگر مهمان و مجاز بود، کانتر را افزایش بده.
         session['guest_chat_count'] = guest_count + 1
         
         # is_long_response is false, usage_type is 'chat'
@@ -1507,6 +1532,87 @@ def bazaar_callback():
     except Exception as e:
         # ... (مدیریت خطا)
         pass # کدهای مدیریت خطا را اینجا بگذارید
+    # =========================================================
+# 💳 مسیرهای پرداخت بازارپی (BazaarPay Routes)
+# =========================================================
+
+@app.route("/pay/<plan_type>")
+def initiate_pay(plan_type):
+    """ایجاد توکن پرداخت و انتقال کاربر به درگاه بازارپی."""
+    user_identifier = get_user_identifier(session)
+    user = get_user_by_identifier(user_identifier)
+    
+    if not user:
+        return redirect(url_for('login'))
+
+    if plan_type not in PRICES:
+        return "پلن انتخاب شده معتبر نیست.", 400
+
+    amount = PRICES[plan_type]
+    
+    # ۱. درخواست توکن پرداخت از بازارپی
+    pay_init_url = "https://api.bazaarpay.ir/v1/checkout/initiate/"
+    headers = {
+        "Authorization": f"Token {BAZAAR_PAY_AUTH_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "amount": amount,
+        "destination_index": 0, # بر اساس تنظیمات پنل بازارپی شما
+        "callback_url": f"{YOUR_DOMAIN}/payment_callback?plan={plan_type}",
+        "description": f"خرید سرویس {plan_type} Noctovex"
+    }
+
+    try:
+        response = requests.post(pay_init_url, json=payload, headers=headers, timeout=10)
+        res_data = response.json()
+        
+        if response.status_code == 200:
+            payment_token = res_data.get("checkout_token")
+            # انتقال کاربر به درگاه پرداخت
+            return redirect(f"https://www.bazaarpay.ir/checkout/start?token={payment_token}")
+        else:
+            return f"خطا در اتصال به درگاه: {res_data.get('detail', 'نامشخص')}", 500
+    except Exception as e:
+        return f"Error: {str(e)}", 500
+
+@app.route("/payment_callback")
+def payment_callback():
+    """تایید نهایی پرداخت و اعمال تغییرات در دیتابیس."""
+    checkout_token = request.args.get('token')
+    plan_type = request.args.get('plan')
+    user_identifier = get_user_identifier(session)
+    user = get_user_by_identifier(user_identifier)
+
+    if not user or not checkout_token:
+        return "دسترسی غیرمجاز یا خطای توکن.", 403
+
+    # ۱. استعلام وضعیت پرداخت از بازارپی
+    verify_url = "https://api.bazaarpay.ir/v1/checkout/verify/"
+    headers = {"Authorization": f"Token {BAZAAR_PAY_AUTH_TOKEN}"}
+    payload = {"checkout_token": checkout_token}
+
+    try:
+        verify_res = requests.post(verify_url, json=payload, headers=headers, timeout=10)
+        
+        if verify_res.status_code == 204: # کد 204 یعنی پرداخت با موفقیت تایید شده است
+            # ✅ اعمال تغییرات بر اساس پلن خریداری شده
+            if plan_type == 'weekly':
+                user.is_premium = True
+                user.premium_expiry = datetime.utcnow() + timedelta(days=7)
+            elif plan_type == 'monthly':
+                user.is_premium = True
+                user.premium_expiry = datetime.utcnow() + timedelta(days=30)
+            elif plan_type == 'package':
+                user.extra_chat_packages += 1
+            
+            db.session.commit()
+            return render_template("payment_result.html", success=True, plan=plan_type)
+        else:
+            return render_template("payment_result.html", success=False, error="پرداخت تایید نشد یا لغو شده است.")
+            
+    except Exception as e:
+        return f"خطای سیستمی: {str(e)}", 500
 
 # =========================================================
 # ▶️ اجرای برنامه
