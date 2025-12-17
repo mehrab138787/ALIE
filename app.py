@@ -1,5 +1,5 @@
 import os
-from urllib.parse import quote # کتابخانه مورد نیاز برای انکود کردن آدرس بازار
+from urllib.parse import quote, urlencode
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, Blueprint
 import requests
 import requests.exceptions
@@ -43,8 +43,11 @@ TOKEN_ALERT_PHONE_NUMBER = '0902328702'
 BAZAAR_CLIENT_ID = "8Fk3ykSaqDNnBs54"
 BAZAAR_CLIENT_SECRET = "GQfRhVPuPyvOJ0L86BTpq2lgH6wnPojq"
 
-# 🆕 تنظیمات جدید درگاه پرداخت بازارپی و تعرفه‌های Noctovex
-BAZAAR_PAY_AUTH_TOKEN = "01f16b92299ad730cb405e22ebf9a9f14b11b970"
+# =========================================================
+# 🔑 تنظیمات جدید درگاه پرداخت بازارپی (نسخه Badje)
+# =========================================================
+BASE_URL = "https://api.bazaar-pay.ir/badje/v1"
+AUTH_TOKEN = "01f16b92299ad730cb405e22ebf9a9f14b11b970"
 DESTINATION_NAME = "kodular_bazaar"
 YOUR_DOMAIN = "https://alie-1.onrender.com"
 
@@ -1537,82 +1540,101 @@ def bazaar_callback():
 # =========================================================
 
 @app.route("/pay/<plan_type>")
+@app.route('/pay/<plan_type>')
+@login_required
 def initiate_pay(plan_type):
-    """ایجاد توکن پرداخت و انتقال کاربر به درگاه بازارپی."""
-    user_identifier = get_user_identifier(session)
+    user_identifier = session.get('user_identifier')
     user = get_user_by_identifier(user_identifier)
     
-    if not user:
-        return redirect(url_for('login'))
-
-    if plan_type not in PRICES:
-        return "پلن انتخاب شده معتبر نیست.", 400
-
-    amount = PRICES[plan_type]
-    
-    # ۱. درخواست توکن پرداخت از بازارپی
-    pay_init_url = "https://api.bazaarpay.ir/v1/checkout/initiate/"
-    headers = {
-        "Authorization": f"Token {BAZAAR_PAY_AUTH_TOKEN}",
-        "Content-Type": "application/json"
+    # مبالغ به ریال (هماهنگ با کدهای تست قبلی تو)
+    amounts = {
+        'weekly': 250000,   # ۲۵ هزار تومان
+        'monthly': 700000,  # ۷۰ هزار تومان
+        'package': 30000    # ۳ هزار تومان
     }
+    amount = amounts.get(plan_type, 30000)
+
+    # استفاده از شماره تلفن برای شناسایی در بازگشت از درگاه
+    callback_url = f"https://alie-1.onrender.com/bazaarpay/callback/{plan_type}/{user.phone}"
+
     payload = {
         "amount": amount,
-        "destination_index": 0, # بر اساس تنظیمات پنل بازارپی شما
-        "callback_url": f"{YOUR_DOMAIN}/payment_callback?plan={plan_type}",
-        "description": f"خرید سرویس {plan_type} Noctovex"
+        "service_name": f"شارژ حساب {plan_type}",
+        "destination": DESTINATION_NAME,
+        "callback_url": callback_url
     }
 
     try:
-        response = requests.post(pay_init_url, json=payload, headers=headers, timeout=10)
-        res_data = response.json()
+        headers = {"Content-Type": "application/json"}
+        # 🚀 فراخوانی آدرس جدید بازارپی (Badje)
+        response = requests.post(f"{BASE_URL}/checkout/init/", headers=headers, data=json.dumps(payload))
+        response.raise_for_status()
         
-        if response.status_code == 200:
-            payment_token = res_data.get("checkout_token")
-            # انتقال کاربر به درگاه پرداخت
-            return redirect(f"https://www.bazaarpay.ir/checkout/start?token={payment_token}")
-        else:
-            return f"خطا در اتصال به درگاه: {res_data.get('detail', 'نامشخص')}", 500
+        response_data = response.json()
+        payment_url_base = response_data.get('payment_url')
+        
+        # انکود کردن شماره تلفن برای تجربه کاربری بهتر در درگاه
+        user_phone = user.phone if user.phone else ""
+        from urllib.parse import urlencode, quote
+        query_params = {"phone": user_phone, "redirect_url": callback_url}
+        encoded_params = urlencode(query_params, quote_via=quote)
+        
+        return redirect(f"{payment_url_base}&{encoded_params}")
     except Exception as e:
-        return f"Error: {str(e)}", 500
+        print(f"❌ خطای درگاه: {str(e)}")
+        return f"خطا در اتصال به درگاه: {str(e)}", 500
 
-@app.route("/payment_callback")
-def payment_callback():
-    """تایید نهایی پرداخت و اعمال تغییرات در دیتابیس."""
-    checkout_token = request.args.get('token')
-    plan_type = request.args.get('plan')
-    user_identifier = get_user_identifier(session)
-    user = get_user_by_identifier(user_identifier)
-
-    if not user or not checkout_token:
-        return "دسترسی غیرمجاز یا خطای توکن.", 403
-
-    # ۱. استعلام وضعیت پرداخت از بازارپی
-    verify_url = "https://api.bazaarpay.ir/v1/checkout/verify/"
-    headers = {"Authorization": f"Token {BAZAAR_PAY_AUTH_TOKEN}"}
-    payload = {"checkout_token": checkout_token}
+@app.route('/bazaarpay/callback/<plan_type>/<user_id>', methods=['GET', 'POST'])
+def bazaarpay_callback(plan_type, user_id):
+    # دریافت توکن از بازارپی
+    checkout_token = request.args.get('token') or request.form.get('token')
+    
+    if not checkout_token:
+        return render_template("payment_result.html", success=False, error="توکن پرداخت دریافت نشد")
 
     try:
-        verify_res = requests.post(verify_url, json=payload, headers=headers, timeout=10)
+        # ۱. استعلام وضعیت تراکنش (Trace)
+        trace_res = requests.post(f"{BASE_URL}/trace/", 
+                                headers={"Content-Type": "application/json"}, 
+                                data=json.dumps({"checkout_token": checkout_token}))
+        trace_data = trace_res.json()
         
-        if verify_res.status_code == 204: # کد 204 یعنی پرداخت با موفقیت تایید شده است
-            # ✅ اعمال تغییرات بر اساس پلن خریداری شده
-            if plan_type == 'weekly':
-                user.is_premium = True
-                user.premium_expiry = datetime.utcnow() + timedelta(days=7)
-            elif plan_type == 'monthly':
-                user.is_premium = True
-                user.premium_expiry = datetime.utcnow() + timedelta(days=30)
-            elif plan_type == 'package':
-                user.extra_chat_packages += 1
+        # اگر کاربر پرداخت را انجام داده باشد
+        if trace_data.get('status') == 'paid_not_committed':
             
-            db.session.commit()
-            return render_template("payment_result.html", success=True, plan=plan_type)
-        else:
-            return render_template("payment_result.html", success=False, error="پرداخت تایید نشد یا لغو شده است.")
+            # ۲. تایید نهایی و قطعی کردن واریز (Commit) - بسیار حیاتی
+            commit_headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Token {AUTH_TOKEN}" 
+            }
+            commit_res = requests.post(f"{BASE_URL}/commit/", 
+                                     headers=commit_headers, 
+                                     data=json.dumps({"checkout_token": checkout_token}))
             
+            # کد 204 یعنی پول با موفقیت به حساب شما نشست
+            if commit_res.status_code == 204:
+                # پیدا کردن کاربر در دیتابیس
+                user = get_user_by_identifier(user_id)
+                
+                if user:
+                    # اعمال پلن خریداری شده
+                    if plan_type == 'weekly':
+                        user.is_premium = True
+                        user.premium_expiry = datetime.utcnow() + timedelta(days=7)
+                    elif plan_type == 'monthly':
+                        user.is_premium = True
+                        user.premium_expiry = datetime.utcnow() + timedelta(days=30)
+                    elif plan_type == 'package':
+                        user.extra_chat_packages = (user.extra_chat_packages or 0) + 1
+                    
+                    db.session.commit()
+                    return render_template("payment_result.html", success=True)
+        
+        return render_template("payment_result.html", success=False, error="پرداخت تایید نشد یا لغو شده است")
+
     except Exception as e:
-        return f"خطای سیستمی: {str(e)}", 500
+        print(f"❌ خطای بازگشت از درگاه: {str(e)}")
+        return render_template("payment_result.html", success=False, error=f"خطای سیستمی: {str(e)}")
 
 # =========================================================
 # ▶️ اجرای برنامه
@@ -1622,11 +1644,12 @@ def payment_callback():
 def migrate_database():
     with app.app_context():
         try:
-            db.session.execute(sqlalchemy.text('ALTER TABLE users ADD COLUMN IF NOT EXISTS chat_count INTEGER DEFAULT 0'))
-            db.session.execute(sqlalchemy.text('ALTER TABLE users ADD COLUMN IF NOT EXISTS premium_expiry TIMESTAMP'))
-            db.session.execute(sqlalchemy.text('ALTER TABLE users ADD COLUMN IF NOT EXISTS extra_chat_packages INTEGER DEFAULT 0'))
+            # استفاده از "user" داخل کوتیشن برای PostgreSQL
+            db.session.execute(sqlalchemy.text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS chat_count INTEGER DEFAULT 0'))
+            db.session.execute(sqlalchemy.text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS premium_expiry TIMESTAMP'))
+            db.session.execute(sqlalchemy.text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS extra_chat_packages INTEGER DEFAULT 0'))
             db.session.commit()
-            print("✅ دیتابیس با موفقیت بروزرسانی شد.")
+            print("✅ دیتابیس بروزرسانی شد.")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ وضعیت دیتابیس: {e}")
