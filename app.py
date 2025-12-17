@@ -1618,6 +1618,23 @@ def payment_callback():
 # ▶️ اجرای برنامه
 # =========================================================
 
+# ۱. ابتدا تابع آپدیت دیتابیس (Migrate) را اینجا کپی کن
+def migrate_database():
+    with app.app_context():
+        try:
+            db.session.execute(sqlalchemy.text('ALTER TABLE users ADD COLUMN IF NOT EXISTS chat_count INTEGER DEFAULT 0'))
+            db.session.execute(sqlalchemy.text('ALTER TABLE users ADD COLUMN IF NOT EXISTS premium_expiry TIMESTAMP'))
+            db.session.execute(sqlalchemy.text('ALTER TABLE users ADD COLUMN IF NOT EXISTS extra_chat_packages INTEGER DEFAULT 0'))
+            db.session.commit()
+            print("✅ دیتابیس با موفقیت بروزرسانی شد.")
+        except Exception as e:
+            db.session.rollback()
+            print(f"⚠️ وضعیت دیتابیس: {e}")
+
+# ۲. فراخوانی تابع (قبل از اجرای سرور)
+migrate_database()
+
+# ۳. حالا کد اصلی خودت که از قبل داشتی (تغییری در این بخش نده)
 if __name__ == "__main__":
     if os.environ.get("FLASK_ENV") != "production":
         cleanup_old_images()
