@@ -651,7 +651,7 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'user_identifier' not in session:
             # اگر کاربر لاگین نبود، بفرستش به صفحه ورود
-            return redirect(url_for('login_page'))
+            return redirect(url_for('login_phone'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -1649,27 +1649,30 @@ def bazaarpay_callback(plan_type, user_id):
 # ▶️ اجرای برنامه
 # =========================================================
 
-# ۱. ابتدا تابع آپدیت دیتابیس (Migrate) را اینجا کپی کن
 def migrate_database():
     with app.app_context():
         try:
-            # استفاده از "user" داخل کوتیشن برای PostgreSQL
-            db.session.execute(sqlalchemy.text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS chat_count INTEGER DEFAULT 0'))
-            db.session.execute(sqlalchemy.text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS premium_expiry TIMESTAMP'))
-            db.session.execute(sqlalchemy.text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS extra_chat_packages INTEGER DEFAULT 0'))
+            # ابتدا مطمئن می‌شویم تمام جداول (users, payments و ...) ساخته شده‌اند
+            db.create_all()
+            
+            # حالا ستون‌ها را به جدول درست یعنی "users" اضافه می‌کنیم
+            # از sqlalchemy.text استفاده می‌کنیم تا خطا نگیرد
+            from sqlalchemy import text
+            
+            db.session.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS chat_count INTEGER DEFAULT 0'))
+            db.session.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS premium_expiry TIMESTAMP'))
+            db.session.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS extra_chat_packages INTEGER DEFAULT 0'))
+            
             db.session.commit()
-            print("✅ دیتابیس بروزرسانی شد.")
+            print("✅ وضعیت دیتابیس: تمام جداول و ستون‌ها آماده هستند.")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ وضعیت دیتابیس: {e}")
 
-# ۲. فراخوانی تابع (قبل از اجرای سرور)
+# فراخوانی تابع قبل از اجرای سرور
 migrate_database()
 
-# ۳. حالا کد اصلی خودت که از قبل داشتی (تغییری در این بخش نده)
 if __name__ == "__main__":
-    if os.environ.get("FLASK_ENV") != "production":
-        cleanup_old_images()
-
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    # تنظیم پورت برای رندر
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
