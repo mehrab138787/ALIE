@@ -11,6 +11,7 @@ import uuid
 import glob
 import time
 import random
+# ❌ حذف کامل وابستگی flask_mail
 from functools import wraps
 import json
 from flask_sqlalchemy import SQLAlchemy
@@ -51,16 +52,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# ----------------- 📧 تنظیمات Flask-Mail -----------------
-# این تنظیمات بدون استفاده باقی می‌مانند، اما برای جلوگیری از حذف تصادفی توسط ابزار، می‌ماند.
-app.config['MAIL_SERVER']='smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USERNAME'] = 'noctovex@gmail.com'
-app.config['MAIL_PASSWORD'] = 'valh wehv jnqp sgsa'
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USE_SSL'] = False
-mail = Mail(app)
-# ❌ حذف verification_codes
+# ----------------- 📧 تنظیمات Flask-Mail (حذف شد) -----------------
+# ❌ حذف کامل تنظیمات Mail و وابستگی‌ها
 
 # ----------------- 📱 تنظیمات SMS.ir -----------------
 SMSIR_API_KEY = 'rTAR33leVoNpAjnUUzzu2rygt72VrlXa7OrOqTHA5K1VgeSs' 
@@ -165,7 +158,7 @@ encoder = tiktoken.get_encoding("cl100k_base")
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    email = db.Column(db.String(120), unique=True, nullable=True) # اکنون فقط برای کاربران بازار که شناسه ایمیلی ندارند پر می‌شود
+    email = db.Column(db.String(120), unique=True, nullable=True)
     phone = db.Column(db.String(15), unique=True, nullable=True)
     score = db.Column(db.Integer, default=0)
     is_premium = db.Column(db.Boolean, default=False)
@@ -198,6 +191,9 @@ class Conversation(db.Model):
 # =========================================================
 # ⚙️ توابع احراز هویت و پیامک (فقط تلفن)
 # =========================================================
+def generate_verification_code():
+    return str(random.randint(100000, 999999))
+
 def send_verification_sms(phone_number, code):
     if phone_number.startswith('0'):
         mobile = phone_number[1:]
@@ -260,8 +256,6 @@ def register_user_if_new(user_identifier, email=None, phone=None):
     if not user:
         is_admin = (phone == ADMIN_PHONE_NUMBER)
         
-        # اگر از بازار آمده (user_identifier=bazaar_0912...)، آن را در فیلد phone ذخیره می‌کنیم.
-        # اگر از صفحه مستقیم تلفن آمده، phone مقداردهی شده است.
         phone_to_save = phone if phone else user_identifier if user_identifier.startswith('bazaar_') else None
         
         user = User(
@@ -277,10 +271,9 @@ def register_user_if_new(user_identifier, email=None, phone=None):
     else:
         # به‌روزرسانی (در صورت تکرار لاگین از بازار)
         if phone and not user.phone:
-             user.phone = phone # در مواردی که شماره تلفن از طریق /verify_sms_code کامل می‌شود
+             user.phone = phone 
         elif user_identifier.startswith('bazaar_') and not user.phone:
              user.phone = user_identifier
-
 
     try:
         db.session.commit()
@@ -478,7 +471,7 @@ def manage_users():
     all_users = User.query.all()
     users_list = [
         {
-            'identifier': user.phone or user.id, # فقط شماره تلفن نمایش داده شود
+            'identifier': user.phone or user.id, 
             'score': user.score,
             'is_premium': user.is_premium,
             'is_banned': user.is_banned,
@@ -528,57 +521,6 @@ def user_action():
     return jsonify({"status": "success", "message": message, "new_status": {'is_premium': user.is_premium, 'is_banned': user.is_banned, 'score': user.score}})
 
 app.register_blueprint(admin_bp)
-
-# =========================================================
-# 📧 مسیرهای احراز هویت (فقط تلفن)
-# =========================================================
-
-@app.route("/send_sms_code", methods=["POST"])
-def send_sms_code():
-    phone_number = request.json.get("phone", "").strip()
-    if not re.match(r'^0?9\d{9}$', phone_number):
-        return jsonify({"status": "error", "message": "لطفاً یک شماره تلفن معتبر (مانند 0912...) وارد کنید."}), 400
-    code = generate_verification_code()
-    phone_verification_codes[phone_number] = {'code': code, 'expiry_time': time.time() + 300}
-    if not send_verification_sms(phone_number, code):
-        return jsonify({"status": "error", "message": "خطا در ارسال پیامک. لطفاً شماره و تنظیمات SMS.ir را بررسی کنید."}), 500
-    return jsonify({"status": "success", "message": "کد تأیید به شماره شما ارسال شد. لطفاً پیامک‌ها را بررسی کنید."})
-
-@app.route("/verify_sms_code", methods=["POST"])
-def verify_sms_code():
-    phone_number = request.json.get("phone", "").strip()
-    entered_code = request.json.get("code", "").strip()
-
-    if phone_number not in phone_verification_codes:
-        return jsonify({"status": "error", "message": "شماره نامعتبر یا درخواستی برای آن ثبت نشده است."}), 400
-
-    stored_data = phone_verification_codes[phone_number]
-    if time.time() > stored_data['expiry_time']:
-        del phone_verification_codes[phone_number]
-        return jsonify({"status": "error", "message": "کد تأیید منقضی شده است. لطفاً مجدداً درخواست کد دهید."}), 400
-
-    if entered_code == stored_data['code']:
-        del phone_verification_codes[phone_number]
-        
-        # استفاده از phone_number به عنوان user_identifier برای ثبت اولیه
-        user = register_user_if_new(phone_number, phone=phone_number) 
-
-        if not user:
-            return jsonify({"status": "error", "message": "خطا در ثبت/بازیابی کاربر از دیتابیس."}), 500
-
-        is_admin = user.is_admin
-        redirect_url = url_for('admin.admin_dashboard') if is_admin else url_for('account')
-
-        session.clear()
-        session['user_id'] = user.id
-        session['user_identifier'] = phone_number # شناسه اصلی
-        session['user_phone'] = phone_number      # شماره تلفن برای مسیرهای دیگر
-        session['needs_profile_info'] = True
-        session['is_admin'] = is_admin
-
-        return jsonify({"status": "success", "redirect": redirect_url})
-    else:
-        return jsonify({"status": "error", "message": "کد وارد شده صحیح نیست."}), 400
 
 # =========================================================
 # 💬 مسیر چت و بقیه مسیرها (با اعمال محدودیت و چرخش کلید)
@@ -800,7 +742,6 @@ def guess_game():
 
 @app.route("/login")
 def login():
-    # هدایت مستقیم به لاگین تلفن
     return redirect(url_for('login_phone')) 
 
 @app.route("/login_phone")
@@ -835,7 +776,6 @@ def account():
 
 @app.route("/verify_page")
 def verify_page():
-    # حذف صفحه تأیید ایمیل
     return redirect(url_for('verify_page_phone'))
 
 @app.route("/verify_page_phone")
