@@ -1041,7 +1041,7 @@ def initiate_pay(plan_type):
     user_identifier = session.get('user_identifier')
     user = get_user_by_identifier(user_identifier)
 
-    amounts = {'weekly': 250000, 'monthly': 700000, 'package': 30000}
+    amounts = {'weekly': 459000, 'monthly': 1690000, 'package': 30000}
     amount = amounts.get(plan_type, 30000)
     callback_url = f"{YOUR_DOMAIN}/bazaarpay/callback/{plan_type}/{user.phone}"
 
