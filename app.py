@@ -15,7 +15,7 @@ from flask_mail import Mail, Message
 from functools import wraps
 import json
 from flask_sqlalchemy import SQLAlchemy
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta # timedelta برای تاریخ انقضا اضافه شد
 import sqlalchemy.exc
 from sqlalchemy import or_
 
@@ -81,8 +81,8 @@ mail = Mail(app)
 verification_codes = {}
 
 # ----------------- 📱 تنظیمات SMS.ir (جایگزین Kavenegar) -----------------
-SMSIR_API_KEY = 'rTAR33leVoNpAjnUUzzu2rygt72VrlXa7OrOqTHA5K1VgeSs'
-SMSIR_TEMPLATE_ID = 660708
+SMSIR_API_KEY = 'rTAR33leVoNpAjnUUzzu2rygt72VrlXa7OrOqTHA5K1VgeSs' # ⬅️ کلید نمونه، تغییر دهید
+SMSIR_TEMPLATE_ID = 660708 # ⬅️ شناسه قالب کد تأیید، تغییر دهید
 SMSIR_VERIFY_URL = "https://api.sms.ir/v1/send/verify"
 
 phone_verification_codes = {}
@@ -92,9 +92,8 @@ phone_verification_codes = {}
 # 🔑 سیستم مدیریت کلیدهای GapGPT (Key Rotation & Fallback)
 # =========================================================
 
-# 1. بارگذاری تمام کلیدهای تعریف شده در متغیرهای محیطی
 GAPGPT_KEYS = {}
-for i in range(1, 6):
+for i in range(1, 6): # از 1 تا 5
     key_name = f"GAPGPT_API_KEY_{i}"
     key_value = os.getenv(key_name)
     if key_value:
@@ -103,19 +102,18 @@ for i in range(1, 6):
 if not GAPGPT_KEYS:
     raise ValueError("❌ حداقل یک متغیر محیطی GAPGPT_API_KEY_i پیدا نشد! لطفاً آن را تنظیم کنید.")
 
-# 2. متغیرهای سراسری برای مدیریت حالت کلیدها
 KEY_NAMES_ORDER = list(GAPGPT_KEYS.keys())
 BLOCKED_KEYS = set()
 KEY_INDEX = 0
 
 def send_token_alert(key_name, reason):
+    """ارسال پیامک هشدار برای اتمام/خطای کلید API."""
     if not TOKEN_ALERT_PHONE_NUMBER:
-        print(f"Warning: TOKEN_ALERT_PHONE_NUMBER not set. Alert for {key_name} skipped.")
         return
-
-    print(f"🔔 هشدار (بدون ارسال پیامک): اخطار! کلید GapGPT ({key_name}) با خطا مواجه شد ({reason}). موقتا مسدود شد.")
+    print(f"🔔 هشدار: اخطار! کلید GapGPT ({key_name}) با خطا مواجه شد ({reason}). موقتا مسدود شد.")
 
 def handle_key_failure(key_name, status_code):
+    """مسدود کردن کلید معیوب و ارسال هشدار."""
     if key_name not in BLOCKED_KEYS:
         BLOCKED_KEYS.add(key_name)
         reason = f"HTTP {status_code}"
@@ -123,21 +121,18 @@ def handle_key_failure(key_name, status_code):
         print(f"❌ کلید {key_name} به دلیل خطای {status_code} مسدود شد.")
 
 def get_openrouter_key(initial_attempt=True):
+    """برگرداندن کلید فعال بعدی به صورت چرخشی (Round-Robin)."""
     global KEY_INDEX
     total_keys = len(KEY_NAMES_ORDER)
-    if total_keys == 0:
-        return None, None
-
+    if total_keys == 0: return None, None
     if len(BLOCKED_KEYS) == total_keys and initial_attempt:
         print("🚨 همه کلیدهای API مسدود هستند. ریست کردن و تلاش مجدد.")
         BLOCKED_KEYS.clear()
-
     for _ in range(total_keys):
         key_name = KEY_NAMES_ORDER[KEY_INDEX]
         KEY_INDEX = (KEY_INDEX + 1) % total_keys
         if key_name not in BLOCKED_KEYS:
             return key_name, GAPGPT_KEYS[key_name]
-
     return None, None
 # ---------------------------------------------------------
 
@@ -166,11 +161,9 @@ SCORE_QUOTA_CONFIG = {
 GAPGPT_BASE_URL = "https://api.gapapi.com/v1/chat/completions"
 CHAT_MODEL_NAME = "gpt-4o-mini"
 TRANSLATION_MODEL_NAME = "gpt-4o-mini"
-
 POLLINATIONS_URL = "https://image.pollinations.ai/prompt/"
 STATIC_DIR = os.path.join(app.root_path, 'static', 'temp_images')
 IMAGE_LIFETIME = 3600
-
 IMAGE_QUALITY_PARAMS = [
     "hd", "detailed", "4k", "8k", "highly detailed",
     "trending on artstation", "cinematic light", "masterpiece", "photorealistic"
@@ -179,17 +172,16 @@ IMAGE_QUALITY_PARAMS = [
 if not os.path.exists(STATIC_DIR):
     os.makedirs(STATIC_DIR)
 
-SYSTEM_PROMPT = """
-تو یک چت‌بات مفید هستی. پاسخ‌ها را به زبان فارسی و روان بده.
+SYSTEM_PROMPT = """تو یک چت‌بات مفید هستی. پاسخ‌ها را به زبان فارسی و روان بده.
 - برای سوالات سازنده: تیم NOCTOVEX به رهبری مهراب عزیزی
-- پاسخ‌ها باید **فوق‌العاده مختصر، مفید و خیلی کوتاه** باشند و در سقف نهایی **۴۰۰ توکن** به پایان برسند.
-"""
+- پاسخ‌ها باید **فوق‌العاده مختصر، مفید و خیلی کوتاه** باشند و در سقف نهایی **۴۰۰ توکن** به پایان برسند."""
 
 LONG_RESPONSE_TOKEN_THRESHOLD = 350
 LONG_RESPONSE_MAX_COMPLETION_TOKENS = 400
 LONG_RESPONSE_TOTAL_TOKEN_LIMIT = 500
 
 TOTAL_TOKEN_LIMIT = 500
+INPUT_TOKEN_LIMIT = 500
 MAX_COMPLETION_TOKENS = 400
 
 GUEST_CHAT_LIMIT = 5
@@ -208,12 +200,9 @@ class User(db.Model):
     is_premium = db.Column(db.Boolean, default=False)
     is_banned = db.Column(db.Boolean, default=False)
     is_admin = db.Column(db.Boolean, default=False)
-
-    # 🆕 فیلدهای جدید برای سیستم پرداخت و محدودیت Noctovex
     chat_count = db.Column(db.Integer, default=0)
     premium_expiry = db.Column(db.DateTime, nullable=True)
-    extra_chat_packages = db.Column(db.Integer, default=0)
-
+    extra_chat_packages = db.Column(db.Integer, default=0) # بسته‌های 5 تایی
     usage = db.relationship('UserUsage', backref='user', lazy=True, uselist=False)
     conversations = db.relationship('Conversation', backref='user', lazy='dynamic')
 
@@ -221,13 +210,11 @@ class UserUsage(db.Model):
     __tablename__ = 'user_usage'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(36), db.ForeignKey('users.id'), unique=True, nullable=False)
-
     date = db.Column(db.Date, default=datetime.utcnow().date)
-
     chat_budget = db.Column(db.Integer, default=50)
     image_budget = db.Column(db.Integer, default=60)
     long_response_budget = db.Column(db.Integer, default=5)
-    package_chat_budget = db.Column(db.Integer, default=0) # 💡 بودجه بسته‌های 24 ساعته
+    package_chat_budget = db.Column(db.Integer, default=0) # 💡 بودجه بسته‌های 24 ساعته (که در واقع از extra_chat_packages کم می‌شود)
     level_check = db.Column(db.String(10), nullable=True)
 
 class Conversation(db.Model):
@@ -241,9 +228,7 @@ class Conversation(db.Model):
 # =========================================================
 # ⚙️ توابع احراز هویت و ایمیل/پیامک
 # =========================================================
-def generate_verification_code():
-    return str(random.randint(100000, 999999))
-
+def generate_verification_code(): return str(random.randint(100000, 999999))
 def send_verification_email(email, code):
     try:
         msg = Message('کد تأیید حساب Cyrus AI', sender=app.config['MAIL_USERNAME'], recipients=[email])
@@ -255,19 +240,11 @@ def send_verification_email(email, code):
         return False
 
 def send_verification_sms(phone_number, code):
-    if phone_number.startswith('0'):
-        mobile = phone_number[1:]
-    else:
-        mobile = phone_number
-
-    payload = {
-        "mobile": mobile,
-        "templateId": SMSIR_TEMPLATE_ID,
-        "parameters": [{"name": "Code", "value": code}]
-    }
-
+    """ارسال کد تأیید از طریق پیامک با SMS.ir (ارسال سریع)."""
+    if phone_number.startswith('0'): mobile = phone_number[1:]
+    else: mobile = phone_number
+    payload = {"mobile": mobile, "templateId": SMSIR_TEMPLATE_ID, "parameters": [{"name": "Code", "value": code}]}
     headers = {'x-api-key': SMSIR_API_KEY, 'Content-Type': 'application/json'}
-
     try:
         response = requests.post(SMSIR_VERIFY_URL, json=payload, headers=headers, timeout=10)
         response.raise_for_status()
@@ -288,38 +265,21 @@ def send_verification_sms(phone_number, code):
 # =========================================================
 # 💾 توابع پایداری داده (Persistence)
 # =========================================================
-def get_user_identifier(session):
-    return session.get('user_email') or session.get('user_phone')
-
+def get_user_identifier(session): return session.get('user_email') or session.get('user_phone') or session.get('user_identifier')
 def get_user_by_identifier(identifier):
-    return User.query.filter(
-        or_(User.email == identifier, User.phone == identifier)
-    ).first()
-
-def get_user_by_id(user_id):
-    return User.query.get(user_id)
+    if not identifier: return None
+    return User.query.filter(or_(User.email == identifier, User.phone == identifier, User.id == identifier)).first()
+def get_user_by_id(user_id): return User.query.get(user_id)
 
 def register_user_if_new(user_identifier, email=None, phone=None):
     user = get_user_by_identifier(user_identifier)
-
     if not user:
         is_admin = (phone == ADMIN_PHONE_NUMBER)
-        user = User(
-            id=str(uuid.uuid4()),
-            email=email,
-            phone=phone,
-            score=0,
-            is_premium=False,
-            is_banned=False,
-            is_admin=is_admin
-        )
+        user = User(id=str(uuid.uuid4()), email=email, phone=phone, score=0, is_premium=False, is_banned=False, is_admin=is_admin)
         db.session.add(user)
     else:
-        if email:
-            user.email = email
-        if phone:
-            user.phone = phone
-
+        if email: user.email = email
+        if phone: user.phone = phone
     try:
         db.session.commit()
         return user
@@ -329,86 +289,58 @@ def register_user_if_new(user_identifier, email=None, phone=None):
         return None
 
 def check_and_deduct_score(user_identifier, usage_type):
+    """بررسی بودجه امتیاز روزانه، کسر هزینه و ذخیره. (منطق اصلاح شده برای اولویت بسته)"""
     user = get_user_by_identifier(user_identifier)
-    if not user:
-        return False, "خطای داخلی: کاربر در دیتابیس یافت نشد."
-
+    if not user: return False, "خطای داخلی: کاربر در دیتابیس یافت نشد."
+    
     today_date = datetime.utcnow().date()
-    is_premium = user.is_premium
-    level = 'premium' if is_premium else 'free'
+    now = datetime.utcnow()
+    
+    is_premium_active = user.is_premium and user.premium_expiry and user.premium_expiry > now
+    level = 'premium' if is_premium_active else 'free'
+    
     cost = SCORE_QUOTA_CONFIG['COSTS'][usage_type]
     daily_limits = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]
     budget_key = f'{usage_type}_budget'
 
-    usage, created = UserUsage.query.filter_by(user_id=user.id).first()
+    usage = user.usage
 
-    if created or not usage or usage.date != today_date or usage.level_check != level:
-        if not created and usage:
-            # ریست روزانه
-            usage.date = today_date
-            usage.level_check = level
-        elif not created and usage.date != today_date:
-            usage.date = today_date
-            usage.level_check = level
-        elif created:
-             # ایجاد اولیه
-             usage = UserUsage(user_id=user.id, date=today_date, level_check=level)
-             db.session.add(usage)
-
-        # ریست بودجه‌ها به سقف روزانه
+    # --- ریست روزانه و بررسی وضعیت پرمیوم ---
+    if not usage or usage.date != today_date or usage.level_check != level:
+        usage = usage or UserUsage(user_id=user.id, date=today_date)
+        if not usage in db.session: db.session.add(usage)
+        
+        usage.date = today_date
         usage.chat_budget = daily_limits['chat']
         usage.image_budget = daily_limits['image']
         usage.long_response_budget = daily_limits.get('long_response', 0)
-        usage.package_chat_budget = 0 # 💡 ریست بودجه بسته‌ها (اگر بسته جدیدی فعال نشد)
+        usage.level_check = level
 
     current_budget = getattr(usage, budget_key, 0)
 
     # --- 🎯 منطق کسر امتیاز جدید: اول بسته 24 ساعته، سپس بودجه روزانه ---
-    if usage_type == 'chat':
+    if usage_type == 'chat' and not is_premium_active:
         # 1. اولویت با استفاده از بسته خریداری شده (extra_chat_packages)
         if user.extra_chat_packages and user.extra_chat_packages > 0 and current_budget < cost:
-            # اگر بودجه روزانه تمام شده بود و بسته پکیج هم داریم
             user.extra_chat_packages -= 1
             message = f"✅ از بسته اضافی شما استفاده شد. {user.extra_chat_packages} بسته باقی مانده است."
             try:
                 db.session.commit()
-                return True, remaining_budget
+                return True, message
             except Exception:
                  db.session.rollback()
                  return False, "خطای دیتابیس هنگام استفاده از بسته اضافی."
 
-        # 2. اگر بسته اضافی نبود یا بودجه روزانه کافی بود، بودجه روزانه کسر می‌شود
-        if current_budget < cost:
-            action_fa = 'چت'
-            level_fa = 'پرمیوم' if is_premium else 'عادی'
-            remaining_uses = current_budget // cost
-            error_message = (
-                f"⛔ متأسفم، بودجه امتیاز روزانه شما برای {action_fa} ({level_fa}) کافی نیست."
-                f" هزینه هر {action_fa} {cost} امتیاز است و شما {current_budget} امتیاز باقی مانده دارید."
-                f" (حدود {remaining_uses} استفاده باقی مانده)."
-            )
-            if not is_premium and user.extra_chat_packages < 1:
-                error_message += " با ارتقا یا خرید بسته می‌توانید محدودیت‌های خود را برطرف کنید."
-            return False, error_message
-        
-        setattr(usage, budget_key, current_budget - cost)
-        # توجه: اگر کاربر پرمیوم باشد، اما بودجه روزانه پرمیومش تمام شود، باز هم خطا می‌گیرد مگر اینکه بسته داشته باشد.
+    # 2. کسر از بودجه روزانه (برای همه موارد و چت‌هایی که بسته ندارند)
+    if current_budget < cost:
+        action_fa = ('چت' if usage_type == 'chat' else 'تولید تصویر' if usage_type == 'image' else 'پاسخ بلند')
+        level_fa = 'پرمیوم' if is_premium_active else 'عادی'
+        remaining_uses = current_budget // cost
+        error_message = (f"⛔ متأسفم، بودجه امتیاز روزانه شما برای {action_fa} ({level_fa}) کافی نیست. هزینه هر {action_fa} {cost} امتیاز است و شما {current_budget} امتیاز باقی مانده دارید. (حدود {remaining_uses} استفاده باقی مانده).")
+        if not is_premium_active: error_message += " با ارتقا به حساب پرمیوم می‌توانید محدودیت‌های خود را برطرف کنید."
+        return False, error_message
 
-    else: # برای 'image'
-        if current_budget < cost:
-            action_fa = ('تولید تصویر' if usage_type == 'image' else 'پاسخ بلند')
-            level_fa = 'پرمیوم' if is_premium else 'عادی'
-            remaining_uses = current_budget // cost
-            error_message = (
-                f"⛔ متأسفم، بودجه امتیاز روزانه شما برای {action_fa} ({level_fa}) کافی نیست."
-                f" هزینه هر {action_fa} {cost} امتیاز است و شما {current_budget} امتیاز باقی مانده دارید."
-                f" (حدود {remaining_uses} استفاده باقی مانده)."
-            )
-            if not is_premium:
-                error_message += " با ارتقا به حساب پرمیوم می‌توانید محدودیت‌های خود را برطرف کنید."
-            return False, error_message
-
-        setattr(usage, budget_key, current_budget - cost)
+    setattr(usage, budget_key, current_budget - cost)
 
     try:
         db.session.commit()
@@ -421,59 +353,40 @@ def check_and_deduct_score(user_identifier, usage_type):
 
 def save_conversation(user_identifier, chat_id, messages, user_message):
     user = get_user_by_identifier(user_identifier)
-    if not user:
-        return
-
+    if not user: return
     chat_entry = Conversation.query.filter_by(id=chat_id, user_id=user.id).first()
     messages_json_string = json.dumps(messages, ensure_ascii=False)
-
     if chat_entry:
         chat_entry.messages_json = messages_json_string
         chat_entry.last_update = time.time()
-        if chat_entry.title == "گفتگوی جدید...":
-             chat_entry.title = user_message[:50] + "..." if len(user_message) > 50 else user_message
+        if chat_entry.title == "گفتگوی جدید...": chat_entry.title = user_message[:50] + "..." if len(user_message) > 50 else user_message
     else:
         new_title = user_message[:50] + "..." if len(user_message) > 50 else user_message
         chat_entry = Conversation(id=chat_id, user_id=user.id, title=new_title, messages_json=messages_json_string, last_update=time.time())
         db.session.add(chat_entry)
-
-    try:
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error saving conversation: {e}")
+    try: db.session.commit()
+    except Exception as e: db.session.rollback(); print(f"Error saving conversation: {e}")
 
 # =========================================================
 # ⚙️ توابع کمکی، شمارنده و محدودیت (Quota)
 # =========================================================
-def count_tokens(messages):
-    return sum(len(encoder.encode_ordinary(m["content"])) for m in messages)
-
+def count_tokens(messages): return sum(len(encoder.encode_ordinary(m["content"])) for m in messages)
 def fix_rtl_ltr(text):
-    def ltr_replacer(match):
-        return f"\u200E{match.group(0)}\u200E"
+    def ltr_replacer(match): return f"\u200E{match.group(0)}\u200E"
     fixed_text = re.sub(r'([a-zA-Z0-9\/\.\-\_\=\+\(\)\{\}\[\]\*\`\:\<\>\#\@\$\%\^\&\!\"\'\?\;\,\s]+)', ltr_replacer, text)
     final_lines = [f"\u200F{line}" for line in fixed_text.split('\n')]
     return "\n".join(final_lines)
 
 def translate_prompt_to_english(persian_prompt):
-    translation_system_prompt = ("You are an expert prompt engineer. Translate the following Persian description into a detailed, "
-                                 "high-quality English prompt suitable for a Stable Diffusion image generator. "
-                                 "The prompt should be artistic and descriptive (e.g., 'digital painting, 4k, cinematic light'). "
-                                 "Do not add any explanation or text other than the translated prompt itself. "
-                                 "Ensure the translation is vivid and descriptive, ready for image generation.")
-
+    # ... (منطق ترجمه بدون تغییر)
+    translation_system_prompt = ("You are an expert prompt engineer. Translate the following Persian description into a detailed, high-quality English prompt suitable for a Stable Diffusion image generator. The prompt should be artistic and descriptive (e.g., 'digital painting, 4k, cinematic light'). Do not add any explanation or text other than the translated prompt itself. Ensure the translation is vivid and descriptive, ready for image generation.")
     messages = [{"role": "system", "content": translation_system_prompt}, {"role": "user", "content": persian_prompt}]
     max_attempts = len(GAPGPT_KEYS)
-
     for attempt in range(max_attempts):
         key_name, current_api_key = get_openrouter_key(initial_attempt=(attempt==0))
-        if not current_api_key:
-            return persian_prompt
-
+        if not current_api_key: return persian_prompt
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {current_api_key}"}
         data = {"model": TRANSLATION_MODEL_NAME, "messages": messages, "max_tokens": 75}
-
         try:
             response = requests.post(GAPGPT_BASE_URL, json=data, headers=headers, timeout=15)
             response.raise_for_status()
@@ -481,12 +394,12 @@ def translate_prompt_to_english(persian_prompt):
             return english_prompt
         except requests.exceptions.RequestException as e:
             status_code = getattr(e.response, 'status_code', 500)
+            print(f"Translation API Error (Key: {key_name}): {e}. Status: {status_code}")
             if status_code in [402, 401]:
                 handle_key_failure(key_name, status_code)
                 if attempt == max_attempts - 1: return persian_prompt
                 continue
-            else:
-                return persian_prompt
+            else: return persian_prompt
         except Exception as e:
             print(f"Translation General Error: {e}")
             return persian_prompt
@@ -500,39 +413,31 @@ def generate_and_crop_image(english_prompt):
         response.raise_for_status()
         img = Image.open(BytesIO(response.content))
         width, height = img.size
-        crop_right = max(0, width - 40)
-        crop_bottom = max(0, height - 60)
-        cropped_img = img.crop((0, 0, crop_right, crop_bottom))
+        crop_box = (0, 0, max(0, width - 40), max(0, height - 60))
+        cropped_img = img.crop(crop_box)
         file_name = f"cropped_{uuid.uuid4()}.jpg"
         file_path = os.path.join(STATIC_DIR, file_name)
         cropped_img.save(file_path, 'JPEG', quality=95)
         return file_name
-    except requests.exceptions.Timeout:
-        return "TIMEOUT_100_SEC"
-    except Exception as e:
-        print(f"Error in image generation/cropping: {e}")
-        return None
+    except requests.exceptions.Timeout: return "TIMEOUT_100_SEC"
+    except Exception as e: print(f"Error in image generation/cropping: {e}"); return None
 
 @app.cli.command("cleanup-images")
-def cleanup_images_command():
-    cleanup_old_images()
-
+def cleanup_images_command(): cleanup_old_images()
 def cleanup_old_images():
     now = time.time()
     for filename in glob.glob(os.path.join(STATIC_DIR, '*')):
         try:
-            file_mod_time = os.path.getmtime(filename)
-            if now - file_mod_time > IMAGE_LIFETIME:
+            if now - os.path.getmtime(filename) > IMAGE_LIFETIME:
                 os.remove(filename)
                 print(f"🗑️ Deleted old image: {filename}")
-        except Exception as e:
-            print(f"Error deleting file {filename}: {e}")
+        except Exception as e: print(f"Error deleting file {filename}: {e}")
 
 # =========================================================
-# 👑 توابع و مسیرهای پنل مدیریت (Blueprint)
+# 👑 توابع و مسیرهای پنل مدیریت (Blueprint) و لاگین مورد نیاز
 # =========================================================
-admin_bp = Blueprint('admin', __name__, url_prefix='/admin', template_folder='templates')
 
+# --- تعریف دکوراتورها در ابتدای فایل ---
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -543,64 +448,60 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('user_identifier'): # استفاده از user_identifier برای تشخیص لاگین بودن
+            return redirect(url_for('login_phone'))
+        return f(*args, **kwargs)
+    return decorated_function
+# --- پایان تعریف دکوراتورها ---
+
+admin_bp = Blueprint('admin', __name__, url_prefix='/admin', template_folder='templates')
+
 @admin_bp.route("/")
 @admin_required
 def admin_dashboard():
+    # ... (منطق ادمین)
     total_users = User.query.count()
     premium_users = User.query.filter_by(is_premium=True).count()
     banned_users = User.query.filter_by(is_banned=True).count()
     context = {
-        'total_users': total_users, 'premium_users': premium_users,
-        'banned_users': banned_users, 'admin_identifier': get_user_identifier(session)
+        'total_users': total_users, 'premium_users': premium_users, 'banned_users': banned_users,
+        'admin_identifier': get_user_identifier(session)
     }
     return render_template("admin_dashboard.html", **context)
 
 @admin_bp.route("/users")
 @admin_required
 def manage_users():
+    # ... (منطق مدیریت کاربران)
     all_users = User.query.all()
-    users_list = [
-        {
-            'identifier': user.email or user.phone or user.id, 'score': user.score,
-            'is_premium': user.is_premium, 'is_banned': user.is_banned,
-            'email': user.email or 'N/A', 'phone': user.phone or 'N/A'
-        }
-        for user in all_users
-    ]
+    users_list = [{'identifier': u.email or u.phone or u.id, 'score': u.score, 'is_premium': u.is_premium, 'is_banned': u.is_banned, 'email': u.email or 'N/A', 'phone': u.phone or 'N/A'} for u in all_users]
     return render_template("admin_users.html", users=users_list)
 
 @admin_bp.route("/user_action", methods=["POST"])
 @admin_required
 def user_action():
+    # ... (منطق اعمال تغییرات)
     identifier = request.json.get("identifier")
     action = request.json.get("action")
     value = request.json.get("value")
     user = get_user_by_identifier(identifier)
     if not user: return jsonify({"status": "error", "message": "کاربر یافت نشد."}), 404
-
     if action == "set_score":
-        try:
-            score = int(value)
-            user.score = score
-            message = f"امتیاز کاربر {identifier} به {score} تغییر یافت."
-        except ValueError:
-            return jsonify({"status": "error", "message": "امتیاز باید عدد صحیح باشد."}), 400
+        try: score = int(value); user.score = score; message = f"امتیاز کاربر {identifier} به {score} تغییر یافت."
+        except ValueError: return jsonify({"status": "error", "message": "امتیاز باید عدد صحیح باشد."}), 400
     elif action == "toggle_premium":
         user.is_premium = not user.is_premium
-        status = "پرمیوم شد" if user.is_premium else "عادی شد"
-        message = f"وضعیت کاربر {identifier}: {status}."
+        message = f"وضعیت کاربر {identifier}: {'پرمیوم شد' if user.is_premium else 'عادی شد'}."
         if user.usage: user.usage.level_check = None
     elif action == "toggle_ban":
         user.is_banned = not user.is_banned
-        status = "بن شد" if user.is_banned else "رفع بن شد"
-        message = f"وضعیت بن کاربر {identifier}: {status}."
+        message = f"وضعیت بن کاربر {identifier}: {'بن شد' if user.is_banned else 'رفع بن شد'}."
     else: return jsonify({"status": "error", "message": "عملیات نامعتبر."}), 400
-
     try: db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"status": "error", "message": f"خطای دیتابیس: {e}"}), 500
-
+    except Exception as e: db.session.rollback(); return jsonify({"status": "error", "message": f"خطای دیتابیس: {e}"}), 500
     return jsonify({"status": "success", "message": message, "new_status": {'is_premium': user.is_premium, 'is_banned': user.is_banned, 'score': user.score}})
 
 app.register_blueprint(admin_bp)
@@ -622,8 +523,7 @@ def send_code():
 def verify_code():
     user_email = request.json.get("email", "").strip().lower()
     entered_code = request.json.get("code", "").strip()
-    if user_email not in verification_codes:
-        return jsonify({"status": "error", "message": "ایمیل نامعتبر یا درخواستی برای آن ثبت نشده است."}), 400
+    if user_email not in verification_codes: return jsonify({"status": "error", "message": "ایمیل نامعتبر یا درخواستی برای آن ثبت نشده است."}), 400
     stored_data = verification_codes[user_email]
     if time.time() > stored_data['expiry_time']:
         del verification_codes[user_email]
@@ -634,12 +534,11 @@ def verify_code():
         if not user: return jsonify({"status": "error", "message": "خطا در ثبت/بازیابی کاربر از دیتابیس."}), 500
         session.clear()
         session['user_id'] = user.id
-        session['user_email'] = user_email
+        session['user_identifier'] = user_email # اصلاح: ذخیره شناسه برای استفاده در مسیرهای دیگر
         session['needs_profile_info'] = True
         session['is_admin'] = user.is_admin
         return jsonify({"status": "success", "redirect": url_for('account')})
-    else:
-        return jsonify({"status": "error", "message": "کد وارد شده صحیح نیست."}), 400
+    else: return jsonify({"status": "error", "message": "کد وارد شده صحیح نیست."}), 400
 
 @app.route("/send_sms_code", methods=["POST"])
 def send_sms_code():
@@ -656,8 +555,7 @@ def send_sms_code():
 def verify_sms_code():
     phone_number = request.json.get("phone", "").strip()
     entered_code = request.json.get("code", "").strip()
-    if phone_number not in phone_verification_codes:
-        return jsonify({"status": "error", "message": "شماره نامعتبر یا درخواستی برای آن ثبت نشده است."}), 400
+    if phone_number not in phone_verification_codes: return jsonify({"status": "error", "message": "شماره نامعتبر یا درخواستی برای آن ثبت نشده است."}), 400
     stored_data = phone_verification_codes[phone_number]
     if time.time() > stored_data['expiry_time']:
         del phone_verification_codes[phone_number]
@@ -670,65 +568,61 @@ def verify_sms_code():
         redirect_url = url_for('admin.admin_dashboard') if is_admin else url_for('account')
         session.clear()
         session['user_id'] = user.id
-        session['user_phone'] = phone_number
+        session['user_identifier'] = phone_number
         session['needs_profile_info'] = True
         session['is_admin'] = is_admin
         return jsonify({"status": "success", "redirect": redirect_url})
-    else:
-        return jsonify({"status": "error", "message": "کد وارد شده صحیح نیست."}), 400
+    else: return jsonify({"status": "error", "message": "کد وارد شده صحیح نیست."}), 400
 
 # =========================================================
 # 💬 مسیر چت و بقیه مسیرها (با اعمال محدودیت و چرخش کلید)
 # =========================================================
+
 @app.route("/chat", methods=["POST"])
 def chat():
     user_message = request.json.get("message", "")
     lower_msg = user_message.lower()
-
-    if not user_message.strip():
-        return jsonify({"reply": "لطفاً پیامی ارسال کنید."})
+    if not user_message.strip(): return jsonify({"reply": "لطفاً پیامی ارسال کنید."})
 
     user_identifier = get_user_identifier(session)
     user = get_user_by_identifier(user_identifier)
-
+    now = datetime.utcnow()
+    is_active_premium = user and user.is_premium and user.premium_expiry and user.premium_expiry > now
+    
     user_message_tokens = count_tokens([{"role": "user", "content": user_message}])
-    is_long_response = False
-    usage_type = 'chat'
+    
+    # 1. بررسی محدودیت پیام بلند
+    if not is_active_premium and user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
+        return jsonify({"reply": "⛔ عذر می‌خواهم، محدودیت توکن شما برای حساب عادی رد شده است. برای ارسال پیام‌های طولانی لطفاً اشتراک تهیه کنید.", "show_upgrade": True})
 
-    # 1. بررسی پیام بلند برای همه کاربران
-    if user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
-        error_reply = ("⛔ عذر می‌خواهم، محدودیت توکن شما برای حساب عادی رد شده است. "
-                       "می‌توانید پرمیوم بخرید که جواب‌ها با دقت کافی و بهتر ارائه داده میشه. "
-                       f"برای خرید پرمیوم هم می‌توانید به این آیدی در تلگرام پیام دهید: <span class='copyable-id'>Im_Mehrab_1</span>")
-        return jsonify({"reply": error_reply})
-
-    # 2. ادامه منطق برای کاربران مجاز
-    if user and user_identifier:
-        if user.is_banned:
-            return jsonify({"reply": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."})
-
-        is_allowed, result = check_and_deduct_score(user_identifier, usage_type)
+    # 2. بررسی محدودیت چت روزانه و استفاده از بسته اضافی
+    if user:
+        if user.is_banned: return jsonify({"reply": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."})
+        
+        # کسر امتیاز یا بسته
+        is_allowed, result = check_and_deduct_score(user_identifier, 'chat')
         if not is_allowed:
+            if isinstance(result, str) and "از بسته اضافی" in result:
+                 return jsonify({"reply": result, "use_package": True})
             return jsonify({"reply": result})
+
     else:
-        # 💡 مدیریت کاربران مهمان
-        today_date_str = datetime.utcnow().date().isoformat()
+        # کاربر مهمان
+        today_date_str = now.date().isoformat()
         if session.get('guest_last_date') != today_date_str:
             session['guest_chat_count'] = 0
             session['guest_last_date'] = today_date_str
         guest_count = session.get('guest_chat_count', 0)
-
         if guest_count >= GUEST_CHAT_LIMIT:
             return jsonify({"reply": "⛔ متأسفم، شما به سقف **۵ چت روزانه** برای کاربران مهمان رسیده‌اید. لطفاً وارد حساب کاربری خود شوید تا چت‌های نامحدود دریافت کنید."})
         session['guest_chat_count'] = guest_count + 1
-    # ------------------------------------------------------------------------
 
     # --- پاسخ‌های اختصاصی ---
     if "مامی سازندت کیه" in lower_msg: return jsonify({"reply": "عسل خانوم 💖"})
     if any(keyword in lower_msg for keyword in ["اعضای تیمت کیا هستن", "اعضای noctovex", "noctovex members"]):
         new_reply = "تنها NOCTOVEX معتبر ما هستیم، و تیم ما متشکل از 5 تا 10 کدنویس حرفه‌ای است. در حال حاضر، هویت تنها دو نفر از ما مشخص است: مهراب، که رهبر تیم، لیدر و حرفه‌ای‌ترین کدنویس است، و آرشام. 🧑‍💻"
         return jsonify({"reply": new_reply})
-    if any(keyword in lower_msg for keyword in ["سازندت کیه", "تو کی هستی", "چه شرکتی", "who made you", "who created you", "who built you", "لیدر تیم noctovex", "رهبر تیم noctovex", "مهراب"]):
+    if any(keyword in lower_msg for keyword in ["سازندت کیه", "تو کی هستی", "چه شرکتی", "who made you"]):
         new_reply = "من توسط تیم NOCTOVEX توسعه داده شده‌ام. این تیم توسط **مهراب عزیزی** رهبری می‌شود که مدیریت پروژه، برنامه‌ریزی و هدایت توسعه‌دهندگان را بر عهده دارد. 👑"
         return jsonify({"reply": new_reply})
 
@@ -741,20 +635,16 @@ def chat():
     else:
         session.pop('current_chat_id', None)
 
-    session["conversation"] = []
-    current_total_token_limit = TOTAL_TOKEN_LIMIT
-    current_max_completion_tokens = MAX_COMPLETION_TOKENS
-    system_prompt_to_use = SYSTEM_PROMPT
+    session["conversation"] = [] # پاکسازی تاریخچه برای حفظ سقف توکن پایین
 
     messages_list = [{"role": "system", "content": system_prompt_to_use}]
     messages_list.extend(session.get("conversation", []))
     messages_list.append({"role": "user", "content": user_message})
 
     prompt_tokens = count_tokens(messages_list)
-    remaining_tokens = current_total_token_limit - prompt_tokens
-    max_tokens = min(max(20, remaining_tokens), current_max_completion_tokens)
+    remaining_tokens = TOTAL_TOKEN_LIMIT - prompt_tokens
+    max_tokens = min(max(20, remaining_tokens), MAX_COMPLETION_TOKENS)
 
-    # --- مکانیزم چرخش کلید و تلاش مجدد ---
     max_attempts = len(GAPGPT_KEYS)
     ai_message = None
 
@@ -763,10 +653,8 @@ def chat():
         if not current_api_key:
             ai_message = "❌ خطایی در سیستم رخ داد. سرور در حال به‌روزرسانی است، لطفاً کمی بعد دوباره امتحان کنید."
             break
-
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {current_api_key}"}
         data = {"model": CHAT_MODEL_NAME, "messages": messages_list, "max_tokens": max_tokens}
-
         try:
             response = requests.post(GAPGPT_BASE_URL, json=data, headers=headers, timeout=10)
             response.raise_for_status()
@@ -774,6 +662,7 @@ def chat():
             break
         except requests.exceptions.RequestException as e:
             status_code = getattr(e.response, 'status_code', 500)
+            print(f"API Request Error (Key: {key_name}): {e}. Status: {status_code}")
             if status_code in [402, 401]:
                 handle_key_failure(key_name, status_code)
                 if attempt == max_attempts - 1:
@@ -788,25 +677,23 @@ def chat():
             ai_message = "⚠️ مشکلی پیش اومد!"
             break
 
-    if ai_message:
-        ai_message = fix_rtl_ltr(ai_message)
-    else:
-        ai_message = "❌ خطایی در سیستم رخ داد. سرور در حال به‌روزرسانی است، لطفاً کمی بعد دوباره امتحان کنید."
+    if ai_message: ai_message = fix_rtl_ltr(ai_message)
+    else: ai_message = "❌ خطایی در سیستم رخ داد. سرور در حال به‌روزرسانی است، لطفاً کمی بعد دوباره امتحان کنید."
 
     if not ai_message.startswith(("❌", "⚠️", "⛔")):
         current_chat_to_save = [{"role": "user", "content": user_message}, {"role": "assistant", "content": ai_message}]
         session["conversation"] = []
-        if user and session.get('user_id'):
+        if user and session.get('user_id') and current_chat_id:
             chat_entry = Conversation.query.filter_by(id=session['current_chat_id'], user_id=user.id).first()
             if chat_entry:
                 try:
                     prev_messages = json.loads(chat_entry.messages_json)
                     prev_messages.extend(current_chat_to_save)
-                    save_conversation(user_identifier, session['current_chat_id'], prev_messages, user_message)
+                    save_conversation(user_identifier, current_chat_id, prev_messages, user_message)
                 except Exception:
-                    save_conversation(user_identifier, session['current_chat_id'], current_chat_to_save, user_message)
+                    save_conversation(user_identifier, current_chat_id, current_chat_to_save, user_message)
             else:
-                 save_conversation(user_identifier, session['current_chat_id'], current_chat_to_save, user_message)
+                 save_conversation(user_identifier, current_chat_id, current_chat_to_save, user_message)
 
     session["conversation"] = []
     return jsonify({"reply": ai_message})
@@ -841,11 +728,7 @@ def image_generator():
         quality = "%20".join(IMAGE_QUALITY_PARAMS)
         direct_image_url = f"{POLLINATIONS_URL}{english_prompt.replace(' ', '%20')}%20{quality}?nologo=true&seed={seed}"
 
-        return jsonify({
-            "status": "success",
-            "message": f"تصویر شما با پرامپت '{persian_prompt}' تولید شد. 🖼️",
-            "image_url": direct_image_url
-        })
+        return jsonify({"status": "success", "message": f"تصویر شما با پرامپت '{persian_prompt}' تولید شد. 🖼️", "image_url": direct_image_url})
     except Exception as e:
         print(f"Image Generator Handler Error: {e}")
         return jsonify({"status": "error", "message": f"❌ خطای داخلی سرور هنگام پردازش تصویر."}), 500
@@ -866,38 +749,29 @@ def image_page():
 
 @app.route("/premium")
 def premium_page():
-    """نمایش صفحه خرید یا اطلاعات پرمیوم."""
     return render_template("premium.html", logged_in=session.get('user_id') is not None, is_admin=session.get('is_admin', False))
 
 # =========================================================
 # 🎮 مسیرهای بازی
 # =========================================================
 @app.route("/game")
-def game_center():
-    return render_template("game.html", logged_in=session.get('user_id') is not None)
-
+def game_center(): return render_template("game.html", logged_in=session.get('user_id') is not None)
 @app.route("/game/car")
-def car_game():
-    return render_template("car_game.html", logged_in=session.get('user_id') is not None)
-
+def car_game(): return render_template("car_game.html", logged_in=session.get('user_id') is not None)
 @app.route("/game/guess")
-def guess_game():
-    return render_template("number_guess_game.html", logged_in=session.get('user_id') is not None)
+def guess_game(): return render_template("number_guess_game.html", logged_in=session.get('user_id') is not None)
 
 # --- مسیرهای احراز هویت ---
 @app.route("/login")
 def login():
     if session.get('user_id'): return redirect(url_for('account'))
     return render_template("account_login.html")
-
 @app.route("/login_phone")
 def login_phone():
     if session.get('user_id'): return redirect(url_for('account'))
     return render_template("account_login_phone.html")
-
 @app.route("/login_google")
-def login_google():
-    return redirect(url_for('login'))
+def login_google(): return redirect(url_for('login'))
 
 @app.route("/account")
 def account():
@@ -934,10 +808,11 @@ def profile():
     is_premium = user.is_premium
     level = 'premium' if is_premium else 'free'
     today_date = datetime.utcnow().date()
+    now = datetime.utcnow()
     daily_limits = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]
-    usage = user.usage
 
-    if not usage or usage.date != today_date or usage.level_check != level:
+    usage = user.usage
+    if not usage or usage.date != today_date or (user.is_premium and user.premium_expiry and user.premium_expiry > now and usage.level_check != 'premium') or (not user.is_premium and usage.level_check != 'free'):
         chat_budget_remaining = daily_limits['chat']
         image_budget_remaining = daily_limits['image']
         long_response_budget_remaining = daily_limits.get('long_response', 0)
@@ -951,8 +826,8 @@ def profile():
     long_response_cost = SCORE_QUOTA_CONFIG['COSTS'].get('long_response', 1)
 
     user_data = {
-        'identifier': user.email or user.phone or user.id, 'is_admin': user.is_admin,
-        'score': user.score, 'is_premium': is_premium, 'is_banned': user.is_banned,
+        'identifier': user.email or user.phone or user.id,
+        'is_admin': user.is_admin, 'score': user.score, 'is_premium': user.is_premium, 'is_banned': user.is_banned,
         'chat_budget_remaining': chat_budget_remaining,
         'image_budget_remaining': image_budget_remaining,
         'long_response_budget_remaining': long_response_budget_remaining,
@@ -1017,8 +892,7 @@ def load_conversation(chat_id):
             session['current_chat_id'] = chat_entry.id
             return jsonify({"status": "success", "message": "گفتگو با موفقیت بارگذاری شد.", "redirect": url_for('index')})
         except Exception: return jsonify({"status": "error", "message": "خطا در پردازش داده‌های گفتگو."}), 500
-    else:
-        return jsonify({"status": "error", "message": "گفتگوی مورد نظر یافت نشد."}), 404
+    else: return jsonify({"status": "error", "message": "گفتگوی مورد نظر یافت نشد."}), 404
 
 # =========================================================
 # 🛍️ مسیرهای احراز هویت با کافه‌بازار (Bazaar Auth)
@@ -1029,11 +903,7 @@ def bazaar_login():
     encoded_redirect_uri = quote(redirect_uri, safe='')
     state = uuid.uuid4().hex
     session['state'] = state
-    bazaar_auth_url = (f"https://cafebazaar.ir/user/oauth?"
-                       f"redirect_url={encoded_redirect_uri}"
-                       f"&client_id={BAZAAR_CLIENT_ID}"
-                       f"&state={state}"
-                       f"&scope=profile")
+    bazaar_auth_url = (f"https://cafebazaar.ir/user/oauth?redirect_url={encoded_redirect_uri}&client_id={BAZAAR_CLIENT_ID}&state={state}&scope=profile")
     return redirect(bazaar_auth_url)
 
 @app.route("/bazaar_callback")
@@ -1044,7 +914,6 @@ def bazaar_callback():
 
     token_url = "https://account.cafebazaar.ir/api/v0/tokens"
     userinfo_url = "http://account.cafebazaar.ir/api/v0/userinfo"
-
     data = {'grant_type': 'authorization_code', 'code': auth_code, 'client_id': BAZAAR_CLIENT_ID, 'client_secret': BAZAAR_CLIENT_SECRET}
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
@@ -1062,13 +931,12 @@ def bazaar_callback():
 
         bazaar_identifier = user_info.get('phone_number') or user_info.get('mobile') or user_info.get('account_id')
 
-        if not bazaar_identifier: return "Authentication Failed: Could not find any identifier in User Info response.", 500
+        if not bazaar_identifier: return "Authentication Failed: Could not find any identifier (phone or account_id) in User Info response.", 500
 
         if 'state' in session: session.pop('state')
 
         bazaar_user_id = f"bazaar_{bazaar_identifier}"
         user = register_user_if_new(bazaar_user_id)
-
         if not user: return "Internal Error: Could not create user from Bazaar account", 500
 
         session.clear()
@@ -1078,49 +946,40 @@ def bazaar_callback():
         return redirect(url_for('account'))
 
     except requests.exceptions.RequestException as e:
-        return f"Bazaar Auth Error: {e}", 500
+        print(f"Bazaar Auth Error: {e}")
+        return "Authentication Failed due to API error.", 500
     except Exception as e:
-        return f"General Bazaar Error: {e}", 500
+        print(f"General Bazaar Auth Error: {e}")
+        return "Authentication Failed due to internal error.", 500
 
 # =========================================================
 # 💳 مسیرهای پرداخت بازارپی (BazaarPay Routes)
 # =========================================================
-@app.route("/pay/<plan_type>", methods=['GET', 'POST'])
-@app.route('/pay/<plan_type>')
-@login_required
+@app.route("/pay/<plan_type>")
+@login_required # استفاده از دکوراتور تعریف شده در ابتدای فایل
 def initiate_pay(plan_type):
     user_identifier = session.get('user_identifier')
     user = get_user_by_identifier(user_identifier)
 
-    amounts = {
-        'weekly': PRICES['weekly'],
-        'monthly': PRICES['monthly'],
-        'package': PRICES['package']
-    }
-    amount = amounts.get(plan_type, PRICES['package'])
+    if not user: return "User not found during payment initiation.", 404
 
-    # 📞 استفاده از شماره تلفن کاربر برای بازگشت درگاه (ضروری)
-    user_phone_for_callback = user.phone if user.phone else "UNKNOWN_PHONE"
+    amounts = {'weekly': 250000, 'monthly': 700000, 'package': 30000}
+    amount = amounts.get(plan_type, 30000)
+    
+    # 🔴 اصلاح شده: استفاده از YOUR_DOMAIN برای ساخت callback
+    callback_url = f"{YOUR_DOMAIN}/bazaarpay/callback/{plan_type}/{user.phone or user.id}"
 
-    callback_url = f"{YOUR_DOMAIN}/bazaarpay/callback/{plan_type}/{user_phone_for_callback}"
-
-    payload = {
-        "amount": amount,
-        "service_name": f"شارژ حساب {plan_type}",
-        "destination": DESTINATION_NAME,
-        "callback_url": callback_url
-    }
+    payload = {"amount": amount, "service_name": f"شارژ حساب {plan_type}", "destination": DESTINATION_NAME, "callback_url": callback_url}
 
     try:
         headers = {"Content-Type": "application/json"}
         response = requests.post(f"{BASE_URL}/checkout/init/", headers=headers, data=json.dumps(payload))
         response.raise_for_status()
-
-        response_data = response.json()
-        payment_url_base = response_data.get('payment_url')
-
+        payment_url_base = response.json().get('payment_url')
+        
+        user_phone = user.phone if user.phone else ""
         from urllib.parse import urlencode, quote
-        query_params = {"phone": user_phone_for_callback, "redirect_url": callback_url}
+        query_params = {"phone": user_phone, "redirect_url": callback_url}
         encoded_params = urlencode(query_params, quote_via=quote)
 
         return redirect(f"{payment_url_base}&{encoded_params}")
@@ -1131,27 +990,18 @@ def initiate_pay(plan_type):
 @app.route('/bazaarpay/callback/<plan_type>/<user_id>', methods=['GET', 'POST'])
 def bazaarpay_callback(plan_type, user_id):
     checkout_token = request.args.get('token') or request.form.get('token')
-
-    if not checkout_token:
-        return render_template("payment_result.html", success=False, error="توکن پرداخت دریافت نشد")
+    if not checkout_token: return render_template("payment_result.html", success=False, error="توکن پرداخت دریافت نشد")
 
     try:
-        # ۱. استعلام وضعیت تراکنش (Trace)
-        trace_res = requests.post(f"{BASE_URL}/trace/",
-                                headers={"Content-Type": "application/json"},
-                                data=json.dumps({"checkout_token": checkout_token}))
+        trace_res = requests.post(f"{BASE_URL}/trace/", headers={"Content-Type": "application/json"}, data=json.dumps({"checkout_token": checkout_token}))
         trace_data = trace_res.json()
 
         if trace_data.get('status') == 'paid_not_committed':
-            # ۲. تایید نهایی و قطعی کردن واریز (Commit)
             commit_headers = {"Content-Type": "application/json", "Authorization": f"Token {AUTH_TOKEN}"}
-            commit_res = requests.post(f"{BASE_URL}/commit/",
-                                     headers=commit_headers,
-                                     data=json.dumps({"checkout_token": checkout_token}))
+            commit_res = requests.post(f"{BASE_URL}/commit/", headers=commit_headers, data=json.dumps({"checkout_token": checkout_token}))
 
             if commit_res.status_code == 204:
-                user = get_user_by_identifier(user_id) # user_id در اینجا همان phone_number است
-
+                user = get_user_by_identifier(user_id)
                 if user:
                     if plan_type == 'weekly':
                         user.is_premium = True
@@ -1161,39 +1011,36 @@ def bazaarpay_callback(plan_type, user_id):
                         user.premium_expiry = datetime.utcnow() + timedelta(days=30)
                     elif plan_type == 'package':
                         user.extra_chat_packages = (user.extra_chat_packages or 0) + 1
-
                     db.session.commit()
                     return render_template("payment_result.html", success=True)
 
         return render_template("payment_result.html", success=False, error="پرداخت تایید نشد یا لغو شده است")
-
     except Exception as e:
         print(f"❌ خطای بازگشت از درگاه: {str(e)}")
         return render_template("payment_result.html", success=False, error=f"خطای سیستمی: {str(e)}")
 
 # =========================================================
-# ▶️ اجرای برنامه
+# ▶️ اجرای برنامه و Migration
 # =========================================================
 def migrate_database():
     with app.app_context():
-        from sqlalchemy import text
         try:
             db.create_all()
-            # افزودن ستون‌های جدید به جدول users
+            from sqlalchemy import text
+            # اطمینان از وجود ستون‌های مورد نیاز
             db.session.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS chat_count INTEGER DEFAULT 0'))
             db.session.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS premium_expiry TIMESTAMP'))
             db.session.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS extra_chat_packages INTEGER DEFAULT 0'))
             db.session.commit()
-            print("✅ وضعیت دیتابیس: تمام جداول و ستون‌های مورد نیاز آماده هستند.")
+            print("✅ وضعیت دیتابیس: تمام جداول و ستون‌ها آماده هستند.")
         except Exception as e:
             db.session.rollback()
-            print(f"⚠️ وضعیت دیتابیس: خطای ایجاد/به‌روزرسانی جداول: {e}")
+            print(f"⚠️ وضعیت دیتابیس: {e}")
 
 migrate_database()
 
 if __name__ == "__main__":
-    # برای محیط توسعه (Local)
     if os.environ.get("FLASK_ENV") != "production":
         cleanup_old_images()
-        port = int(os.environ.get("PORT", 5000))
-        app.run(host="0.0.0.0", port=port, debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
