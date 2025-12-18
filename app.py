@@ -856,7 +856,8 @@ def verify_sms_code():
 
         session.clear()
         session['user_id'] = user.id
-        session['user_identifier'] = phone
+        # ✅ اصلاح شد: از phone_number استفاده کردیم که در بالا تعریف شده است
+        session['user_identifier'] = phone_number 
         session['needs_profile_info'] = True
         session['is_admin'] = is_admin
 
