@@ -908,7 +908,7 @@ def chat():
 
         # 2. 🆕 بررسی سقف ۱۵ چت و بسته‌های خریداری شده
         if not is_active_premium:
-            allowed_total = FREE_CHAT_LIMIT + (user.extra_chat_packages * 5)
+            allowed_total = FREE_CHAT_LIMIT + ((user.extra_chat_packages or 0) * 5)
             if user.chat_count >= allowed_total:
                 payment_html = (
                     "<div style='text-align: center; padding: 20px; background: rgba(13, 14, 18, 0.95); border-radius: 20px; border: 1px solid #d4af37; margin: 10px 0; font-family: Tahoma;'>"
