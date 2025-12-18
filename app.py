@@ -1572,5 +1572,4 @@ if __name__ == "__main__":
     # تنظیم پورت برای رندر
     port = int(os.environ.get("PORT", 5000)) # تنظیم پورت پیش‌فرض 5000 برای محیط توسعه
     app.run(host="0.0.0.0", port=port, debug=True)
-```ost="0.0.0.0", port=port, debug=True)
 
