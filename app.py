@@ -1087,7 +1087,7 @@ def chat():
                     # اگر بارگذاری ناموفق بود، فقط پیام جدید را ذخیره کن
                     save_conversation(user_identifier, session['current_chat_id'], current_chat_to_save, user_message)
             else:
-                 save_conversation(user_identifier, session['current_chat_id'], current_chat_to_save, user_message)
+                 save_conversation(u_identifier, session['current_chat_id'], current_chat_to_save, user_message)
 
     # 💡 این خط تضمین می‌کند که سشن برای درخواست بعدی خالی است.
     session["conversation"] = []
