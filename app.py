@@ -876,84 +876,62 @@ def chat():
     if not user_message.strip():
         return jsonify({"reply": "لطفاً پیامی ارسال کنید."})
 
-    # --- اصلاح بخش شناسایی کاربر (رفع مشکل عدم تشخیص لاگین) ---
+    # --- ۱. محاسبه توکن‌ها (خط مفقود شده که باعث ارور می‌شد) ---
+    user_message_tokens = count_tokens([{"role": "user", "content": user_message}])
+    lower_msg = user_message.lower()
+
+    # --- ۲. شناسایی کاربر ---
     user = None
-    # گرفتن شماره موبایل از سشن
-    u_identifier = session.get('user_identifier') 
-    
+    u_identifier = session.get('user_identifier')
     if u_identifier:
-        # جستجو در دیتابیس بر اساس شماره موبایل یا ایمیل
         user = User.query.filter((User.phone == u_identifier) | (User.email == u_identifier)).first()
     
-    # اگر با موبایل پیدا نشد، با ID چک کن
     if not user and 'user_id' in session:
         user = User.query.get(session['user_id'])
 
-    # --- تعیین وضعیت کاربر و بررسی توکن ---
+    # --- ۳. تعیین وضعیت پرمیوم ---
     now = datetime.utcnow()
     is_active_premium = user and user.is_premium and user.premium_expiry and user.premium_expiry > now
-    
-    # باقی کدهای شما در مورد شمارش توکن و ارسال پیام به AI بعد از این ادامه می‌یابد...
 
-    # 1. بررسی محدودیت توکن فقط برای غیرپرمیوم‌ها
+    # --- ۴. بررسی محدودیت توکن (برای غیرپرمیوم‌ها) ---
     if not is_active_premium and user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
-        error_reply = (
-            "⛔ عذر می‌خواهم، محدودیت توکن شما برای حساب عادی رد شده است. "
-            "می‌توانید پرمیوم بخرید تا جواب‌ها با دقت کامل ارائه شوند. "
-            "برای خرید به این آیدی تلگرام پیام دهید: <span class='copyable-id'>Im_Mehrab_1</span>"
-        )
-        return jsonify({"reply": error_reply})
+        return jsonify({
+            "reply": "⛔ پیام شما طولانی است. برای ارسال پیام‌های طولانی لطفاً اشتراک تهیه کنید.",
+            "show_upgrade": True
+        })
 
-    # 2. منطق کاربران لاگین شده
+    # --- ۵. مدیریت محدودیت تعداد چت (اصلاح شده) ---
     if user:
         if user.is_banned:
-            return jsonify({"reply": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."})
-
+            return jsonify({"reply": "⛔ حساب شما مسدود شده است."})
+        
         if not is_active_premium:
-            # محاسبه سقف ۱۵ چت رایگان + بسته‌ها
-            allowed_total = FREE_CHAT_LIMIT + ((user.extra_chat_packages or 0) * 5)
-            if user.chat_count >= allowed_total:
-                payment_html = (
-                    "<div style='text-align: center; padding: 20px; background: rgba(13, 14, 18, 0.95); border-radius: 20px; border: 1px solid #d4af37; margin: 10px 0; font-family: Tahoma;'>"
-                    "<i class='fas fa-lock' style='color: #d4af37; font-size: 2rem; margin-bottom: 10px;'></i>"
-                    "<h3 style='color: #fff; margin: 0 0 10px 0;'>سقف چت رایگان تمام شد</h3>"
-                    "<p style='color: #aaa; font-size: 0.85rem; margin-bottom: 20px;'>برای ادامه گفتگو یکی از گزینه‌های زیر را انتخاب کنید:</p>"
-                    "<a href='/pay/package' style='display: block; padding: 12px; background: #1a2a44; color: #fff; text-decoration: none; border-radius: 12px; font-weight: bold; margin-bottom: 10px; border: 1px solid #2a3d5f;'>خرید بسته ۵ تایی (۳,۰۰۰ تومان)</a>"
-                    "<a href='/premium' style='display: block; padding: 12px; background: linear-gradient(135deg, #d4af37, #aa8928); color: #000; text-decoration: none; border-radius: 12px; font-weight: bold; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);'>مشاهده پلن‌های VIP 👑</a>"
-                    "</div>"
-                )
-                return jsonify({"reply": payment_html})
-    
-    # ۳. مدیریت محدودیت چت (اصلاح شده)
-    if user:
-        # اگر کاربر لاگین بود ولی اشتراک ویژه (Premium) نداشت
-        if not is_active_premium:
-            # محاسبه کل چت‌های مجاز: ۵ تا هدیه + بسته‌های خریداری شده
+            # ۵ چت هدیه + بسته‌های خریداری شده
             total_allowed = 5 + (getattr(user, 'extra_chat_packages', 0) or 0)
-            
             if (user.chat_count or 0) >= total_allowed:
                 return jsonify({
-                    "reply": "⚠️ سقف چت رایگان شما به پایان رسیده است. برای ادامه چت، لطفاً اشتراک تهیه کنید یا بسته چت بخرید.",
+                    "reply": "⚠️ سقف چت رایگان شما تمام شده است. برای ادامه اشتراک تهیه کنید.",
                     "show_upgrade": True
                 })
             
-            # اضافه کردن به تعداد چت‌ها در دیتابیس
+            # افزایش شمارنده در دیتابیس
             user.chat_count = (user.chat_count or 0) + 1
             db.session.commit()
-    
     else:
-        # اگر کاربر اصلاً لاگین نبود (کاربر مهمان واقعی)
-        today_date_str = datetime.utcnow().date().isoformat()
+        # کاربر مهمان
+        today_date_str = now.date().isoformat()
         if session.get('guest_last_date') != today_date_str:
             session['guest_chat_count'] = 0
             session['guest_last_date'] = today_date_str
             
         guest_count = session.get('guest_chat_count', 0)
         if guest_count >= GUEST_CHAT_LIMIT:
-            return jsonify({
-                "reply": "⛔ متأسفم، شما به سقف **۵ چت روزانه** برای کاربران مهمان رسیده‌اید. لطفاً برای چت بیشتر وارد حساب شوید."
-            })
+            return jsonify({"reply": "⛔ سقف ۵ چت روزانه مهمان تمام شد. لطفا وارد حساب شوید."})
+        
         session['guest_chat_count'] = guest_count + 1
+
+    # --- ۶. پاسخ‌های اختصاصی و ادامه ارسال به هوش مصنوعی ---
+    # کدهای بعدی شما (مثل پاسخ‌های اختصاصی سازنده و غیره) در اینجا ادامه می‌یابد...
 
     # در اینجا بقیه کدهای مربوط به ارسال پیام به هوش مصنوعی (OpenAI/HuggingFace) قرار می‌گیرد...
     # (ادامه کدی که قبلاً داشتی برای تولید پاسخ)
