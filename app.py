@@ -878,19 +878,22 @@ def chat():
 
     # --- اصلاح بخش شناسایی کاربر (رفع مشکل عدم تشخیص لاگین) ---
     user = None
-    # ابتدا از طریق شماره موبایل که در سشن ذخیره کردیم دنبال کاربر می‌گردیم
-    u_id = session.get('user_identifier') 
-    if u_id:
-        user = User.query.filter_by(phone=u_id).first()
+    # گرفتن شماره موبایل از سشن
+    u_identifier = session.get('user_identifier') 
     
-    # اگر پیدا نشد، از طریق ID عددی تست می‌کنیم
+    if u_identifier:
+        # جستجو در دیتابیس بر اساس شماره موبایل یا ایمیل
+        user = User.query.filter((User.phone == u_identifier) | (User.email == u_identifier)).first()
+    
+    # اگر با موبایل پیدا نشد، با ID چک کن
     if not user and 'user_id' in session:
         user = User.query.get(session['user_id'])
 
-    # --- تعیین نوع استفاده و بررسی توکن ---
-    user_message_tokens = count_tokens([{"role": "user", "content": user_message}])
+    # --- تعیین وضعیت کاربر و بررسی توکن ---
     now = datetime.utcnow()
     is_active_premium = user and user.is_premium and user.premium_expiry and user.premium_expiry > now
+    
+    # باقی کدهای شما در مورد شمارش توکن و ارسال پیام به AI بعد از این ادامه می‌یابد...
 
     # 1. بررسی محدودیت توکن فقط برای غیرپرمیوم‌ها
     if not is_active_premium and user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
@@ -921,8 +924,25 @@ def chat():
                 )
                 return jsonify({"reply": payment_html})
     
-    # 3. منطق کاربران مهمان (اگر کاربر لاگین نبود)
+    # ۳. مدیریت محدودیت چت (اصلاح شده)
+    if user:
+        # اگر کاربر لاگین بود ولی اشتراک ویژه (Premium) نداشت
+        if not is_active_premium:
+            # محاسبه کل چت‌های مجاز: ۵ تا هدیه + بسته‌های خریداری شده
+            total_allowed = 5 + (getattr(user, 'extra_chat_packages', 0) or 0)
+            
+            if (user.chat_count or 0) >= total_allowed:
+                return jsonify({
+                    "reply": "⚠️ سقف چت رایگان شما به پایان رسیده است. برای ادامه چت، لطفاً اشتراک تهیه کنید یا بسته چت بخرید.",
+                    "show_upgrade": True
+                })
+            
+            # اضافه کردن به تعداد چت‌ها در دیتابیس
+            user.chat_count = (user.chat_count or 0) + 1
+            db.session.commit()
+    
     else:
+        # اگر کاربر اصلاً لاگین نبود (کاربر مهمان واقعی)
         today_date_str = datetime.utcnow().date().isoformat()
         if session.get('guest_last_date') != today_date_str:
             session['guest_chat_count'] = 0
@@ -931,7 +951,7 @@ def chat():
         guest_count = session.get('guest_chat_count', 0)
         if guest_count >= GUEST_CHAT_LIMIT:
             return jsonify({
-                "reply": "⛔ متأسفم، شما به سقف **۵ چت روزانه** برای کاربران مهمان رسیده‌اید. لطفاً وارد حساب شوید."
+                "reply": "⛔ متأسفم، شما به سقف **۵ چت روزانه** برای کاربران مهمان رسیده‌اید. لطفاً برای چت بیشتر وارد حساب شوید."
             })
         session['guest_chat_count'] = guest_count + 1
 
