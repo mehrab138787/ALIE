@@ -1614,7 +1614,7 @@ def bazaarpay_callback(plan_type, user_id):
             # ۲. تایید نهایی و قطعی کردن واریز (Commit) - بسیار حیاتی
             commit_headers = {
                 "Content-Type": "application/json",
-                "Authorization": f"Token {{AUTH_TOKEN}" 
+                "Authorization": f"Token {AUTH_TOKEN}"
             }
             commit_res = requests.post(f"{BASE_URL}/commit/", 
                                      headers=commit_headers, 
