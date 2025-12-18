@@ -856,7 +856,7 @@ def verify_sms_code():
 
         session.clear()
         session['user_id'] = user.id
-        session['user_phone'] = phone_number
+        session['user_identifier'] = phone
         session['needs_profile_info'] = True
         session['is_admin'] = is_admin
 
@@ -1614,7 +1614,7 @@ def bazaarpay_callback(plan_type, user_id):
             # ۲. تایید نهایی و قطعی کردن واریز (Commit) - بسیار حیاتی
             commit_headers = {
                 "Content-Type": "application/json",
-                "Authorization": f"Token {BAZAAR_PAY_AUTH_TOKEN}" 
+                "Authorization": f"Token {{AUTH_TOKEN}" 
             }
             commit_res = requests.post(f"{BASE_URL}/commit/", 
                                      headers=commit_headers, 
