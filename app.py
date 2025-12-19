@@ -149,7 +149,7 @@ SCORE_QUOTA_CONFIG = {
 }
 
 GAPGPT_BASE_URL = "https://api.gapapi.com/v1/chat/completions"
-CHAT_MODEL_NAME = "gpt-4o-mini"
+CHAT_MODEL_NAME = "gemma-3-27b-it"
 TRANSLATION_MODEL_NAME = "gpt-4o-mini"
 
 POLLINATIONS_URL = "https://image.pollinations.ai/prompt/"
