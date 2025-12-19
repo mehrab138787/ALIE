@@ -792,9 +792,11 @@
             </ul>
         </div>
 
-        <button onclick="window.location.href='premium.html'" class="premium-btn">
-            همین حالا پرمیوم کن <i class="fas fa-arrow-left" style="margin-right: 8px; font-size: 0.9rem;"></i>
-        </button>
+        <button onclick="window.location.href='{{ url_for("premium_page") }}'" class="premium-btn">
+    همین حالا پرمیوم کن
+    <i class="fas fa-arrow-left" style="margin-right: 8px; font-size: 0.9rem;"></i>
+</button>
+
         
         <div style="width: 100%; display: flex; justify-content: center;">
              <button id="close-upsell-btn" style="background: transparent; color: var(--muted-text); border: none; cursor: pointer; font-size: 0.9rem; margin-top: 10px;">
