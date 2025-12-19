@@ -204,10 +204,11 @@ class User(db.Model):
     premium_expiry = db.Column(db.DateTime, nullable=True)
     extra_chat_packages = db.Column(db.Integer, default=0)
     
-    # --- منطق معلمان خصوصی ---
-    tutor_activated_langs = db.Column(db.String(100), default="") # e.g., "fr,es,kr"
-    tutor_access_used_today = db.Column(db.Date, nullable=True) # آخرین روزی که دسترسی استفاده شده
-    # --------------------------
+    # --------------------------------------------------------------------
+    # ➕ لطفاً این دو خط جدید را اینجا اضافه کنید:
+    tutor_activated_langs = db.Column(db.String(255), nullable=True, default="") 
+    tutor_access_used_today = db.Column(db.Date, nullable=True) 
+    # --------------------------------------------------------------------
 
     usage = db.relationship('UserUsage', backref='user', lazy=True, uselist=False)
     conversations = db.relationship('Conversation', backref='user', lazy='dynamic')
@@ -1310,6 +1311,7 @@ def migrate_database():
             print(f"⚠️ وضعیت دیتابیس: {e}")
 
 migrate_database()
+
 
 if __name__ == "__main__":
     # تنظیم پورت برای رندر
