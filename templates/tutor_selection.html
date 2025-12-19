@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>انتخاب معلم تخصصی - Cyrus AI</title>
+    
+    <!-- 🎨 Dark Mode و استایل ریسپانسیو برای موبایل -->
+    <style>
+        /* تنظیمات عمومی و Dark Mode */
+        body {
+            font-family: Tahoma, sans-serif;
+            background-color: #121212; /* پس‌زمینه سیاه تیره */
+            color: #e0e0e0; /* متن اصلی سفید/روشن */
+            margin: 0;
+            padding: 0;
+            direction: rtl;
+        }
+        .container {
+            width: 95%; /* کمی پهن‌تر برای موبایل */
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 15px;
+        }
+        h1 {
+            color: #ffffff;
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333; /* خط جداکننده تیره */
+        }
+        
+        /* کارت‌های معلمین */
+        .tutor-card {
+            border: 1px solid #3a3a3a; /* حاشیه کارت تیره */
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            background-color: #1e1e1e; /* پس‌زمینه کارت کمی روشن‌تر از بدنه */
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .tutor-card.activated {
+            border-left: 6px solid #00ff41; /* فعال: سبز روشن (کنتراست بالا) */
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+        }
+        .tutor-card.daily-use {
+            border-left: 6px solid #ffcc00; /* استفاده روزانه: زرد/نارنجی */
+        }
+        
+        .tutor-info h3 {
+            margin-top: 0;
+            color: #ffffff;
+            font-size: 1.1em;
+        }
+        .tutor-info h3 small {
+            color: #aaaaaa;
+            font-size: 0.75em;
+        }
+        .price-info {
+            margin-top: 8px;
+            font-size: 0.85em;
+            color: #cccccc;
+        }
+        .price-permanent {
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        /* دکمه‌ها */
+        .btn-action {
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            color: #ffffff; /* متن دکمه سفید */
+            font-weight: bold;
+            transition: opacity 0.2s;
+            border: none;
+            font-size: 0.9em;
+            margin-left: 8px;
+        }
+        .btn-activate {
+            background-color: #ffcc00; /* زرد برای خرید پول */
+            color: #1a1a1a;
+        }
+        .btn-activate:hover { background-color: #e6b800; }
+        
+        .btn-daily {
+            background-color: #3a3a3a; /* خاکستری تیره برای امتیاز */
+            border: 1px solid #555555;
+        }
+        .btn-daily:hover { opacity: 0.8; }
+
+        /* پیام‌ها و هشدارها */
+        .alert {
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        .alert-success {
+            color: #d4edda;
+            background-color: #155724;
+            border-color: #155724;
+        }
+        .alert-info {
+            color: #cce5ff;
+            background-color: #0c5460;
+            border-color: #0c5460;
+        }
+        .alert-danger {
+            color: #f8d7da;
+            background-color: #721c24;
+            border-color: #721c24;
+        }
+
+        /* ریسپانسیو (برای زمانی که صفحه بزرگتر شود، فقط حاشیه تغییر می‌کند) */
+        @media (min-width: 768px) {
+            .container {
+                padding: 30px;
+            }
+            .tutor-info h3 {
+                font-size: 1.3em;
+            }
+            .btn-action {
+                padding: 10px 20px;
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎓 انتخاب معلم تخصصی</h1>
+
+    {% if payment_success_msg %}
+    <div class="alert alert-success" role="alert">
+        <strong>✨ موفقیت!</strong> {{ payment_success_msg }}
+    </div>
+    {% endif %}
+
+    {% if selected_tutor %}
+    <div class="alert alert-info" role="alert">
+        <strong>✅ معلم امروز:</strong> شما امروز از معلم <strong>{{ selected_tutor }}</strong> استفاده می‌کنید.
+    </div>
+    {% endif %}
+
+    <div id="tutor-list">
+        {% for tutor in tutor_data_list %}
+        <div class="tutor-card" id="card-{{ tutor.lang_code }}">
+            <div class="tutor-info">
+                <h3>
+                    {{ tutor.name }} ({{ tutor.lang_code | upper }})
+                    <small style="float: left; color: #aaaaaa;">{{ tutor.description }}</small>
+                </h3>
+                <div class="price-info">
+                    <p>
+                        <strong>فعال‌سازی دائمی:</strong> 
+                        <span class="price-permanent">{{ tutor.permanent_price_fa }} تومان</span>
+                        | <strong>استفاده روزانه:</strong> {{ tutor.daily_cost }} امتیاز
+                    </p>
+                </div>
+            </div>
+            
+            <div id="action-area-{{ tutor.lang_code }}">
+                <!-- محتوای این بخش توسط جاوا اسکریپت به‌روز می‌شود -->
+                <p style="color: #777;">در حال بررسی وضعیت...</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // تبدیل داده‌های ارسال شده از بک‌اند به آبجکت جاوا اسکریپت
+    const tutorData = JSON.parse('{{ tutor_data_list | tojson | safe }}');
+    const userLoggedIn = {{ 'true' if logged_in else 'false' }};
+
+    if (!userLoggedIn) {
+        document.querySelectorAll('[id^="action-area-"]').forEach(el => {
+            el.innerHTML = '<p class="text-danger" style="color: #f8d7da;">⚠️ لطفاً برای دسترسی به این امکانات <a href="{{ url_for(\'login\') }}" style="color: #cce5ff;">وارد شوید</a>.</p>';
+        });
+        return;
+    }
+
+    // --- تابع اصلی برای دریافت وضعیت و به‌روزرسانی UI ---
+    function fetchTutorStatus(langCode) {
+        // مسیر دریافت وضعیت
+        fetch("{{ url_for('tutor_status_api', lang_code='TEMP_CODE') }}".replace('TEMP_CODE', langCode), {
+            method: 'GET',
+            headers: {'Content-Type': 'application/json'}
+        })
+        .then(response => response.json())
+        .then(data => {
+            const actionArea = document.getElementById(`action-area-${langCode}`);
+            const card = document.getElementById(`card-${langCode}`);
+            const tutorInfo = tutorData.find(t => t.lang_code === langCode);
+
+            if (data.status === 'error') {
+                actionArea.innerHTML = `<p class="alert alert-danger">خطا: ${data.message}</p>`;
+                return;
+            }
+
+            const isActivated = data.is_activated;
+            const canUseDaily = data.can_use_daily;
+
+            let htmlContent = '';
+            card.classList.remove('activated', 'daily-use'); // ریست کردن کلاس‌ها
+
+            if (isActivated) {
+                // فعال‌سازی دائمی (تأیید شده توسط سرور)
+                card.classList.add('activated');
+                htmlContent = `<p style="color: #00ff41;">✅ این معلم به صورت دائمی برای شما فعال است.</p>`;
+            } else if (data.is_using_today) {
+                // استفاده روزانه فعال است (امروز استفاده شده)
+                card.classList.add('daily-use');
+                htmlContent = `<p style="color: #ffcc00;">⏳ شما امروز از این معلم استفاده کرده‌اید.</p>`;
+            } else if (canUseDaily) {
+                // امکان استفاده روزانه وجود دارد (با امتیاز)
+                htmlContent = `
+                    <button class="btn-action btn-daily" onclick="useTutorDaily('${langCode}', '${tutorInfo.daily_cost}')">
+                        استفاده روزانه (${tutorInfo.daily_cost} امتیاز)
+                    </button>
+                    <button class="btn-action btn-activate" onclick="activateTutor('${langCode}', '${tutorInfo.permanent_price_fa}')">
+                        فعال‌سازی دائمی (خرید)
+                    </button>
+                `;
+            } else {
+                // هیچکدام: بودجه روزانه تمام شده
+                htmlContent = `<p class="alert alert-danger">⛔ بودجه استفاده روزانه شما برای امروز تمام شده است.</p>
+                               <button class="btn-action btn-activate" onclick="activateTutor('${langCode}', '${tutorInfo.permanent_price_fa}')">
+                                   فعال‌سازی دائمی (خرید)
+                               </button>`;
+            }
+
+            actionArea.innerHTML = htmlContent;
+        })
+        .catch(error => {
+            console.error('Error fetching status for:', langCode, error);
+            document.getElementById(`action-area-${langCode}`).innerHTML = '<p class="alert alert-danger">خطای شبکه در هنگام دریافت وضعیت.</p>';
+        });
+    }
+
+    // --- توابع فراخوانی بک‌اند ---
+    
+    // 1. فعال سازی دائمی (هدایت به پرداخت واقعی) - **بدون کسر امتیاز**
+    window.activateTutor = function(langCode, priceFa) {
+        if (!confirm(`آیا مطمئن هستید که می‌خواهید معلم ${langCode} را با قیمت ${priceFa} تومان به صورت دائمی فعال کنید؟ این کار شما را به درگاه پرداخت هدایت می‌کند و امتیازی کسر نخواهد شد.`)) {
+            return;
+        }
+        // مسیر به درگاه پرداخت
+        window.location.href = "{{ url_for('activate_tutor_api', lang_code='TEMP_CODE') }}".replace('TEMP_CODE', langCode);
+    };
+
+    // 2. استفاده روزانه (کسر امتیاز)
+    window.useTutorDaily = function(langCode, cost) {
+         if (!confirm(`آیا مطمئن هستید که می‌خواهید از معلم ${langCode} برای امروز استفاده کنید؟ ${cost} امتیاز از بودجه روزانه شما کسر می‌شود.`)) {
+            return;
+        }
+        // مسیر کسر امتیاز روزانه
+        fetch("{{ url_for('use_tutor_daily_api', lang_code='TEMP_CODE') }}".replace('TEMP_CODE', langCode), {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message);
+                // پس از موفقیت، وضعیت صفحه را مجدداً چک می‌کنیم
+                window.location.reload();
+            } else {
+                alert('خطا: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error using daily tutor:', error);
+            alert('خطای سیستمی در هنگام استفاده روزانه رخ داد.');
+        });
+    };
+
+    // --- اجرای اولیه ---
+    tutorData.forEach(tutor => {
+        fetchTutorStatus(tutor.lang_code);
+    });
+});
+</script>
+
+</body>
+</html>

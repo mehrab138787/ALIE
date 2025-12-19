@@ -132,22 +132,28 @@ SCORE_QUOTA_CONFIG = {
     'COSTS': {
         'chat': 1,
         'image': 20,
-        'long_response': 1
+        'long_response': 1,
+        'tutor_access': 10  # هزینه فرضی برای دسترسی به معلم
     },
     'DAILY_BUDGET': {
         'free': {
             'chat': 30,
             'image': 80,
-            'long_response': 5
+            'long_response': 5,
+            'tutor_access': 0 # دانشجویان عادی دسترسی ندارند مگر با بسته
         },
         'premium': {
             'chat': 80,
             'image': 200,
-            'long_response': 15
+            'long_response': 15,
+            'tutor_access': 1 # دسترسی روزانه 1 بار رایگان برای پرمیوم
         }
     }
 }
 
+# --- تنظیمات جدید برای تبلیغ معلمان ---
+TUTOR_PROMO_THRESHOLD_MIN = 4
+TUTOR_PROMO_THRESHOLD_MAX = 8
 GAPGPT_BASE_URL = "https://api.gapapi.com/v1/chat/completions"
 CHAT_MODEL_NAME = "gpt-4o-mini"
 TRANSLATION_MODEL_NAME = "gpt-4o-mini"
@@ -197,6 +203,11 @@ class User(db.Model):
     chat_count = db.Column(db.Integer, default=0)
     premium_expiry = db.Column(db.DateTime, nullable=True)
     extra_chat_packages = db.Column(db.Integer, default=0)
+    
+    # --- منطق معلمان خصوصی ---
+    tutor_activated_langs = db.Column(db.String(100), default="") # e.g., "fr,es,kr"
+    tutor_access_used_today = db.Column(db.Date, nullable=True) # آخرین روزی که دسترسی استفاده شده
+    # --------------------------
 
     usage = db.relationship('UserUsage', backref='user', lazy=True, uselist=False)
     conversations = db.relationship('Conversation', backref='user', lazy='dynamic')
@@ -209,6 +220,7 @@ class UserUsage(db.Model):
     chat_budget = db.Column(db.Integer, default=50)
     image_budget = db.Column(db.Integer, default=60)
     long_response_budget = db.Column(db.Integer, default=5)
+    tutor_access_budget = db.Column(db.Integer, default=0) # بودجه جدید برای دسترسی به معلم
     level_check = db.Column(db.String(10), nullable=True)
 
 class Conversation(db.Model):
@@ -312,6 +324,11 @@ def check_and_deduct_score(user_identifier, usage_type):
     is_premium = user.is_premium
     level = 'premium' if is_premium else 'free'
     cost = SCORE_QUOTA_CONFIG['COSTS'][usage_type]
+    
+    # مطمئن شدن از وجود بخش tutor_access_budget در تنظیمات
+    if usage_type == 'tutor_access' and 'tutor_access_budget' not in SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]:
+         SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]['tutor_access_budget'] = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level].get('tutor_access', 0)
+
     daily_limits = SCORE_QUOTA_CONFIG['DAILY_BUDGET'][level]
     budget_key = f'{usage_type}_budget'
     usage = user.usage
@@ -323,6 +340,7 @@ def check_and_deduct_score(user_identifier, usage_type):
             chat_budget=daily_limits['chat'],
             image_budget=daily_limits['image'],
             long_response_budget=daily_limits.get('long_response', 0),
+            tutor_access_budget=daily_limits.get('tutor_access', 0), # مقداردهی اولیه بودجه جدید
             level_check=level
         )
         db.session.add(usage)
@@ -331,12 +349,13 @@ def check_and_deduct_score(user_identifier, usage_type):
         usage.chat_budget = daily_limits['chat']
         usage.image_budget = daily_limits['image']
         usage.long_response_budget = daily_limits.get('long_response', 0)
+        usage.tutor_access_budget = daily_limits.get('tutor_access', 0) # مقداردهی اولیه بودجه جدید
         usage.level_check = level
 
     current_budget = getattr(usage, budget_key, 0)
 
     if current_budget < cost:
-        action_fa = ('چت' if usage_type == 'chat' else 'تولید تصویر' if usage_type == 'image' else 'پاسخ بلند')
+        action_fa = ('چت' if usage_type == 'chat' else 'تولید تصویر' if usage_type == 'image' else 'پاسخ بلند' if usage_type == 'long_response' else 'دسترسی به معلم')
         level_fa = 'پرمیوم' if is_premium else 'عادی'
         remaining_uses = current_budget // cost
         error_message = (
@@ -478,15 +497,13 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# **محل انتقال: تعریف login_required قبل از استفاده در روت‌های اصلی**
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user_identifier' not in session and 'user_phone' not in session: # اصلاح برای شناسایی بهتر
+        if 'user_identifier' not in session and 'user_phone' not in session:
             return redirect(url_for('login_phone'))
         return f(*args, **kwargs)
     return decorated_function
-# **پایان انتقال**
 
 @admin_bp.route("/")
 @admin_required
@@ -508,7 +525,8 @@ def manage_users():
         {
             'identifier': user.email or user.phone or user.id, 'score': user.score,
             'is_premium': user.is_premium, 'is_banned': user.is_banned,
-            'email': user.email or 'N/A', 'phone': user.phone or 'N/A'
+            'email': user.email or 'N/A', 'phone': user.phone or 'N/A',
+            'tutor_activated_langs': user.tutor_activated_langs
         } for user in all_users
     ]
     return render_template("admin_users.html", users=users_list)
@@ -538,6 +556,10 @@ def user_action():
         user.is_banned = not user.is_banned
         status = "بن شد" if user.is_banned else "رفع بن شد"
         message = f"وضعیت بن کاربر {identifier}: {status}."
+    elif action == "set_tutors":
+        # value = "en,fr,es"
+        user.tutor_activated_langs = value
+        message = f"زبان‌های فعال معلم برای کاربر {identifier}: {value}."
     else:
         return jsonify({"status": "error", "message": "عملیات نامعتبر."}), 400
 
@@ -580,7 +602,7 @@ def verify_code():
         if not user: return jsonify({"status": "error", "message": "خطا در ثبت/بازیابی کاربر از دیتابیس."}), 500
         session.clear()
         session['user_id'] = user.id
-        session['user_email'] = user_email
+        session['user_identifier'] = user_email
         session['needs_profile_info'] = True
         session['is_admin'] = user.is_admin
         return jsonify({"status": "success", "redirect": url_for('account')})
@@ -616,7 +638,7 @@ def verify_sms_code():
         redirect_url = url_for('admin.admin_dashboard') if is_admin else url_for('account')
         session.clear()
         session['user_id'] = user.id
-        session['user_phone'] = phone_number
+        session['user_identifier'] = phone_number
         session['needs_profile_info'] = True
         session['is_admin'] = is_admin
         return jsonify({"status": "success", "redirect": redirect_url})
@@ -636,17 +658,35 @@ def chat():
     user = get_user_by_identifier(user_identifier)
 
     user_message_tokens = count_tokens([{"role": "user", "content": user_message}])
-    is_long_response = False
+    
+    # --- منطق تبلیغ معلمان (جدید) ---
+    TUTOR_PROMO_THRESHOLD_MIN = 4
+    TUTOR_PROMO_THRESHOLD_MAX = 8
+    
+    if 'chat_count_since_promo' not in session:
+        session['chat_count_since_promo'] = 0
+        
+    session['chat_count_since_promo'] = session.get('chat_count_since_promo', 0) + 1
+    
+    show_promo = False
+    if session['chat_count_since_promo'] >= TUTOR_PROMO_THRESHOLD_MIN and \
+       session['chat_count_since_promo'] <= TUTOR_PROMO_THRESHOLD_MAX:
+        
+        # 50% شانس نمایش در این بازه
+        if random.randint(1, 10) > 5: 
+            show_promo = True
+            session['chat_count_since_promo'] = 0 # ریست کردن شمارنده
+            
+    if show_promo:
+        # در صورت نمایش تبلیغ، شمارنده ریست شده و پیام تبلیغی حاوی لینک بازمی‌گردد
+        return jsonify({
+            "reply": "✨ **ویژه:** آیا می‌خواهید مکالمات خود را به سطح حرفه‌ای برسانید؟ **دسترسی نامحدود به مشاورین تخصصی (ویژه دانش‌آموزان و دانشجویان)** منتظر شما هستند! روی دکمه زیر کلیک کنید تا پروفایل خود را ببینید و فعال‌سازی کنید.",
+            "promo_link": url_for('tutor_selection') 
+        })
+    # --- پایان منطق تبلیغ ---
+    
     usage_type = 'chat'
-
-    if user_message_tokens >= LONG_RESPONSE_TOKEN_THRESHOLD:
-        error_reply = (
-            "⛔ عذر می‌خواهم، محدودیت توکن شما برای حساب عادی رد شده است. "
-            "می‌توانید پرمیوم بخرید که جواب‌ها با دقت کافی و بهتر ارائه داده میشه. "
-            f"برای خرید پرمیوم هم می‌توانید به این آیدی در تلگرام پیام دهید: <span class='copyable-id'>Im_Mehrab_1</span>"
-        )
-        return jsonify({"reply": error_reply})
-
+    
     if user and user_identifier:
         if user.is_banned:
             return jsonify({"reply": "⛔ متأسفم، حساب کاربری شما توسط مدیر سیستم مسدود شده است."})
@@ -790,17 +830,150 @@ def image_generator():
         return jsonify({"status": "error", "message": f"❌ خطای داخلی سرور هنگام پردازش تصویر."}), 500
 
 # =========================================================
+# 👑 مسیرهای معلمان خصوصی (جدید)
+# =========================================================
+@app.route("/tutor_selection")
+@login_required
+def tutor_selection():
+    user_id = session.get('user_id')
+    user = get_user_by_id(user_id)
+    
+    if not user:
+        session.clear()
+        return redirect(url_for('login'))
+        
+    # جمع‌آوری وضعیت فعال‌سازی از دیتابیس
+    activated_langs = user.tutor_activated_langs.split(',') if user.tutor_activated_langs else []
+    
+    # تعیین اینکه آیا کاربر دسترسی روزانه دارد (برای پرمیوم)
+    tutor_daily_allowed = False
+    if user.is_premium:
+        today_date = datetime.utcnow().date()
+        if user.tutor_access_used_today != today_date:
+            tutor_daily_allowed = True
+
+    return render_template("tutor_selection.html", 
+                           activated_langs=activated_langs, 
+                           tutor_daily_allowed=tutor_daily_allowed,
+                           logged_in=True,
+                           is_admin=user.is_admin)
+
+@app.route("/api/tutor_status")
+@login_required
+def tutor_status_api():
+    user_id = session.get('user_id')
+    user = get_user_by_id(user_id)
+    if not user: return jsonify({"status": "error", "message": "User not found"}), 404
+    
+    activated_langs = user.tutor_activated_langs.split(',') if user.tutor_activated_langs else []
+    
+    tutor_daily_allowed = False
+    if user.is_premium:
+        today_date = datetime.utcnow().date()
+        if user.tutor_access_used_today != today_date:
+            tutor_daily_allowed = True
+            
+    return jsonify({
+        "status": "success",
+        "activated": activated_langs,
+        "daily_allowed": tutor_daily_allowed
+    })
+
+@app.route("/activate_tutor_api/<lang_code>", methods=["POST"])
+@login_required
+def activate_tutor_api(lang_code):
+    user_id = session.get('user_id')
+    user = get_user_by_id(user_id)
+    if not user: return jsonify({"status": "error", "message": "کاربر یافت نشد."}), 404
+
+    if lang_code not in ['en', 'fr', 'de', 'kr', 'es']:
+        return jsonify({"status": "error", "message": "زبان نامعتبر."}), 400
+
+    # منطق فعال‌سازی دائمی (نیاز به کسر امتیاز/هزینه)
+    is_activated = lang_code in (user.tutor_activated_langs.split(',') if user.tutor_activated_langs else [])
+    
+    if not is_activated:
+        # کسر امتیاز برای فعال‌سازی دائمی (مثلا 10 امتیاز)
+        is_allowed, _ = check_and_deduct_score(session.get('user_identifier'), 'tutor_access')
+        if not is_allowed:
+            return jsonify({"status": "error", "message": "امتیاز کافی برای فعال‌سازی دائمی این معلم وجود ندارد."}), 402
+            
+        langs = user.tutor_activated_langs.split(',') if user.tutor_activated_langs else []
+        if lang_code not in langs:
+            langs.append(lang_code)
+            user.tutor_activated_langs = ",".join(filter(None, langs))
+        
+    # منطق دسترسی روزانه (فقط برای پرمیوم)
+    if user.is_premium:
+        today_date = datetime.utcnow().date()
+        user.tutor_access_used_today = today_date # استفاده از دسترسی روزانه
+        
+    try:
+        db.session.commit()
+        return jsonify({"status": "success", "message": f"دسترسی به معلم {lang_code.upper()} فعال شد."})
+    except Exception:
+        db.session.rollback()
+        return jsonify({"status": "error", "message": "خطای دیتابیس هنگام فعال‌سازی."}), 500
+
+@app.route("/use_tutor_daily_api/<lang_code>", methods=["POST"])
+@login_required
+def use_tutor_daily_api(lang_code):
+    # این مسیر برای شروع مکالمه مستقیم با معلم فعال‌شده استفاده می‌شود
+    user_id = session.get('user_id')
+    user = get_user_by_id(user_id)
+    if not user: return jsonify({"status": "error", "message": "کاربر یافت نشد."}), 404
+
+    if lang_code not in (user.tutor_activated_langs.split(',') if user.tutor_activated_langs else []):
+        return jsonify({"status": "error", "message": f"شما به معلم {lang_code.upper()} دسترسی ندارید."}), 403
+
+    if user.is_premium:
+        today_date = datetime.utcnow().date()
+        if user.tutor_access_used_today == today_date:
+            return jsonify({"status": "error", "message": f"دسترسی روزانه شما برای معلم {lang_code.upper()} برای امروز به پایان رسیده است."}), 429
+        
+        # کسر دسترسی روزانه
+        user.tutor_access_used_today = today_date
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
+            return jsonify({"status": "error", "message": "خطای کسر دسترسی روزانه."}), 500
+
+    # در اینجا منطق باید کاربر را به یک محیط چت جدید (با سیستم پرامپت مخصوص معلم) هدایت کند.
+    # برای سادگی، یک پاسخ برمی‌گردانیم که در فرانت‌اند باید ریدایرکت شود.
+    return jsonify({
+        "status": "success",
+        "redirect": url_for('index') + f"?tutor={lang_code}" # فرض می‌کنیم این پارامتر در index.html خوانده می‌شود
+    })
+
+
+# =========================================================
 # 🏠 مسیرهای سرویس‌دهی صفحات HTML
 # =========================================================
 @app.route("/")
 def index():
     cleanup_old_images()
+    
+    # خواندن پارامتر if موجود در ?tutor=
+    tutor_code = request.args.get('tutor')
+    
     conversation_history = session.get("conversation", [])
     display_messages = [{"role": msg["role"], "content": fix_rtl_ltr(msg["content"])} for msg in conversation_history]
+    
+    # اگر از طریق معلم وارد شدیم، یک پیغام خوش‌آمدگویی اضافه می‌کنیم
+    initial_message = None
+    if tutor_code:
+        LANG_MAP = {'en': 'انگلیسی', 'fr': 'فرانسوی', 'de': 'آلمانی', 'kr': 'کره‌ای', 'es': 'اسپانیایی'}
+        lang_name = LANG_MAP.get(tutor_code, 'تخصصی')
+        initial_message = f"شما اکنون در جلسه مشاوره با **معلم {lang_name}** هستید. سؤالات تخصصی خود را مطرح کنید."
+        session.pop('conversation', None) # شروع مکالمه جدید
+        session.pop('current_chat_id', None) # شروع شناسه جدید
+        
     return render_template("index.html",
         logged_in=session.get('user_id') is not None,
         is_admin=session.get('is_admin', False),
-        chat_history=display_messages)
+        chat_history=display_messages,
+        initial_message=initial_message)
 
 @app.route("/image")
 def image_page():
@@ -889,14 +1062,17 @@ def profile():
         chat_budget_remaining = daily_limits['chat']
         image_budget_remaining = daily_limits['image']
         long_response_budget_remaining = daily_limits.get('long_response', 0)
+        tutor_budget_remaining = daily_limits.get('tutor_access', 0)
     else:
         chat_budget_remaining = usage.chat_budget
         image_budget_remaining = usage.image_budget
         long_response_budget_remaining = usage.long_response_budget
+        tutor_budget_remaining = usage.tutor_access_budget
 
     chat_cost = SCORE_QUOTA_CONFIG['COSTS']['chat']
     image_cost = SCORE_QUOTA_CONFIG['COSTS']['image']
     long_response_cost = SCORE_QUOTA_CONFIG['COSTS'].get('long_response', 1)
+    tutor_cost = SCORE_QUOTA_CONFIG['COSTS']['tutor_access']
 
     user_data = {
         'identifier': user.email or user.phone or user.id,
@@ -905,13 +1081,18 @@ def profile():
         'chat_budget_remaining': chat_budget_remaining,
         'image_budget_remaining': image_budget_remaining,
         'long_response_budget_remaining': long_response_budget_remaining,
+        'tutor_budget_remaining': tutor_budget_remaining,
         'chat_cost': chat_cost, 'image_cost': image_cost, 'long_response_cost': long_response_cost,
+        'tutor_cost': tutor_cost,
         'chats_remaining': chat_budget_remaining // chat_cost,
         'images_remaining': image_budget_remaining // image_cost,
         'long_responses_remaining': long_response_budget_remaining // long_response_cost if long_response_cost > 0 else long_response_budget_remaining,
+        'tutors_remaining': tutor_budget_remaining // tutor_cost if tutor_cost > 0 else tutor_budget_remaining,
         'max_chats': daily_limits['chat'] // chat_cost,
         'max_images': daily_limits['image'] // image_cost,
         'max_long_responses': daily_limits.get('long_response', 0) // long_response_cost if long_response_cost > 0 else daily_limits.get('long_response', 0),
+        'max_tutors': daily_limits.get('tutor_access', 0) // tutor_cost if tutor_cost > 0 else daily_limits.get('tutor_access', 0),
+        'activated_tutors': user.tutor_activated_langs
     }
     return render_template("account_profile.html", user_data=user_data)
 
@@ -1108,6 +1289,20 @@ def migrate_database():
             db.session.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS chat_count INTEGER DEFAULT 0'))
             db.session.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS premium_expiry TIMESTAMP'))
             db.session.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS extra_chat_packages INTEGER DEFAULT 0'))
+            # ستون‌های جدید معلمان
+            db.session.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS tutor_activated_langs VARCHAR(100) DEFAULT ""'))
+            db.session.execute(text('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS tutor_access_used_today DATE'))
+            
+            # جدول جدید UserUsage برای بودجه‌بندی
+            if not UserUsage.__table__.exists(db.engine):
+                db.create_all() # ایجاد جدول اگر وجود نداشت
+                
+            # افزودن ستون tutor_access_budget به UserUsage
+            try:
+                db.session.execute(text('ALTER TABLE "user_usage" ADD COLUMN "tutor_access_budget" INTEGER DEFAULT 0'))
+            except:
+                pass # ستون قبلا اضافه شده است
+                
             db.session.commit()
             print("✅ وضعیت دیتابیس: تمام جداول و ستون‌ها آماده هستند.")
         except Exception as e:
@@ -1119,8 +1314,8 @@ migrate_database()
 if __name__ == "__main__":
     # تنظیم پورت برای رندر
     port = int(os.environ.get("PORT", 5000)) # تنظیم پورت پیش‌فرض 5000 برای محیط توسعه
-    
+
     # اگر در Render هستیم، از پورت محیطی استفاده می‌کنیم، در غیر این صورت 5000
     final_port = int(os.environ.get("PORT", 5000))
-    
+
     app.run(host="0.0.0.0", port=final_port, debug=True)
