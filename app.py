@@ -316,7 +316,8 @@ def check_and_deduct_score(user_identifier, usage_type):
     budget_key = f'{usage_type}_budget'
     usage = user.usage
 
-    if not usage or usage.date != today_date or usage.level_check != level:
+    # 1. اگر هیچ رکورد مصرفی وجود ندارد، یک رکورد جدید ایجاد کن (INSERT)
+    if not usage:
         usage = UserUsage(
             user_id=user.id,
             date=today_date,
@@ -326,13 +327,16 @@ def check_and_deduct_score(user_identifier, usage_type):
             level_check=level
         )
         db.session.add(usage)
+    
+    # 2. اگر رکورد وجود دارد، اما تاریخ یا سطحش تغییر کرده، آن را ریست کن (UPDATE)
     elif usage.date != today_date or usage.level_check != level:
         usage.date = today_date
         usage.chat_budget = daily_limits['chat']
         usage.image_budget = daily_limits['image']
         usage.long_response_budget = daily_limits.get('long_response', 0)
         usage.level_check = level
-
+        
+    # 3. در همه حالت‌ها، بودجه را کسر کن
     current_budget = getattr(usage, budget_key, 0)
 
     if current_budget < cost:
