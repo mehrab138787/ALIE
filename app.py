@@ -148,9 +148,9 @@ SCORE_QUOTA_CONFIG = {
     }
 }
 
-GAPGPT_BASE_URL = "https://api.gapapi.com/v1/chat/completions"
-CHAT_MODEL_NAME = "gpt-5-nano"
-TRANSLATION_MODEL_NAME = "gpt-5-nano"
+GAPGPT_BASE_URL = "https://api.gapgpt.app/"
+CHAT_MODEL_NAME = "gemma-3-27b-it"
+TRANSLATION_MODEL_NAME = "gemma-3-27b-it
 
 POLLINATIONS_URL = "https://image.pollinations.ai/prompt/"
 STATIC_DIR = os.path.join(app.root_path, 'static', 'temp_images')
