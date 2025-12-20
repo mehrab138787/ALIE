@@ -327,7 +327,7 @@ def check_and_deduct_score(user_identifier, usage_type):
             level_check=level
         )
         db.session.add(usage)
-    
+
     # 2. اگر رکورد وجود دارد، اما تاریخ یا سطحش تغییر کرده، آن را ریست کن (UPDATE)
     elif usage.date != today_date or usage.level_check != level:
         usage.date = today_date
@@ -335,7 +335,7 @@ def check_and_deduct_score(user_identifier, usage_type):
         usage.image_budget = daily_limits['image']
         usage.long_response_budget = daily_limits.get('long_response', 0)
         usage.level_check = level
-        
+
     # 3. در همه حالت‌ها، بودجه را کسر کن
     current_budget = getattr(usage, budget_key, 0)
 
@@ -671,7 +671,7 @@ def chat():
             })
         session['guest_chat_count'] = guest_count + 1
 
-    TRIGGER_KEYWORDS = ["سازندت کیه", "تو کی هستی", "چه شرکتی", "who made you", "who created you", "who built you", "لیدر تیم noctovex", "رهبر تیم noctovex", "مهراب"]
+    TRIGGER_KEYWORDS = ["سازندت کیه", "تو کی هستی", "چه شرکتی", "who made you", "who created you", "لیدر تیم noctovex", "رهبر تیم noctovex", "مهراب"]
     TEAM_MEMBERS_KEYWORDS = ["اعضای تیمت کیا هستن", "اعضای noctovex", "اعضای تیم noctovex", "noctovex members"]
 
     if "مامی سازندت کیه" in lower_msg: return jsonify({"reply": "عسل خانوم 💖"})
@@ -1047,8 +1047,10 @@ def initiate_pay(plan_type):
 
     amounts = {'weekly': 459000, 'monthly': 1690000, 'package': 30000}
     amount = amounts.get(plan_type, 30000)
-    callback_url = f"{YOUR_DOMAIN}/bazaarpay/callback/{plan_type}/{user.phone}"
-
+    
+    # 💥 اصلاح ۱: استفاده از user.id به جای user.phone برای تضمین شناسایی در callback
+    callback_url = f"{YOUR_DOMAIN}/bazaarpay/callback/{plan_type}/{user.id}" 
+    
     payload = {"amount": amount, "service_name": f"شارژ حساب {plan_type}", "destination": DESTINATION_NAME, "callback_url": callback_url}
 
     try:
@@ -1058,10 +1060,11 @@ def initiate_pay(plan_type):
         response_data = response.json()
         payment_url_base = response_data.get('payment_url')
 
-        user_phone = user.phone if user.phone else ""
-        query_params = {"phone": user_phone, "redirect_url": callback_url}
+        # اصلاح برای دریافت user_id (که اکنون user.id است)
+        user_id_for_callback = user.id 
+        query_params = {"user_id_param": user_id_for_callback} # پارامتر کمکی (اختیاری)
         encoded_params = urlencode(query_params, quote_via=quote)
-
+        
         return redirect(f"{payment_url_base}&{encoded_params}")
     except Exception as e:
         print(f"❌ خطای درگاه: {str(e)}")
@@ -1082,23 +1085,33 @@ def bazaarpay_callback(plan_type, user_id):
             commit_res = requests.post(f"{BASE_URL}/commit/", headers=commit_headers, data=json.dumps({"checkout_token": checkout_token}))
 
             if commit_res.status_code == 204:
-                user = get_user_by_identifier(user_id)
+                # 💥 اصلاح ۲: استفاده از get_user_by_id به جای get_user_by_identifier
+                user = get_user_by_id(user_id) 
+                
                 if user:
                     if plan_type == 'weekly':
                         user.is_premium = True
                         user.premium_expiry = datetime.utcnow() + timedelta(days=7)
+                        message = "خرید پرمیوم هفتگی موفقیت‌آمیز بود."
                     elif plan_type == 'monthly':
                         user.is_premium = True
                         user.premium_expiry = datetime.utcnow() + timedelta(days=30)
+                        message = "خرید پرمیوم ماهانه موفقیت‌آمیز بود."
                     elif plan_type == 'package':
                         user.extra_chat_packages = (user.extra_chat_packages or 0) + 1
+                        message = "خرید بسته چت موفقیت‌آمیز بود."
+                    else:
+                        message = "نوع پلن ناشناخته است، اما پرداخت تایید شد."
+                        
                     db.session.commit()
-                    return render_template("payment_result.html", success=True)
+                    # 🌟 بهبود تجربه کاربری با نمایش پیام
+                    return render_template("payment_result.html", success=True, message=f"پرداخت موفقیت‌آمیز بود. {message}")
 
         return render_template("payment_result.html", success=False, error="پرداخت تایید نشد یا لغو شده است")
     except Exception as e:
         print(f"❌ خطای بازگشت از درگاه: {str(e)}")
-        return render_template("payment_result.html", success=False, error=f"خطای سیستمی: {str(e)}")
+        # 🌟 بهبود تجربه کاربری با نمایش پیام خطا
+        return render_template("payment_result.html", success=False, error=f"خطای سیستمی هنگام نهایی‌سازی: {str(e)}")
 
 # =========================================================
 # ▶️ اجرای برنامه
@@ -1123,8 +1136,8 @@ migrate_database()
 if __name__ == "__main__":
     # تنظیم پورت برای رندر
     port = int(os.environ.get("PORT", 5000)) # تنظیم پورت پیش‌فرض 5000 برای محیط توسعه
-    
+
     # اگر در Render هستیم، از پورت محیطی استفاده می‌کنیم، در غیر این صورت 5000
     final_port = int(os.environ.get("PORT", 5000))
-    
+
     app.run(host="0.0.0.0", port=final_port, debug=True)

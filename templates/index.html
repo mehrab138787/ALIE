@@ -27,7 +27,8 @@
             --code-text: #80DEEA; 
             --avatar-size: 40px; 
             --border-radius: 12px; 
-            --loading-color: #81C784; /* 🟢 تغییر به سبز ملایم */
+            --loading-color: #81C784; 
+            --premium-gold: #FFC107; /* 🟡 رنگ طلایی برای پرمیوم */
         }
 
         /* ======================================================= */
@@ -55,662 +56,371 @@
         }
 
         /* ======================================================= */
-        /* 📣 MODAL STYLES (نمایش فوری و کنترل‌های شیک)                  */
+        /* 💎 PREMIUM MODAL STYLES (تبلیغ ویژه)                    */
         /* ======================================================= */
-        #promo-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95); 
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            z-index: 2000; 
-            display: none; 
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.2s ease; 
+        #premium-promo-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.96); /* تیره‌تر برای تمرکز بیشتر */
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            z-index: 3000; /* بالاتر از همه چیز */
+            display: none; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.3s ease;
         }
 
-        #promo-modal.show {
-            display: flex;
-            opacity: 1;
-        }
+        #premium-promo-modal.show { display: flex; opacity: 1; }
 
-        /* 💡 انیمیشن چرخش نور */
-        @keyframes rotate-glow {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-        
-        #modal-content {
-            background: var(--card-dark);
-            padding: 20px;
-            border-radius: 15px;
-            max-width: 90%;
-            width: 400px;
-            direction: rtl;
-            text-align: right;
-            transform: scale(0.9);
-            transition: transform 0.3s ease;
-            position: relative;
-            z-index: 1; 
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9); 
-        }
-
-        #promo-modal.show #modal-content {
-            transform: scale(1);
-        }
-
-        /* ---------------------------------------------------- */
-        /* 🌟 Rotating Glow effect for the image area (دور بنر) */
-        /* ---------------------------------------------------- */
-        #image-display-area {
-            margin-bottom: 15px;
-            border-radius: 10px;
-            overflow: hidden;
-            background: var(--bg-dark);
+        .premium-card {
+            background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
+            border: 2px solid var(--premium-gold);
+            box-shadow: 0 0 30px rgba(255, 193, 7, 0.3);
+            width: 90%; max-width: 380px;
+            padding: 30px 20px;
+            border-radius: 20px;
             text-align: center;
             position: relative;
-            padding: 2px; 
+            overflow: hidden;
+            transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #premium-promo-modal.show .premium-card { transform: scale(1); }
+
+        /* افکت نور طلایی پس زمینه */
+        .premium-card::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255, 193, 7, 0.15) 0%, transparent 70%);
+            animation: rotate-glow 10s linear infinite; z-index: 0; pointer-events: none;
+        }
+
+        .premium-icon-box {
+            width: 80px; height: 80px; margin: 0 auto 15px auto;
+            background: rgba(255, 193, 7, 0.1); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            border: 1px solid var(--premium-gold);
+            animation: pulse-gold 2s infinite;
         }
         
+        .premium-icon-box i { font-size: 40px; color: var(--premium-gold); filter: drop-shadow(0 0 10px var(--premium-gold)); }
+
+        .premium-title { font-size: 1.4rem; font-weight: 900; color: #FFF; margin-bottom: 10px; position: relative; z-index: 2; }
+        .premium-title span { color: var(--premium-gold); }
+
+        .premium-desc { font-size: 0.95rem; color: #ccc; line-height: 1.6; margin-bottom: 25px; position: relative; z-index: 2; }
+
+        .btn-buy-premium {
+            background: linear-gradient(45deg, #FFC107, #FF9800);
+            color: #000; font-weight: 800; font-size: 1.1rem;
+            width: 100%; padding: 12px; border: none; border-radius: 50px;
+            cursor: pointer; box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 10px; position: relative; z-index: 2;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-buy-premium:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255, 193, 7, 0.6); }
+        .btn-buy-premium:active { transform: scale(0.95); }
+
+        .btn-later-premium {
+            background: transparent; color: #777; border: none;
+            font-size: 0.9rem; font-weight: 500; cursor: pointer;
+            padding: 8px 15px; border-radius: 20px; transition: color 0.2s;
+            position: relative; z-index: 2;
+        }
+        .btn-later-premium:hover { color: #FFF; background: rgba(255,255,255,0.05); }
+
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 193, 7, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+        }
+
+        /* ======================================================= */
+        /* 📣 MODAL STYLES (نمایش فوری و کنترل‌های شیک - قدیمی)          */
+        /* ======================================================= */
+        #promo-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            z-index: 2000; display: none; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.2s ease; 
+        }
+        #promo-modal.show { display: flex; opacity: 1; }
+        @keyframes rotate-glow { to { transform: rotate(360deg); } }
+        
+        #modal-content {
+            background: var(--card-dark); padding: 20px; border-radius: 15px;
+            max-width: 90%; width: 400px; direction: rtl; text-align: right;
+            transform: scale(0.9); transition: transform 0.3s ease;
+            position: relative; z-index: 1; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9); 
+        }
+        #promo-modal.show #modal-content { transform: scale(1); }
+
+        #image-display-area {
+            margin-bottom: 15px; border-radius: 10px; overflow: hidden;
+            background: var(--bg-dark); text-align: center; position: relative; padding: 2px; 
+        }
         #image-display-area::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: conic-gradient(
-                transparent 0%,
-                transparent 150deg,
-                rgba(129, 199, 132, 0.9) 180deg, /* 🟢 تغییر به سبز ملایم برای نور */
-                transparent 210deg
-            );
-            z-index: 0; 
-            animation: rotate-glow 5s linear infinite; 
-            filter: blur(10px); 
-            opacity: 0.8;
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: conic-gradient(transparent 0%, transparent 150deg, rgba(129, 199, 132, 0.9) 180deg, transparent 210deg);
+            z-index: 0; animation: rotate-glow 5s linear infinite; filter: blur(10px); opacity: 0.8;
         }
-        
-        /* 🔆 مرز ثابت و کم‌نور برای تعریف محدوده */
         #image-display-area::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border-radius: 10px;
-            border: 2px solid rgba(129, 199, 132, 0.5); /* 🟢 تغییر به سبز ملایم روشن */
-            z-index: 2; 
-            pointer-events: none;
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 10px; border: 2px solid rgba(129, 199, 132, 0.5); z-index: 2; pointer-events: none;
         }
-        
-        /* 🖼️ Image Element */
         #promo-uploaded-image {
-            position: relative;
-            z-index: 1; 
-            width: 100%;
-            height: auto;
-            display: block;
-            border-radius: 8px; 
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
-        }
-        /* ---------------------------------------------------- */
-
-
-        /* Modal Content & Buttons */
-        .promo-content {
-            padding: 0 0 10px 0; 
-            margin-bottom: 15px; 
-            border-bottom: 1px solid var(--accent-color);
-        }
-        .promo-content p {
-            color: #FFF;
-            font-size: 1rem; 
-            line-height: 1.8; 
-            font-weight: 400;
-        }
-        .promo-content b {
-            color: #FFEB3B;
-            font-weight: 700;
-        }
-        
-        /* متن تشویقی به نظردهی */
-        .promo-action .promo-star-text {
-            font-size: 0.9rem; 
-            color: var(--muted-text);
-            margin-bottom: 20px; 
-            font-weight: 400;
+            position: relative; z-index: 1; width: 100%; height: auto;
+            display: block; border-radius: 8px; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
         }
 
+        .promo-content { padding: 0 0 10px 0; margin-bottom: 15px; border-bottom: 1px solid var(--accent-color); }
+        .promo-content p { color: #FFF; font-size: 1rem; line-height: 1.8; font-weight: 400; }
+        .promo-content b { color: #FFEB3B; font-weight: 700; }
+        .promo-action .promo-star-text { font-size: 0.9rem; color: var(--muted-text); margin-bottom: 20px; font-weight: 400; }
 
-        /* ---------------------------------------------------- */
-        /* 🆕 کنترل‌های شیک (Grid Layout) 🆕                     */
-        /* ---------------------------------------------------- */
         .modal-footer {
-            display: grid;
-            grid-template-columns: 1fr 1fr; 
-            gap: 10px;
-            align-items: center;
-            border-top: 1px solid var(--accent-color);
-            padding-top: 10px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+            align-items: center; border-top: 1px solid var(--accent-color); padding-top: 10px;
         }
-        
         .promo-btn {
-            grid-column: 1 / -1; 
-            background: linear-gradient(45deg, #4CAF50, #00C853); 
-            color: #FFF; 
-            padding: 10px 25px; 
-            border-radius: 25px;
-            font-size: 1.1rem;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0, 200, 83, 0.4);
-            transition: all 0.2s ease;
-            width: 100%; 
-            margin-top: 5px;
-            border: none;
+            grid-column: 1 / -1; background: linear-gradient(45deg, #4CAF50, #00C853); 
+            color: #FFF; padding: 10px 25px; border-radius: 25px;
+            font-size: 1.1rem; font-weight: 700; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 200, 83, 0.4); transition: all 0.2s ease;
+            width: 100%; margin-top: 5px; border: none;
         }
-
-        .promo-btn:hover {
-            box-shadow: 0 0 15px #00C853;
-            transform: translateY(-2px);
-        }
-        .promo-btn i {
-            margin-left: 10px;
-        }
+        .promo-btn:hover { box-shadow: 0 0 15px #00C853; transform: translateY(-2px); }
+        .promo-btn i { margin-left: 10px; }
         
         #close-modal-btn {
-            order: 2; 
-            background: var(--accent-color);
-            color: var(--muted-text);
-            border: none;
-            padding: 10px 15px; 
-            border-radius: 25px;
-            font-size: 0.95rem; 
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s;
-            width: 100%;
+            order: 2; background: var(--accent-color); color: var(--muted-text);
+            border: none; padding: 10px 15px; border-radius: 25px;
+            font-size: 0.95rem; font-weight: 500; cursor: pointer;
+            transition: background 0.2s; width: 100%;
         }
-
-        #close-modal-btn:hover {
-            background: #444;
-            color: #FFF;
-        }
+        #close-modal-btn:hover { background: #444; color: #FFF; }
 
         #dont-show-again-label {
-            order: 1; 
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            font-size: 0.85rem; 
-            color: var(--muted-text);
-            cursor: pointer;
-            padding: 5px; 
-            border-radius: 15px; 
-            transition: background 0.2s;
+            order: 1; display: flex; align-items: center; justify-content: flex-start;
+            font-size: 0.85rem; color: var(--muted-text); cursor: pointer;
+            padding: 5px; border-radius: 15px; transition: background 0.2s;
         }
-        
-        #dont-show-again-label:hover {
-            background: rgba(3, 169, 244, 0.05);
-            color: #FFF;
-        }
-
-        #dont-show-again {
-            margin-left: 8px; 
-            margin-right: 0;
-            transform: scale(1.1);
-            accent-color: var(--highlight-color);
-        }
-        /* ---------------------------------------------------- */
+        #dont-show-again-label:hover { background: rgba(3, 169, 244, 0.05); color: #FFF; }
+        #dont-show-again { margin-left: 8px; margin-right: 0; transform: scale(1.1); accent-color: var(--highlight-color); }
         
         /* 👤 Header (Minimal & Clean)                             */
         /* ======================================================= */
         #chat-header {
-            padding: 15px 15px; 
-            background: var(--card-dark); color: var(--text-color);
-            text-align: center; font-size: 1.6rem; 
-            font-weight: 900;
-            border-bottom: 1px solid var(--accent-color); 
-            box-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
+            padding: 15px 15px; background: var(--card-dark); color: var(--text-color);
+            text-align: center; font-size: 1.6rem; font-weight: 900;
+            border-bottom: 1px solid var(--accent-color); box-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
             position: relative; z-index: 10; margin-bottom: 10px; 
             text-shadow: 0 0 5px var(--highlight-color); 
         }
-
-        #header-controls {
-            position: absolute; left: 15px; top: 50%; transform: translateY(-50%); display: flex; gap: 8px; 
-        }
+        #header-controls { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); display: flex; gap: 8px; }
         #chat-header button {
             background: var(--bg-dark); border: none; border-radius: 50%;
-            width: 38px; height: 38px; 
-            color: var(--muted-text);
-            font-size: 1rem; 
-            box-shadow: 5px 5px 12px var(--neum-dark), -5px -5px 12px var(--neum-light);
+            width: 38px; height: 38px; color: var(--muted-text);
+            font-size: 1rem; box-shadow: 5px 5px 12px var(--neum-dark), -5px -5px 12px var(--neum-light);
             transition: all 0.2s ease;
         }
         #chat-header button:hover { color: var(--highlight-color); box-shadow: 0 0 10px var(--highlight-color); }
         #chat-header button:active { transform: scale(0.9); box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light); color: var(--highlight-color); }
         
-        #menu-btn {
-            position: absolute; right: 15px; top: 50%; transform: translateY(-50%); 
-        }
+        #menu-btn { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); }
 
         #premium-header-btn {
-            position: absolute; 
-            right: 60px; 
-            top: 50%; 
-            transform: translateY(-50%); 
-            background: var(--bg-dark); 
-            border: none; 
-            border-radius: 50%;
-            width: 38px; 
-            height: 38px; 
-            color: #FFC107; 
-            font-size: 1.2rem; 
+            position: absolute; right: 60px; top: 50%; transform: translateY(-50%); 
+            background: var(--bg-dark); border: none; border-radius: 50%;
+            width: 38px; height: 38px; color: #FFC107; font-size: 1.2rem; 
             box-shadow: 5px 5px 12px var(--neum-dark), -5px -5px 12px var(--neum-light);
-            transition: all 0.2s ease;
-            text-shadow: 0 0 5px rgba(255, 193, 7, 0.7);
+            transition: all 0.2s ease; text-shadow: 0 0 5px rgba(255, 193, 7, 0.7);
         }
-        #premium-header-btn:hover { 
-            color: #FFF; 
-            box-shadow: 0 0 10px #FFC107; 
-        }
-        #premium-header-btn:active { 
-            transform: scale(0.9); 
-            box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light); 
-            color: #FFF;
-        }
+        #premium-header-btn:hover { color: #FFF; box-shadow: 0 0 10px #FFC107; }
+        #premium-header-btn:active { transform: scale(0.9); box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light); color: #FFF; }
 
         /* 💬 Messages Area & Containers                           */
         /* ======================================================= */
         #messages {
-            flex: 1; padding: 10px 5px; 
-            overflow-y: auto; 
+            flex: 1; padding: 10px 5px; overflow-y: auto; 
             display: flex; flex-direction: column; scrollbar-width: none;
-            background: rgba(0, 0, 0, 0.4); 
-            border: 1px solid var(--accent-color);
-            border-radius: 15px; 
-            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
-            margin-bottom: 10px; 
-            position: relative; 
+            background: rgba(0, 0, 0, 0.4); border: 1px solid var(--accent-color);
+            border-radius: 15px; box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
+            margin-bottom: 10px; position: relative; 
         }
         #messages::-webkit-scrollbar { width: 0; height: 0; }
         
         #initial-prompt {
-            position: absolute; 
-            top: 50%; 
-            left: 50%;
-            transform: translate(-50%, -50%); 
-            font-size: 1.2rem; 
-            font-weight: 700;
-            color: var(--muted-text); 
-            opacity: 0.6;
-            text-align: center;
-            padding: 20px;
-            pointer-events: none; 
-            transition: opacity 0.3s ease;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+            font-size: 1.2rem; font-weight: 700; color: var(--muted-text); opacity: 0.6;
+            text-align: center; padding: 20px; pointer-events: none; transition: opacity 0.3s ease;
         }
 
-        .message-container {
-            display: flex; margin: 8px 0; 
-            justify-content: flex-start; align-items: flex-end;
-            position: relative;
-        }
+        .message-container { display: flex; margin: 8px 0; justify-content: flex-start; align-items: flex-end; position: relative; }
         .user-container { justify-content: flex-end; }
 
         .avatar {
             width: var(--avatar-size); min-width: var(--avatar-size); height: var(--avatar-size);
-            border-radius: 50%; 
-            background: var(--card-dark); 
+            border-radius: 50%; background: var(--card-dark); 
             display: flex; justify-content: center; align-items: center; 
-            font-size: 1.3rem; 
-            margin: 0 8px; 
-            border: 2px solid var(--accent-color);
+            font-size: 1.3rem; margin: 0 8px; border: 2px solid var(--accent-color);
             box-shadow: 5px 5px 10px var(--neum-dark), -5px -5px 10px var(--neum-light);
             transition: transform 0.3s ease;
         }
         .user-avatar { color: #00FFFF; } 
         .ai-avatar { color: var(--highlight-color); } 
 
-
         .message {
-            padding: 12px 18px; 
-            border-radius: 20px; 
-            max-width: 80%; 
-            opacity: 0;
-            transform: scale(0.95); 
-            animation: bubbleIn 0.3s forwards ease-out;
-            position: relative;
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6); 
-            line-height: 1.4; 
-            font-size: 0.95rem; 
-            direction: rtl; 
-            text-align: right;
+            padding: 12px 18px; border-radius: 20px; max-width: 80%; opacity: 0;
+            transform: scale(0.95); animation: bubbleIn 0.3s forwards ease-out;
+            position: relative; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6); 
+            line-height: 1.4; font-size: 0.95rem; direction: rtl; text-align: right;
             padding-bottom: 28px; 
         }
         
-        /* ⭐️ آیدی تلگرام قابل کپی ⭐️ */
-        .message .copyable-id {
-            cursor: pointer;
-            color: var(--highlight-color);
-            font-weight: 700;
-            text-decoration: none; 
-            direction: ltr !important; 
-            display: inline-block; 
-        }
+        .message .copyable-id { cursor: pointer; color: var(--highlight-color); font-weight: 700; text-decoration: none; direction: ltr !important; display: inline-block; }
+        .message .copyable-id:hover { color: #FFF; }
 
-        .message .copyable-id:hover {
-            color: #FFF;
-        }
-
-        /* 🆕 دکمه کپی کنار آیدی تلگرام */
         .id-copy-btn {
-            background: none;
-            border: none;
-            color: var(--muted-text);
-            font-size: 1em; 
-            cursor: pointer;
-            padding: 2px 5px;
-            border-radius: 4px;
-            transition: all 0.2s;
-            line-height: 1;
-            margin-right: -5px; 
-            margin-left: 5px; 
-            display: inline-block;
+            background: none; border: none; color: var(--muted-text);
+            font-size: 1em; cursor: pointer; padding: 2px 5px;
+            border-radius: 4px; transition: all 0.2s; line-height: 1;
+            margin-right: -5px; margin-left: 5px; display: inline-block;
         }
+        .id-copy-btn:hover { color: var(--highlight-color); background: rgba(3, 169, 244, 0.1); }
 
-        .id-copy-btn:hover {
-            color: var(--highlight-color);
-            background: rgba(3, 169, 244, 0.1);
-        }
-
-        .message p {
-            margin: 0; 
-            padding: 0;
-            margin-bottom: 6px; 
-        }
-        .message p:last-child {
-            margin-bottom: 0; 
-        }
+        .message p { margin: 0; padding: 0; margin-bottom: 6px; }
+        .message p:last-child { margin-bottom: 0; }
 
         @keyframes bubbleIn { 
             0% { opacity: 0; transform: scale(0.8) translateY(10px); }
             100% { opacity: 1; transform: scale(1) translateY(0); }
         }
 
-        /* 👤 حباب کاربر */
-        .user {
-            background: var(--user-bubble); 
-            color: #FFF; 
-            border-radius: 20px 8px 20px 20px; 
-            font-weight: 500; 
-            box-shadow: 0 3px 8px rgba(0, 132, 255, 0.4); 
-        }
+        .user { background: var(--user-bubble); color: #FFF; border-radius: 20px 8px 20px 20px; font-weight: 500; box-shadow: 0 3px 8px rgba(0, 132, 255, 0.4); }
+        .ai { background: var(--ai-bubble-bg); color: var(--text-color); border-radius: 8px 20px 20px 20px; box-shadow: 5px 5px 10px var(--neum-dark), -5px -5px 10px var(--neum-light); }
         
-        /* 🧠 حباب هوش مصنوعی */
-        .ai {
-            background: var(--ai-bubble-bg); 
-            color: var(--text-color);
-            border-radius: 8px 20px 20px 20px; 
-            box-shadow: 5px 5px 10px var(--neum-dark), -5px -5px 10px var(--neum-light); 
-        }
-        
-        .highlight {
-            box-shadow: 0 0 10px 2px var(--highlight-color), 0 0 5px var(--highlight-color); 
-            border: 1px solid var(--highlight-color);
-            transition: box-shadow 0.6s ease-out, border 0.6s ease-out;
-        }
+        .highlight { box-shadow: 0 0 10px 2px var(--highlight-color), 0 0 5px var(--highlight-color); border: 1px solid var(--highlight-color); transition: box-shadow 0.6s ease-out, border 0.6s ease-out; }
 
-        /* ------------------ دکمه کپی کل پیام ------------------ */
         .copy-btn {
-            position: absolute; bottom: 6px; 
-            width: 20px; height: 20px; 
+            position: absolute; bottom: 6px; width: 20px; height: 20px; 
             background: transparent; border: none; cursor: pointer;
-            font-size: 0.85em; 
-            transition: color 0.2s, opacity 0.2s; opacity: 0.5;
+            font-size: 0.85em; transition: color 0.2s, opacity 0.2s; opacity: 0.5;
         }
-
         .user .copy-btn { left: 10px; color: #FFF; } 
         .ai .copy-btn { right: 10px; color: var(--muted-text); } 
         .copy-btn:hover { opacity: 1; color: var(--highlight-color); }
         .user .copy-btn:hover { color: #FFF; }
-        
         .copy-success { color: #00FF00 !important; } 
 
-        /* ------------------ کد بلاک ------------------ */
         code {
-            direction: ltr; display: block; padding: 10px; 
-            background: var(--code-bg);
-            border-radius: 8px; 
-            margin-top: 10px; 
-            overflow-x: auto;
-            border-left: 4px solid #FFC107; 
-            font-size: 0.8em; 
-            color: var(--code-text); font-family: monospace;
-            position: relative; 
-            padding-top: 30px; 
-            white-space: pre-wrap;
-            word-break: break-all;
+            direction: ltr; display: block; padding: 10px; background: var(--code-bg);
+            border-radius: 8px; margin-top: 10px; overflow-x: auto;
+            border-left: 4px solid #FFC107; font-size: 0.8em; color: var(--code-text); font-family: monospace;
+            position: relative; padding-top: 30px; white-space: pre-wrap; word-break: break-all;
         }
-        
         .code-copy-btn {
             position: absolute; top: 3px; left: 5px; right: unset; 
             background: rgba(255, 255, 255, 0.1); color: var(--muted-text);
-            border: none; border-radius: 4px; 
-            cursor: pointer;
-            font-size: 0.7em; 
-            padding: 3px 8px; 
-            opacity: 0.7;
-            transition: opacity 0.2s, background 0.2s, color 0.2s;
-            direction: rtl; 
-            z-index: 5;
+            border: none; border-radius: 4px; cursor: pointer;
+            font-size: 0.7em; padding: 3px 8px; opacity: 0.7;
+            transition: opacity 0.2s, background 0.2s, color 0.2s; direction: rtl; z-index: 5;
         }
         .code-copy-btn:hover { opacity: 1; background: rgba(3, 169, 244, 0.2); color: var(--highlight-color); }
         .code-copy-btn .fas { margin-left: 5px; }
         
         .loading {
             font-style: italic; opacity: 0.9; background: var(--ai-bubble-bg);
-            padding-right: 5px; 
-            animation: pulse 1s infinite alternate;
+            padding-right: 5px; animation: pulse 1s infinite alternate;
         }
-        .loading::after {
-            content: '_'; 
-            animation: blink 1s infinite step-start;
-        }
-        @keyframes pulse { 
-            0% { opacity: 0.8; transform: scale(0.99); } 
-            100% { opacity: 1; transform: scale(1.01); } 
-        }
-        @keyframes blink {
-            50% { opacity: 0; }
-        }
+        .loading::after { content: '_'; animation: blink 1s infinite step-start; }
+        @keyframes pulse { 0% { opacity: 0.8; transform: scale(0.99); } 100% { opacity: 1; transform: scale(1.01); } }
+        @keyframes blink { 50% { opacity: 0; } }
         
-        /* ------------------ تصاویر AI در چت ------------------ */
-        .ai-image-container {
-            display: flex; flex-direction: column; align-items: flex-end; width: 100%;
-        }
+        .ai-image-container { display: flex; flex-direction: column; align-items: flex-end; width: 100%; }
         .ai-image {
-            max-width: 95%; 
-            max-height: 300px; 
-            margin: 8px 0 8px 0; 
+            max-width: 95%; max-height: 300px; margin: 8px 0 8px 0; 
             border-radius: var(--border-radius);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6), 0 0 15px 3px var(--highlight-color);
         }
-        /* ---------------------------------------------------- */
-
 
         /* ⌨️ Input Area (Glassy)                                  */
         /* ======================================================= */
         #input-container {
-            display: flex; background: var(--card-dark); padding: 10px; 
-            align-items: center;
+            display: flex; background: var(--card-dark); padding: 10px; align-items: center;
             border: 1px solid var(--accent-color); border-radius: 20px; 
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.7); z-index: 20;
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
         }
 
         #image-btn {
-            width: 45px; height: 45px; 
-            border-radius: 50%;
-            margin-left: 5px; 
-            background: var(--bg-dark); 
-            color: var(--highlight-color);
-            font-size: 1.2rem; 
-            box-shadow: 5px 5px 10px var(--neum-dark), -5px -5px 10px var(--neum-light); 
-            pointer-events: auto;
-            opacity: 1;
-            display: flex; justify-content: center; align-items: center;
-            transition: all 0.2s ease;
-            cursor: pointer;
+            width: 45px; height: 45px; border-radius: 50%; margin-left: 5px; 
+            background: var(--bg-dark); color: var(--highlight-color);
+            font-size: 1.2rem; box-shadow: 5px 5px 10px var(--neum-dark), -5px -5px 10px var(--neum-light); 
+            pointer-events: auto; opacity: 1; display: flex; justify-content: center; align-items: center;
+            transition: all 0.2s ease; cursor: pointer;
         }
         #image-btn:hover { color: #FFF; box-shadow: 0 0 10px var(--highlight-color); }
-        #image-btn:active { 
-            transform: scale(0.9); 
-            box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light); 
-            color: #FFF;
-        }
-
+        #image-btn:active { transform: scale(0.9); box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light); color: #FFF; }
 
         #user-input {
-            flex: 1; padding: 12px 20px; 
-            border: none; border-radius: 25px; 
-            outline: none;
-            font-size: 1rem; 
-            background: var(--bg-dark); color: var(--text-color);
-            margin: 0 8px; 
-            box-shadow: inset 5px 5px 10px var(--neum-dark), inset -5px -5px 10px var(--neum-light);
-            direction: rtl;
-            resize: none; 
-            overflow-y: hidden; 
-            max-height: 100px; 
-            line-height: 1.4; 
+            flex: 1; padding: 12px 20px; border: none; border-radius: 25px; outline: none;
+            font-size: 1rem; background: var(--bg-dark); color: var(--text-color);
+            margin: 0 8px; box-shadow: inset 5px 5px 10px var(--neum-dark), inset -5px -5px 10px var(--neum-light);
+            direction: rtl; resize: none; overflow-y: hidden; max-height: 100px; line-height: 1.4; 
         }
         #user-input::placeholder { color: var(--muted-text); }
-        #user-input:focus { 
-            box-shadow: inset 0 0 15px rgba(3, 169, 244, 0.6); 
-            border: 1px solid var(--highlight-color); 
-        }
+        #user-input:focus { box-shadow: inset 0 0 15px rgba(3, 169, 244, 0.6); border: 1px solid var(--highlight-color); }
 
         .input-btn {
-            width: 45px; height: 45px; 
-            border: none; border-radius: 50%; cursor: pointer;
-            font-size: 1.2rem; 
-            color: #FFF; 
+            width: 45px; height: 45px; border: none; border-radius: 50%; cursor: pointer;
+            font-size: 1.2rem; color: #FFF; 
             background: linear-gradient(45deg, var(--highlight-color), #0077C0);
             box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.7), 0 0 8px rgba(3, 169, 244, 0.5); 
             transition: transform 0.1s ease, box-shadow 0.2s ease;
         }
         #send-btn:active { 
-            background: #0077C0; 
-            transform: scale(0.9); 
+            background: #0077C0; transform: scale(0.9); 
             box-shadow: inset 4px 4px 8px var(--neum-dark), inset -4px -4px 8px var(--neum-light), 0 0 15px rgba(3, 169, 244, 0.8); 
         }
 
         /* 💡 DRAWER (SIDEBAR) STYLES                              */
         /* ======================================================= */
         #drawer {
-            position: fixed;
-            top: 0;
-            right: 0;
-            width: 80%; 
-            max-width: 300px;
-            height: var(--app-height);
-            background: var(--bg-dark); 
-            border-left: 3px solid var(--highlight-color);
-            box-shadow: -5px 0 20px rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            transform: translateX(100%); 
-            transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
-            padding-top: 50px;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto; 
+            position: fixed; top: 0; right: 0; width: 80%; max-width: 300px; height: var(--app-height);
+            background: var(--bg-dark); border-left: 3px solid var(--highlight-color);
+            box-shadow: -5px 0 20px rgba(0, 0, 0, 0.8); z-index: 1000;
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+            padding-top: 50px; display: flex; flex-direction: column; overflow-y: auto; 
         }
-
-        #drawer.open {
-            transform: translateX(0); 
-        }
+        #drawer.open { transform: translateX(0); }
 
         #drawer-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-            opacity: 0;
-            pointer-events: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); z-index: 999; opacity: 0; pointer-events: none;
             transition: opacity 0.3s ease;
         }
-
-        #drawer.open + #drawer-backdrop {
-            opacity: 1;
-            pointer-events: auto;
-        }
+        #drawer.open + #drawer-backdrop { opacity: 1; pointer-events: auto; }
 
         .drawer-link {
-            display: flex;
-            align-items: center;
-            padding: 18px 20px; 
-            margin: 8px 10px; 
-            color: var(--text-color);
-            text-decoration: none;
-            font-size: 1.1rem; 
-            font-weight: 500;
-            border-radius: var(--border-radius);
-            transition: all 0.2s ease;
-            direction: rtl;
-            background: var(--card-dark);
-            box-shadow: 4px 4px 8px var(--neum-dark), -4px -4px 8px var(--neum-light);
+            display: flex; align-items: center; padding: 18px 20px; margin: 8px 10px; 
+            color: var(--text-color); text-decoration: none; font-size: 1.1rem; font-weight: 500;
+            border-radius: var(--border-radius); transition: all 0.2s ease; direction: rtl;
+            background: var(--card-dark); box-shadow: 4px 4px 8px var(--neum-dark), -4px -4px 8px var(--neum-light);
             border-right: 5px solid transparent;
         }
-
         .drawer-link:hover {
-            background: var(--accent-color);
-            border-right: 5px solid var(--highlight-color);
-            color: var(--highlight-color);
-            transform: translateX(-5px);
+            background: var(--accent-color); border-right: 5px solid var(--highlight-color);
+            color: var(--highlight-color); transform: translateX(-5px);
         }
-
         .drawer-link i {
-            margin-left: 15px; 
-            font-size: 1.4rem; 
-            min-width: 30px;
-            text-align: center;
-            color: var(--highlight-color);
-            text-shadow: 0 0 5px rgba(3, 169, 244, 0.7);
+            margin-left: 15px; font-size: 1.4rem; min-width: 30px; text-align: center;
+            color: var(--highlight-color); text-shadow: 0 0 5px rgba(3, 169, 244, 0.7);
         }
         
         .drawer-link.disabled-link {
-            cursor: not-allowed; 
-            opacity: 0.5; 
-            pointer-events: none; 
-            color: var(--muted-text) !important; 
-            padding-top: 18px;
-            padding-bottom: 18px;
-            background: var(--card-dark); 
-            box-shadow: none; 
-            border-right: 5px solid transparent;
+            cursor: not-allowed; opacity: 0.5; pointer-events: none; 
+            color: var(--muted-text) !important; padding-top: 18px; padding-bottom: 18px;
+            background: var(--card-dark); box-shadow: none; border-right: 5px solid transparent;
         }
-
         .drawer-link.disabled-link small {
-            font-size: 0.85em; 
-            font-weight: 500;
-            margin-right: 5px;
-            color: #81C784; /* 🟢 تغییر به سبز ملایم */
-        }
-
-        @media (max-width: 600px) {
-            /* تنظیمات اضافی برای موبایل اگر نیاز بود */
+            font-size: 0.85em; font-weight: 500; margin-right: 5px; color: #81C784; 
         }
     </style>
 </head>
@@ -719,6 +429,26 @@
 <audio id="send-sound" src="https://assets.mixkit.co/sfx/download/mixkit-bell-notification-978.wav" preload="auto"></audio>
 <audio id="bubble-sound" src="https://assets.mixkit.co/sfx/download/mixkit-bubble-pop-sound-2810.wav" preload="auto"></audio>
 
+<div id="premium-promo-modal">
+    <div class="premium-card">
+        <div class="premium-icon-box">
+            <i class="fas fa-crown"></i>
+        </div>
+        <h2 class="premium-title">🚀 قدرت واقعی <span>سایروس</span> را آزاد کنید!</h2>
+        <p class="premium-desc">
+            هنوز محدود به نسخه عادی هستید؟ <br>
+            با <b>پرمیوم</b>، سرعت پاسخ‌دهی ۲ برابر، دسترسی به مدل‌های پیشرفته و چت بدون محدودیت را تجربه کنید.
+        </p>
+        
+        <button class="btn-buy-premium" onclick="window.location.href='{{ url_for('premium_page') }}'">
+            <i class="fas fa-rocket"></i> فعال‌سازی اشتراک ویژه
+        </button>
+        
+        <button class="btn-later-premium" id="premium-later-btn">
+            شاید بعداً
+        </button>
+    </div>
+</div>
 <div id="promo-modal">
     <div id="modal-content">
         
@@ -853,12 +583,14 @@ const menuBtn = document.getElementById("menu-btn");
 const drawer = document.getElementById("drawer");
 const backdrop = document.getElementById("drawer-backdrop");
 
-// 🆕 عناصر Modal
+// 🆕 عناصر Modal قدیمی
 const promoModal = document.getElementById("promo-modal");
 const closeModalBtn = document.getElementById("close-modal-btn");
 const dontShowAgainCheckbox = document.getElementById("dont-show-again");
-const promoUploadedImage = document.getElementById("promo-uploaded-image");
 
+// 💎💎💎 عناصر Modal پرمیوم جدید 💎💎💎
+const premiumModal = document.getElementById("premium-promo-modal");
+const premiumLaterBtn = document.getElementById("premium-later-btn");
 
 /* ======================================================= */
 /* 🛠️ Utility & Setup                                     */
@@ -1070,7 +802,6 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
     let processedText = text;
     let hasCodeBlock = processedText.includes("```");
 
-    // ⭐️ منطق جداسازی آیدی تلگرام و ساخت دکمه کپی ⭐️
     if (className === 'ai' && !hasCodeBlock) {
         const customIdRegex = /<span class='copyable-id'>(.*?)<\/span>/g;
         processedText = processedText.replace(customIdRegex, (match, id) => {
@@ -1141,7 +872,6 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
             }
         }
     } else {
-        // منطق برای متن عادی (شامل آیدی قابل کپی)
         const formatted = processedText.trim().split('\n').map(p => {
             
             let tempP = p;
@@ -1166,7 +896,6 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
         msg.insertAdjacentHTML('beforeend', formatted);
     }
     
-    // 4. اضافه کردن تصویر (اگر وجود دارد و پیام از AI است)
     if (className === 'ai' && imageUrl) {
         const imageWrapper = document.createElement('div');
         imageWrapper.classList.add('ai-image-container');
@@ -1184,10 +913,8 @@ function appendMessage(text, className, highlight = true, imageUrl = null) {
         };
     }
     
-    // 5. اضافه کردن دکمه کپی کل پیام
     msg.appendChild(copyButton);
 
-    // 6. قرار دادن آواتار و پیام در کانتینر
     if (className === 'user') {
         container.appendChild(msg);
         container.appendChild(avatar);
@@ -1248,7 +975,7 @@ function showLoadingBubble() {
 }
 
 // -------------------------------------------------------------------
-// 🎯 اتصال به بک‌اند Flask - (تابع sendMessage دست نخورده باقی ماند)
+// 🎯 اتصال به بک‌اند Flask
 // -------------------------------------------------------------------
 async function sendMessage() {
     const message = input.value.trim();
@@ -1330,40 +1057,84 @@ function autoGrowTextarea() {
 
 
 /* ======================================================= */
-/* 📢 MODAL LOGIC (منطق پاپ‌آپ)                            */
+/* 📢 MODAL LOGIC (پاپ‌آپ‌های قدیمی و جدید)                */
 /* ======================================================= */
 
+// 1. منطق مودال قدیمی (Cafebazaar Promo)
 function showPromoModal() {
-    // اگر کاربر قبلاً دکمه "دیگر نمایش نده" را نزده باشد، آن را نمایش بده
     if (localStorage.getItem('hidePromoModal') !== 'true') {
         promoModal.classList.add('show');
-        document.body.style.overflow = 'hidden'; 
     }
 }
-
 function hidePromoModal() {
     promoModal.classList.remove('show');
-    document.body.style.overflow = ''; 
-    // اگر تیک "دیگر نمایش نده" خورده باشد، در localStorage ذخیره کن
     if (dontShowAgainCheckbox.checked) {
         localStorage.setItem('hidePromoModal', 'true');
     }
 }
-
-// Event Listeners برای Modal
 closeModalBtn.addEventListener('click', hidePromoModal);
-
-// بستن با کلیک روی بک‌دراپ
 promoModal.addEventListener('click', (e) => {
-    if (e.target === promoModal) {
-        hidePromoModal();
+    if (e.target === promoModal) hidePromoModal();
+});
+
+
+// 2. 💎💎💎 منطق مودال پرمیوم (PREMIUM LOGIC) 💎💎💎
+let premiumTimer = null;
+
+function showPremiumModal() {
+    // اگر مودال قدیمی باز است، پرمیوم را نشان نده تا تداخل نکند
+    if(promoModal.classList.contains('show')) return;
+    
+    premiumModal.classList.add('show');
+}
+
+function hidePremiumModal() {
+    premiumModal.classList.remove('show');
+}
+
+function scheduleNextPremiumPopup(isLater = false) {
+    if (premiumTimer) clearTimeout(premiumTimer);
+    
+    let delay;
+    if (isLater) {
+        // اگر "بعدا" زده شد: دقیقا 5 دقیقه (300,000 میلی‌ثانیه)
+        delay = 300000;
+        console.log("Premium Popup scheduled for 5 minutes later.");
+    } else {
+        // زمان تصادفی بین 2 تا 5 دقیقه (120,000 تا 300,000 میلی‌ثانیه)
+        const min = 120000; 
+        const max = 300000;
+        delay = Math.floor(Math.random() * (max - min + 1) + min);
+        console.log(`Premium Popup scheduled in ${Math.round(delay/60000)} minutes.`);
+    }
+
+    premiumTimer = setTimeout(() => {
+        showPremiumModal();
+    }, delay);
+}
+
+// رویداد دکمه "شاید بعداً"
+premiumLaterBtn.addEventListener('click', () => {
+    hidePremiumModal();
+    scheduleNextPremiumPopup(true); // 5 دقیقه بعد دوباره نشان بده
+});
+
+// بستن با کلیک روی پس‌زمینه
+premiumModal.addEventListener('click', (e) => {
+    if (e.target === premiumModal) {
+        hidePremiumModal();
+        scheduleNextPremiumPopup(true); // فرض بر این است که بستن یعنی "بعدا"
     }
 });
 
 
-// 💡 فراخوانی شو مودال در زمان بارگذاری صفحه (نمایش فوری)
+// 💡 مدیریت نمایش مودال‌ها در بارگذاری
 window.addEventListener('load', () => {
-    showPromoModal(); 
+    // اول مودال قدیمی چک می‌شود (نمایش فوری)
+    showPromoModal();
+    
+    // زمان‌بندی اولین مودال پرمیوم (بین 2 تا 5 دقیقه بعد از باز شدن)
+    scheduleNextPremiumPopup(false);
 });
 
 
