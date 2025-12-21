@@ -28,7 +28,6 @@
             background: var(--bg-dark);
             color: var(--text-color);
             width: 100vw; 
-            /* استفاده از min-height برای تضمین اسکرول */
             min-height: 100vh; 
             overflow-x: hidden;
             display: flex; justify-content: center; align-items: flex-start;
@@ -36,7 +35,6 @@
 
         #page-container {
             width: 100%; 
-            /* حذف height: var(--app-height); برای اسکرول بهتر */
             min-height: 100vh;
             max-width: 600px; 
             display: flex; flex-direction: column;
@@ -45,7 +43,6 @@
             overflow-y: auto;
         }
         
-        /* هدر بهینه شده */
         #page-header {
             position: sticky; top: 0; left: 0; right: 0;
             padding: 15px 20px; background: var(--bg-dark);
@@ -66,7 +63,6 @@
 
         #content {
             flex: 1; padding: 20px; direction: rtl; line-height: 1.8;
-            /* اطمینان از اینکه محتوا به اندازه کافی بلند باشد */
             min-height: calc(100vh - 65px); 
         }
 
@@ -77,7 +73,6 @@
             text-shadow: 0 0 10px rgba(3, 169, 244, 0.2);
         }
 
-        /* کارت‌های شیک نئومورفیسم */
         .card {
             background: var(--card-dark);
             padding: 25px; border-radius: var(--border-radius);
@@ -95,7 +90,6 @@
 
         .card h3 i { margin-left: 10px; font-size: 1.4rem; }
 
-        /* آیتم‌های اطلاعاتی بهینه شده */
         .info-item {
             display: flex; justify-content: space-between;
             padding: 10px 0;
@@ -106,7 +100,6 @@
         .info-item strong { color: var(--muted-text); font-weight: 500; }
         .info-item span { color: var(--text-color); font-weight: 600; }
         
-        /* بخش امتیازات و بودجه */
         .score-item {
             display: flex; justify-content: space-between;
             align-items: center;
@@ -122,7 +115,6 @@
         }
         .score-item i { margin-left: 8px; color: var(--highlight-color); }
         
-        /* دکمه خروج شیک */
         .logout-btn {
             display: block; width: 100%;
             padding: 15px; margin-top: 25px;
@@ -137,12 +129,11 @@
         .logout-btn:hover { background: #C62828; }
         .logout-btn:active { transform: translateY(2px); box-shadow: 0 2px 5px rgba(229, 57, 53, 0.6); }
 
-        /* استایل فوتر که اکنون داخل محتوا است */
         #page-footer-in-content {
             padding: 20px 0; 
             text-align: center; 
             font-size: 0.85rem;
-            color: #666666; /* کم‌رنگ‌تر شدن */
+            color: #666666;
         }
     </style>
 </head>
@@ -169,7 +160,7 @@
                 <p class="info-item">
                     <strong>نوع لاگین:</strong> 
                     <span>
-                        {% if '@' in user_data.identifier %}
+                        {% if '@' in user_data.identifier %} 
                             <i class="fas fa-envelope"></i> ایمیل
                         {% else %}
                             <i class="fas fa-phone"></i> شماره تلفن
@@ -215,44 +206,6 @@
             </div>
 
             <div class="card">
-                <h3><i class="fas fa-bolt"></i> بودجه مصرف روزانه (بازنشانی: 24 ساعت)</h3>
-                
-                <p class="score-item">
-                    <span><i class="fas fa-comments"></i> چت (هر استفاده: {{ user_data.chat_cost }} امتیاز)</span>
-                    <span class="score-value" style="color: {{ '#4CAF50' if user_data.chats_remaining > 0 else '#E53935' }};">
-                        {{ user_data.chats_remaining }} / {{ user_data.max_chats }}
-                        <span style="color: var(--muted-text); font-weight: 500; font-size: 0.9em; margin-left: 5px;"> ({{ user_data.chat_budget_remaining }} امتیاز)</span>
-                    </span>
-                </p>
-                
-                <p class="score-item">
-                    <span><i class="fas fa-file-alt"></i> پاسخ بلند و مفصل (هر استفاده: {{ user_data.long_response_cost }} امتیاز)</span>
-                    <span class="score-value" style="color: {{ '#4CAF50' if user_data.long_responses_remaining > 0 else '#E53935' }};">
-                        {{ user_data.long_responses_remaining }} / {{ user_data.max_long_responses }}
-                        <span style="color: var(--muted-text); font-weight: 500; font-size: 0.9em; margin-left: 5px;"> ({{ user_data.long_response_budget_remaining }} امتیاز)</span>
-                    </span>
-                </p>
-
-                <p class="score-item" style="border-bottom: none;">
-                    <span><i class="fas fa-image"></i> تولید تصویر (هر استفاده: {{ user_data.image_cost }} امتیاز)</span>
-                    <span class="score-value" style="color: {{ '#4CAF50' if user_data.images_remaining > 0 else '#E53935' }};">
-                        {{ user_data.images_remaining }} / {{ user_data.max_images }}
-                        <span style="color: var(--muted-text); font-weight: 500; font-size: 0.9em; margin-left: 5px;"> ({{ user_data.image_budget_remaining }} امتیاز)</span>
-                    </span>
-                </p>
-                
-                {% if user_data.is_premium %}
-                    <p class="info-item" style="border-top: 1px dashed var(--accent-color); padding-top: 10px; margin-top: 10px; border-bottom: none; color: #4CAF50;">
-                        <strong><i class="fas fa-bell"></i> توجه:</strong> <span style="font-weight: 400; color: #4CAF50;">شما از بودجه **پرمیوم** استفاده می‌کنید.</span>
-                    </p>
-                {% else %}
-                    <p class="info-item" style="border-top: 1px dashed var(--accent-color); padding-top: 10px; margin-top: 10px; border-bottom: none; color: #FF9800;">
-                        <strong><i class="fas fa-exclamation-triangle"></i> توجه:</strong> <span style="font-weight: 400; color: #FF9800;">شما از بودجه **عادی** استفاده می‌کنید.</span>
-                    </p>
-                {% endif %}
-            </div>
-            
-            <div class="card">
                 <h3><i class="fas fa-trophy"></i> امتیازات و عملکرد</h3>
 
                 <div class="score-item">
@@ -273,7 +226,7 @@
                 
                 <a href="/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> خروج از حساب کاربری</a>
 
-                </div>
+            </div>
             
             <div id="page-footer-in-content">
                 © 2025 Cyrus AI. تمامی حقوق محفوظ است.
@@ -281,7 +234,7 @@
 
         </div>
         
-        </div>
+    </div>
     
     <script>
         function setAppHeight() {

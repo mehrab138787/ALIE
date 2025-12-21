@@ -136,13 +136,13 @@ SCORE_QUOTA_CONFIG = {
     },
     'DAILY_BUDGET': {
         'free': {
-            'chat': 30,
-            'image': 80,
-            'long_response': 5
+            'chat': 15,
+            'image': 40,
+            'long_response': 0
         },
         'premium': {
             'chat': 80,
-            'image': 200,
+            'image': 300,
             'long_response': 15
         }
     }

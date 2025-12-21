@@ -1098,12 +1098,12 @@ function scheduleNextPremiumPopup(isLater = false) {
     let delay;
     if (isLater) {
         // اگر "بعدا" زده شد: دقیقا 5 دقیقه (300,000 میلی‌ثانیه)
-        delay = 300000;
+        delay = 200000;
         console.log("Premium Popup scheduled for 5 minutes later.");
     } else {
         // زمان تصادفی بین 2 تا 5 دقیقه (120,000 تا 300,000 میلی‌ثانیه)
-        const min = 120000; 
-        const max = 300000;
+        const min = 50000; 
+        const max = 100000;
         delay = Math.floor(Math.random() * (max - min + 1) + min);
         console.log(`Premium Popup scheduled in ${Math.round(delay/60000)} minutes.`);
     }
