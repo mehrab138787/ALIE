@@ -49,7 +49,7 @@ PRICES = {
     'monthly': 1690000,
     'package': 30000
 }
-FREE_CHAT_LIMIT = 15
+FREE_CHAT_LIMIT = 50
 
 # ----------------- 💾 تنظیمات PostgreSQL (Render Internal) -----------------
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -177,7 +177,7 @@ LONG_RESPONSE_TOTAL_TOKEN_LIMIT = 500
 TOTAL_TOKEN_LIMIT = 500
 MAX_COMPLETION_TOKENS = 400
 
-GUEST_CHAT_LIMIT = 35
+GUEST_CHAT_LIMIT = 50
 
 encoder = tiktoken.get_encoding("cl100k_base")
 
