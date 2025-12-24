@@ -533,6 +533,9 @@
         <i class="fas fa-info-circle"></i> درباره ما
     </a>
 
+    <div style="margin: 15px auto; text-align: center; width: 90%;">
+        <div id="pos-article-display-114463"></div>
+    </div>
     {% if logged_in %}
         <a href="{{ url_for('logout') }}" class="drawer-link" style="color: #FF6666; margin-top: auto; border-top: 1px solid var(--accent-color);">
             <i class="fas fa-sign-out-alt"></i> خروج
@@ -555,11 +558,17 @@
     </div>
     
     <div id="messages">
+        <div style="width: 100%; text-align: center; margin-bottom: 10px; padding: 5px;">
+            <div id="pos-article-display-card-114451"></div>
+        </div>
         <div id="initial-prompt">
             چطور میتونم به شما کمک کنم؟ 🤔
         </div>
     </div>
     
+    <div style="width: 100%; text-align: center; padding: 5px 0;">
+         <div id="pos-article-text-card-114464"></div>
+    </div>
     <div id="input-container">
         <button id="image-btn" class="input-btn" title="تولید تصویر" onclick="window.location.href='{{ url_for('image_page') }}';">
             <i class="fas fa-image"></i>
