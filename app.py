@@ -136,7 +136,7 @@ SCORE_QUOTA_CONFIG = {
     },
     'DAILY_BUDGET': {
         'free': {
-            'chat': 30,
+            'chat': 50,
             'image': 40,
             'long_response': 0
         },
@@ -177,7 +177,7 @@ LONG_RESPONSE_TOTAL_TOKEN_LIMIT = 500
 TOTAL_TOKEN_LIMIT = 500
 MAX_COMPLETION_TOKENS = 400
 
-GUEST_CHAT_LIMIT = 15
+GUEST_CHAT_LIMIT = 35
 
 encoder = tiktoken.get_encoding("cl100k_base")
 
