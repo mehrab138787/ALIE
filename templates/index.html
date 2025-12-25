@@ -28,7 +28,7 @@
             --avatar-size: 40px; 
             --border-radius: 12px; 
             --loading-color: #81C784; 
-            --premium-gold: #FFC107; /* 🟡 رنگ طلایی برای پرمیوم */
+            --news-green: #00E676; /* رنگ سبز برای خبر رایگان شدن */
         }
 
         /* ======================================================= */
@@ -56,23 +56,23 @@
         }
 
         /* ======================================================= */
-        /* 💎 PREMIUM MODAL STYLES (تبلیغ ویژه)                    */
+        /* 🎁 NEWS MODAL STYLES (خبر رایگان شدن)                   */
         /* ======================================================= */
-        #premium-promo-modal {
+        #news-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.96); /* تیره‌تر برای تمرکز بیشتر */
+            background: rgba(0, 0, 0, 0.96);
             backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
             z-index: 3000; /* بالاتر از همه چیز */
             display: none; justify-content: center; align-items: center;
             opacity: 0; transition: opacity 0.3s ease;
         }
 
-        #premium-promo-modal.show { display: flex; opacity: 1; }
+        #news-modal.show { display: flex; opacity: 1; }
 
-        .premium-card {
+        .news-card {
             background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
-            border: 2px solid var(--premium-gold);
-            box-shadow: 0 0 30px rgba(255, 193, 7, 0.3);
+            border: 2px solid var(--news-green);
+            box-shadow: 0 0 30px rgba(0, 230, 118, 0.3);
             width: 90%; max-width: 380px;
             padding: 30px 20px;
             border-radius: 20px;
@@ -81,54 +81,45 @@
             overflow: hidden;
             transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        #premium-promo-modal.show .premium-card { transform: scale(1); }
+        #news-modal.show .news-card { transform: scale(1); }
 
-        /* افکت نور طلایی پس زمینه */
-        .premium-card::before {
+        /* افکت نور سبز پس زمینه */
+        .news-card::before {
             content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-            background: radial-gradient(circle, rgba(255, 193, 7, 0.15) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(0, 230, 118, 0.15) 0%, transparent 70%);
             animation: rotate-glow 10s linear infinite; z-index: 0; pointer-events: none;
         }
 
-        .premium-icon-box {
+        .news-icon-box {
             width: 80px; height: 80px; margin: 0 auto 15px auto;
-            background: rgba(255, 193, 7, 0.1); border-radius: 50%;
+            background: rgba(0, 230, 118, 0.1); border-radius: 50%;
             display: flex; justify-content: center; align-items: center;
-            border: 1px solid var(--premium-gold);
-            animation: pulse-gold 2s infinite;
+            border: 1px solid var(--news-green);
+            animation: pulse-green 2s infinite;
         }
         
-        .premium-icon-box i { font-size: 40px; color: var(--premium-gold); filter: drop-shadow(0 0 10px var(--premium-gold)); }
+        .news-icon-box i { font-size: 40px; color: var(--news-green); filter: drop-shadow(0 0 10px var(--news-green)); }
 
-        .premium-title { font-size: 1.4rem; font-weight: 900; color: #FFF; margin-bottom: 10px; position: relative; z-index: 2; }
-        .premium-title span { color: var(--premium-gold); }
+        .news-title { font-size: 1.3rem; font-weight: 900; color: #FFF; margin-bottom: 15px; position: relative; z-index: 2; line-height: 1.5; }
+        .news-title span { color: var(--news-green); }
 
-        .premium-desc { font-size: 0.95rem; color: #ccc; line-height: 1.6; margin-bottom: 25px; position: relative; z-index: 2; }
+        .news-desc { font-size: 0.95rem; color: #ccc; line-height: 1.8; margin-bottom: 25px; position: relative; z-index: 2; text-align: justify; direction: rtl; }
 
-        .btn-buy-premium {
-            background: linear-gradient(45deg, #FFC107, #FF9800);
+        .btn-news-confirm {
+            background: linear-gradient(45deg, var(--news-green), #00C853);
             color: #000; font-weight: 800; font-size: 1.1rem;
             width: 100%; padding: 12px; border: none; border-radius: 50px;
-            cursor: pointer; box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+            cursor: pointer; box-shadow: 0 5px 15px rgba(0, 230, 118, 0.4);
             transition: transform 0.2s, box-shadow 0.2s;
-            margin-bottom: 10px; position: relative; z-index: 2;
-            display: flex; align-items: center; justify-content: center; gap: 10px;
+            margin-bottom: 5px; position: relative; z-index: 2;
         }
-        .btn-buy-premium:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255, 193, 7, 0.6); }
-        .btn-buy-premium:active { transform: scale(0.95); }
+        .btn-news-confirm:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0, 230, 118, 0.6); }
+        .btn-news-confirm:active { transform: scale(0.95); }
 
-        .btn-later-premium {
-            background: transparent; color: #777; border: none;
-            font-size: 0.9rem; font-weight: 500; cursor: pointer;
-            padding: 8px 15px; border-radius: 20px; transition: color 0.2s;
-            position: relative; z-index: 2;
-        }
-        .btn-later-premium:hover { color: #FFF; background: rgba(255,255,255,0.05); }
-
-        @keyframes pulse-gold {
-            0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
-            70% { box-shadow: 0 0 0 15px rgba(255, 193, 7, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(0, 230, 118, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); }
         }
 
         /* ======================================================= */
@@ -432,26 +423,24 @@
 <audio id="send-sound" src="https://assets.mixkit.co/sfx/download/mixkit-bell-notification-978.wav" preload="auto"></audio>
 <audio id="bubble-sound" src="https://assets.mixkit.co/sfx/download/mixkit-bubble-pop-sound-2810.wav" preload="auto"></audio>
 
-<div id="premium-promo-modal">
-    <div class="premium-card">
-        <div class="premium-icon-box">
-            <i class="fas fa-crown"></i>
+<div id="news-modal">
+    <div class="news-card">
+        <div class="news-icon-box">
+            <i class="fas fa-gift"></i>
         </div>
-        <h2 class="premium-title">🚀 قدرت واقعی <span>سایروس</span> را آزاد کنید!</h2>
-        <p class="premium-desc">
-            هنوز محدود به نسخه عادی هستید؟ <br>
-            با <b>پرمیوم</b>، سرعت پاسخ‌دهی ۲ برابر، دسترسی به مدل‌های پیشرفته و چت بدون محدودیت را تجربه کنید.
+        <h2 class="news-title">🚀 همه امکانات هوش مصنوعی ما، اکنون کاملاً رایگان!</h2>
+        <p class="news-desc">
+            هوش مصنوعی‌ای که قبلاً پرمیوم و محدودیت داشت، حالا تمام محدودیت‌ها برداشته شده و شما می‌توانید به طور کامل و رایگان از همه قابلیت‌ها استفاده کنید.
+            <br><br>
+            این تجربه ما برای شماست، و ما امیدواریم با حمایت و بازخورد خودتون، ما رو همراهی کنید تا همیشه بهترین امکانات را برای شما فراهم کنیم..
         </p>
         
-        <button class="btn-buy-premium" onclick="window.location.href='{{ url_for('premium_page') }}'">
-            <i class="fas fa-rocket"></i> فعال‌سازی اشتراک ویژه
-        </button>
-        
-        <button class="btn-later-premium" id="premium-later-btn">
-            شاید بعداً
+        <button class="btn-news-confirm" id="close-news-btn">
+             متوجه شدم ❤️
         </button>
     </div>
 </div>
+
 <div id="promo-modal">
     <div id="modal-content">
         
@@ -611,9 +600,9 @@ const promoModal = document.getElementById("promo-modal");
 const closeModalBtn = document.getElementById("close-modal-btn");
 const dontShowAgainCheckbox = document.getElementById("dont-show-again");
 
-// 💎💎💎 عناصر Modal پرمیوم جدید 💎💎💎
-const premiumModal = document.getElementById("premium-promo-modal");
-const premiumLaterBtn = document.getElementById("premium-later-btn");
+// 🎁 عناصر Modal خبر جدید 🎁
+const newsModal = document.getElementById("news-modal");
+const closeNewsBtn = document.getElementById("close-news-btn");
 
 /* ======================================================= */
 /* 🛠️ Utility & Setup                                     */
@@ -1101,53 +1090,19 @@ promoModal.addEventListener('click', (e) => {
 });
 
 
-// 2. 💎💎💎 منطق مودال پرمیوم (PREMIUM LOGIC) 💎💎💎
-let premiumTimer = null;
-
-function showPremiumModal() {
-    // اگر مودال قدیمی باز است، پرمیوم را نشان نده تا تداخل نکند
-    if(promoModal.classList.contains('show')) return;
-    
-    premiumModal.classList.add('show');
+// 2. 🎁 منطق مودال خبر جدید (جایگزین پرمیوم) 🎁
+function showNewsModal() {
+    // این مودال همیشه هنگام ورود نمایش داده شود
+    newsModal.classList.add('show');
 }
 
-function hidePremiumModal() {
-    premiumModal.classList.remove('show');
+function hideNewsModal() {
+    newsModal.classList.remove('show');
 }
 
-function scheduleNextPremiumPopup(isLater = false) {
-    if (premiumTimer) clearTimeout(premiumTimer);
-    
-    let delay;
-    if (isLater) {
-        // اگر "بعدا" زده شد: دقیقا 5 دقیقه (300,000 میلی‌ثانیه)
-        delay = 2000000000000000000000000000000000000000000;
-        console.log("Premium Popup scheduled for 5 minutes later.");
-    } else {
-        // زمان تصادفی بین 2 تا 5 دقیقه (120,000 تا 300,000 میلی‌ثانیه)
-        const min = 50000000000000000000000000000000000000000000; 
-        const max = 1000000000000000000000000000000000000000000;
-        delay = Math.floor(Math.random() * (max - min + 1) + min);
-        console.log(`Premium Popup scheduled in ${Math.round(delay/60000)} minutes.`);
-    }
-
-    premiumTimer = setTimeout(() => {
-        showPremiumModal();
-    }, delay);
-}
-
-// رویداد دکمه "شاید بعداً"
-premiumLaterBtn.addEventListener('click', () => {
-    hidePremiumModal();
-    scheduleNextPremiumPopup(true); // 5 دقیقه بعد دوباره نشان بده
-});
-
-// بستن با کلیک روی پس‌زمینه
-premiumModal.addEventListener('click', (e) => {
-    if (e.target === premiumModal) {
-        hidePremiumModal();
-        scheduleNextPremiumPopup(true); // فرض بر این است که بستن یعنی "بعدا"
-    }
+closeNewsBtn.addEventListener('click', hideNewsModal);
+newsModal.addEventListener('click', (e) => {
+    if (e.target === newsModal) hideNewsModal();
 });
 
 
@@ -1156,8 +1111,11 @@ window.addEventListener('load', () => {
     // اول مودال قدیمی چک می‌شود (نمایش فوری)
     showPromoModal();
     
-    // زمان‌بندی اولین مودال پرمیوم (بین 2 تا 5 دقیقه بعد از باز شدن)
-    scheduleNextPremiumPopup(false);
+    // نمایش مودال خبر جدید
+    // با کمی تاخیر نمایش می‌دهیم تا اگر مودال قبلی هست، تداخل نکند یا روی هم بیایند
+    setTimeout(() => {
+        showNewsModal();
+    }, 1000); 
 });
 
 
