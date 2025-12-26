@@ -217,6 +217,9 @@
         #menu-btn { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); }
 
         #premium-header-btn {
+            /* تغییر: مخفی کردن دکمه پرمیوم در هدر */
+            display: none;
+            
             position: absolute; right: 60px; top: 50%; transform: translateY(-50%); 
             background: var(--bg-dark); border: none; border-radius: 50%;
             width: 38px; height: 38px; color: #FFC107; font-size: 1.2rem; 
@@ -432,7 +435,11 @@
         <p class="news-desc">
             هوش مصنوعی‌ای که قبلاً پرمیوم و محدودیت داشت، حالا تمام محدودیت‌ها برداشته شده و شما می‌توانید به طور کامل و رایگان از همه قابلیت‌ها استفاده کنید.
             <br><br>
-            این تجربه ما برای شماست، و ما امیدواریم با حمایت و بازخورد خودتون، ما رو همراهی کنید تا همیشه بهترین امکانات را برای شما فراهم کنیم..
+            <span style="color: #FFD54F; font-weight: 500; display: block; margin: 10px 0;">
+                برای پوشش هزینه‌های سرور و نگه‌داری این سرویس، بخشی از درآمد برنامه از طریق تبلیغات تأمین می‌شود.
+            </span>
+            <br>
+            این تجربه ما برای شماست، و امیدواریم با حمایت و بازخورد خودتون، ما رو همراهی کنید تا همیشه بهترین امکانات را برای شما فراهم کنیم.
         </p>
         
         <button class="btn-news-confirm" id="close-news-btn">
@@ -462,7 +469,7 @@
         <div class="promo-action">
             <p class="promo-star-text" style="font-size: 0.9rem; margin-bottom: 20px;">
                 حمایت و همدلی شما با
-                <span style="color: #81C784; font-weight: 900; font-size: 1.05rem; text-shadow: 0 0 8px #4CAF50;">امتیاز ۵ ستاره</span> در کافه بازار، سرعت توسعه این امکانات را چند برابر می‌کند.
+                <span style="color: #81C784; font-weight: 900; font-size: 1.05rem; text-shadow: 0 0 8px #4CAF50;">امتیاز ۵ ستاره</span> ، سرعت توسعه این امکانات را چند برابر می‌کند.
             </p>
         </div>
         
@@ -487,9 +494,9 @@
         منو
     </div>
     
-    <a href="{{ url_for('premium_page') }}" class="drawer-link" style="color: #FFC107; font-weight: 700;">
+    <a href="{{ url_for('premium_page') }}" class="drawer-link" style="color: #FFC107; font-weight: 700; display: none;">
         <i class="fas fa-crown" style="color: #FFC107; text-shadow: 0 0 5px rgba(255, 193, 7, 0.7);"></i> 
-        خرید پرمیوم از کافه بازار
+        خرید پرمیوم
     </a>
     
     <a href="{{ url_for('image_page') }}" class="drawer-link" style="color: var(--highlight-color); font-weight: 500;">
