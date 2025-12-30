@@ -1,6 +1,7 @@
 import os
 from urllib.parse import quote, urlencode
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, Blueprint
+# ----------------- تغییر اول: اضافه کردن send_from_directory به ایمپورت‌ها -----------------
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, Blueprint, send_from_directory
 import requests
 import requests.exceptions
 import tiktoken
@@ -796,6 +797,15 @@ def image_generator():
 # =========================================================
 # 🏠 مسیرهای سرویس‌دهی صفحات HTML
 # =========================================================
+
+# ----------------- 🔔 تغییر دوم: اضافه شدن روت نجوا -----------------
+@app.route('/najva-messaging-sw.js')
+def serve_najva_sw():
+    # این تابع فایل najva-messaging-sw.js را از پوشه static می‌خواند
+    # و آن را در آدرس روت (https://site.com/najva-messaging-sw.js) نمایش می‌دهد.
+    return send_from_directory(app.static_folder, 'najva-messaging-sw.js')
+# -------------------------------------------------------------------
+
 @app.route("/")
 def index():
     cleanup_old_images()
