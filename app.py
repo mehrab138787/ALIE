@@ -1129,6 +1129,18 @@ def migrate_database():
             print(f"⚠️ وضعیت دیتابیس: {e}")
 
 migrate_database()
+ 
+@app.route('/manifest.json')
+def serve_manifest():
+    return send_from_directory(app.static_folder, 'manifest.json')
+
+@app.route('/service-worker.js')
+def serve_sw():
+    return send_from_directory(app.static_folder, 'service-worker.js')
+
+@app.route('/offline.html')
+def serve_offline():
+    return send_from_directory(app.template_folder, 'offline.html')
 
 if __name__ == "__main__":
     # تنظیم پورت برای رندر

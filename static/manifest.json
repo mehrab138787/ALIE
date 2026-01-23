@@ -1,0 +1,15 @@
+{
+  "name": "Cyrus AI",
+  "short_name": "Cyrus",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070707",
+  "theme_color": "#070707",
+  "icons": [
+    {
+      "src": "/static/images/1.png", 
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

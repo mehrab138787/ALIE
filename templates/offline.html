@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyrus AI - Offline</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <script>
+        !function(e,t,n){e.yektanetAnalyticsObject=n,e[n]=e[n]||function(){e[n].q.push(arguments)},e[n].q=e[n].q||[];var a=t.getElementsByTagName("head")[0],r=new Date,c="https://cdn.yektanet.com/superscript/Zqtus4UG/native-alie-1.onrender.com-45106/yn_pub.js?v="+r.getFullYear().toString()+"0"+r.getMonth()+"0"+r.getDate()+"0"+r.getHours(),s=t.createElement("link");s.rel="preload",s.as="script",s.href=c,a.appendChild(s);var l=t.createElement("script");l.async=!0,l.src=c,a.appendChild(l)}(window,document,"yektanet");
+    </script>
+
+    <style>
+        :root {
+            --bg-color: #070707;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --text-color: #FAFAFA;
+            --accent-color: #03A9F4; /* آبی الکتریک */
+            --glow-color: rgba(3, 169, 244, 0.5);
+            --btn-grad-1: #03A9F4;
+            --btn-grad-2: #0077C0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* پس‌زمینه متحرک */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle at center, rgba(3, 169, 244, 0.1) 0%, transparent 70%);
+            animation: pulse-bg 5s infinite alternate;
+            z-index: -1;
+        }
+
+        .container {
+            background: var(--card-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px 30px;
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .icon-container {
+            font-size: 80px;
+            margin-bottom: 20px;
+            color: var(--accent-color);
+            text-shadow: 0 0 20px var(--glow-color);
+            animation: flicker 2s infinite;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        p {
+            color: #ccc;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .btn {
+            display: inline-block;
+            background: linear-gradient(45deg, var(--btn-grad-1), var(--btn-grad-2));
+            color: white;
+            padding: 15px 40px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            box-shadow: 0 5px 20px rgba(3, 169, 244, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 10px rgba(3, 169, 244, 0.4);
+        }
+
+        /* فضای تبلیغات */
+        .ad-container {
+            margin-top: 30px;
+            width: 100%;
+            min-height: 100px; /* حداقل ارتفاع برای جلوگیری از پرش */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* استایل مخصوص زمانی که تبلیغ لود نمی‌شود */
+        .ad-placeholder {
+            font-size: 0.8rem;
+            color: #444;
+            border: 1px dashed #333;
+            padding: 10px;
+            border-radius: 10px;
+            width: 100%;
+            display: none; /* پیش‌فرض مخفی */
+        }
+        
+        /* انیمیشن‌ها */
+        @keyframes pulse-bg {
+            0% { transform: scale(1); opacity: 0.5; }
+            100% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        @keyframes flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; text-shadow: 0 0 20px var(--glow-color); }
+            20%, 24%, 55% { opacity: 0.5; text-shadow: none; }
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="icon-container">
+            <i class="fas fa-satellite-dish"></i> 📡
+        </div>
+        
+        <h2>ارتباط با سرور قطع شد</h2>
+        
+        <p>
+            به نظر میرسد اینترنت شما ضعیف و دچار اختلال هست.
+            <br>
+            نگران نباشید، ما منتظر اتصال مجدد شما هستیم.
+        </p>
+
+        <a href="javascript:window.location.reload()" class="btn">
+            تلاش مجدد 🔄
+        </a>
+
+        <div class="ad-container">
+            <div id="pos-article-display-card-114470"></div>
+        </div>
+    </div>
+
+</body>
+</html>
